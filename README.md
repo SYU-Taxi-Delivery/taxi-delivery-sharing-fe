@@ -136,7 +136,46 @@ pnpm build
 이슈 양식은 버그 신고, 기능 제안, 일반 작업을 제공하며 지정된 필수 항목을 입력합니다.
 기존에 없는 라벨이나 담당자를 자동 지정하지 않습니다.
 
-### 알려진 의존성 제한
+## 협업 규칙
+
+### 커밋 메시지
+
+커밋 메시지는 대문자 유형, 작업 설명, 관련 이슈 또는 PR 번호 순서로 작성합니다.
+
+```text
+[TYPE] 작업 설명 (#번호)
+```
+
+예시:
+
+```text
+[CHORE] 프론트엔드 보일러플레이트 구현 (#2)
+```
+
+유형은 작업에 맞게 `FEAT`, `FIX`, `CHORE`, `DOCS`, `REFACTOR`, `TEST`, `CI`를 사용합니다.
+각 커밋은 한 작업을 담습니다.
+
+### 브랜치와 PR
+
+- 작업 브랜치에 커밋을 푸시하고 `main`을 대상으로 PR을 생성합니다.
+- PR 병합 후 원격 작업 브랜치를 자동 삭제하는 저장소 설정을 활성화했습니다.
+- 목표 정책은 `main`의 PR 경유를 필수로 하고 승인 리뷰 인원을 `0`명으로 설정하는 것입니다.
+- 룰셋 우회 사용자는 두지 않습니다.
+
+현재 비공개 조직 저장소의 요금제 제한으로 GitHub 룰셋·브랜치 보호 API가 HTTP 403을 반환합니다.
+따라서 `main` 직접 푸시 차단은 아직 GitHub에서 강제되지 않습니다.
+비공개를 유지하려면 조직의 GitHub Team 이상 요금제가 필요합니다.
+적용할 룰셋은 [`.github/rulesets/main.json`](.github/rulesets/main.json)에 준비했습니다.
+이 JSON 파일을 저장소에 추가하는 것만으로 GitHub 보호 설정이 활성화되지는 않습니다.
+
+요금제 제한이 해소되면 관리자 권한으로 다음 명령을 실행하고, `main`에 적용된 규칙을 확인합니다.
+
+```sh
+gh api --method POST repos/SYU-Taxi-Delivery/taxi-delivery-sharing-fe/rulesets --input .github/rulesets/main.json
+gh api repos/SYU-Taxi-Delivery/taxi-delivery-sharing-fe/rules/branches/main
+```
+
+## 알려진 의존성 제한
 
 2026-10-04 기준 `pnpm audit --audit-level=high`는 다음 개발 의존성 경로에서 High 1건으로 실패합니다.
 
