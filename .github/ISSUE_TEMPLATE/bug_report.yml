@@ -1,0 +1,42 @@
+name: 버그 신고
+description: 재현 가능한 오류를 공유합니다.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: 토큰, 개인정보, 비밀 환경변수는 작성하지 마세요.
+  - type: textarea
+    id: description
+    attributes:
+      label: 발생한 문제
+      description: 어떤 화면에서 어떤 문제가 발생했나요?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. 접속한 페이지
+        2. 수행한 동작
+        3. 발생한 결과
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 동작
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 실행 환경
+      placeholder: "예: Windows 11 / Chrome / 로컬 또는 Preview URL"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 스크린샷·로그·추가 정보
+      description: 공유 전 개인정보와 인증 정보를 제거해 주세요.

@@ -1,0 +1,31 @@
+name: 기능 제안
+description: 필요한 기능과 완료 기준을 정의합니다.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 해결하려는 문제
+      description: 누구에게 어떤 문제가 있나요?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안하는 기능
+      description: 사용자가 할 수 있어야 하는 동작을 설명해 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 기준
+      placeholder: |
+        - [ ] 확인 가능한 동작 또는 결과
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 관련 API 명세, Figma, Notion, 이슈 링크 등
