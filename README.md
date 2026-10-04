@@ -9,7 +9,7 @@
 - Tailwind CSS 4
 - Vitest / React Testing Library / jsdom
 - ESLint / Prettier
-- GitHub Actions CI / Vercel 배포 준비
+- GitHub Actions CI / Vercel 배포
 
 Node.js 24.15 이상(24.x)과 pnpm 10.34.6을 사용합니다. 정확한 패키지 버전은
 `package.json`과 `pnpm-lock.yaml`을 기준으로 합니다. Vercel에서 지원하는 pnpm 10을
@@ -132,7 +132,7 @@ pnpm test
 pnpm build
 ```
 
-현재 파일을 원격에 올린 이후부터 CI와 이슈·PR 템플릿이 GitHub에 반영됩니다.
+CI와 이슈·PR 템플릿은 GitHub에 적용되어 있습니다.
 이슈 양식은 버그 신고, 기능 제안, 일반 작업을 제공하며 지정된 필수 항목을 입력합니다.
 기존에 없는 라벨이나 담당자를 자동 지정하지 않습니다.
 
@@ -215,21 +215,21 @@ Node.js 프로세스가 종료될 수 있는 문제이며, 공지에 패치 버�
 pnpm은 `unrs-resolver`의 설치 스크립트를 기본 차단합니다. 현재 플랫폼용 native 패키지로 린트가 정상 동작하므로
 전체 설치 스크립트를 일괄 허용하지 않습니다.
 
-## Vercel 연결
+## Vercel 배포
 
-Vercel 연결과 실제 배포는 저장소 소유자가 진행합니다.
+GitHub 저장소와 Vercel 프로젝트 `syu-taxi`의 연결을 완료했습니다.
+배포 주소는 [syu-taxi.singhic.xyz](https://syu-taxi.singhic.xyz)입니다.
 
-1. 저장소에 코드가 올라간 뒤 Vercel에서 해당 GitHub 저장소를 Import합니다.
-2. Framework Preset은 **Next.js**, Root Directory는 저장소 루트(`.`)를 사용합니다.
-3. Node.js는 **24.x**를 사용합니다. `package.json`의 `engines`와 일치시킵니다.
-4. Install Command는 **자동 감지 기본값**을 유지합니다. `pnpm-lock.yaml`을 보고 pnpm 10이 선택됩니다.
-5. Build Command는 기본값인 `pnpm build`, Output Directory도 기본값을 유지합니다.
-6. API 주소가 정해지면 `NEXT_PUBLIC_API_BASE_URL`을 Development / Preview / Production 환경별로 등록합니다.
-7. 공개 환경변수를 변경하면 새로 배포해야 브라우저 번들에 반영됩니다.
+`main`을 기준으로 Production을 배포하고, 작업 브랜치는 Preview 배포를 사용합니다.
+빌드 설정은 Framework Preset **Next.js**, Root Directory 저장소 루트(`.`), Node.js **24.x**를 기준으로 합니다.
+Install Command와 Output Directory는 자동 감지 기본값을 유지하고, Build Command는 `pnpm build`를 사용합니다.
 
 별도 `vercel.json`이나 배포용 GitHub Secret은 필요하지 않습니다.
 Vercel Git 연동이 Preview와 Production 배포를 담당하고, GitHub Actions는 검증을 담당합니다.
 CI 통과를 배포나 병합의 필수 조건으로 만들려면 GitHub 브랜치 규칙과 Vercel 배포 검사 설정을 별도로 구성합니다.
+
+API 주소가 정해지면 `NEXT_PUBLIC_API_BASE_URL`을 Development / Preview / Production 환경별로 등록합니다.
+공개 환경변수를 변경하면 새로 배포해야 브라우저 번들에 반영됩니다.
 
 ## 참고 문서
 
