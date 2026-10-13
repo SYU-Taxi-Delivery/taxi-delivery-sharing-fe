@@ -1,0 +1,160 @@
+.panel,
+.dialog {
+  --participation-border: #eaebee;
+  --participation-text: #212124;
+  --participation-muted: #62666e;
+  --participation-primary: #76b900;
+  --participation-focus: #477000;
+  color: var(--participation-text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: calc(1.25rem - 1px);
+  border: 1px solid var(--participation-border);
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.summary {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.muted,
+.help,
+.dialogDescription,
+.targetMeta {
+  color: var(--participation-muted);
+}
+
+.help {
+  font-size: 0.75rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--participation-border);
+}
+
+.schedule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+}
+
+.primary,
+.secondary {
+  min-height: 3rem;
+  width: 100%;
+  padding: 0.6875rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--participation-primary);
+  color: var(--participation-text);
+}
+
+.secondary {
+  background: white;
+  border: 1px solid var(--participation-border);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  background: var(--participation-border);
+  color: #62666e;
+  cursor: default;
+}
+
+.panel button:focus-visible,
+.dialog button:focus-visible,
+.heading:focus-visible {
+  outline: 3px solid var(--participation-focus);
+  outline-offset: 3px;
+}
+
+.error {
+  color: #a32929;
+}
+
+.success {
+  color: var(--participation-focus);
+}
+
+.dialog {
+  width: min(22.0625rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  margin: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--participation-border);
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.dialog[open] {
+  display: grid;
+  gap: 1rem;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.dialogHeading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 1.875rem;
+  padding-right: 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.close {
+  position: absolute;
+  top: -0.4375rem;
+  right: -0.75rem;
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.target {
+  display: grid;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background: #f7f8fa;
+  padding: 1rem;
+}
+
+.targetTitle {
+  font-weight: 700;
+}
+
+.dialogDescription,
+.targetMeta {
+  font-size: 0.8125rem;
+}
+
+.dialogActions {
+  display: grid;
+  gap: 0.75rem;
+}
