@@ -14,6 +14,8 @@
 
 .field {
   display: grid;
+  /* Keep label and box at the top even when a sibling column shows an error. */
+  align-content: start;
   gap: 0.5rem;
   min-width: 0;
   border: 0;
@@ -71,7 +73,7 @@
   border-color: var(--posts-danger);
 }
 
-.input:read-only,
+input.input:read-only,
 .textarea:read-only {
   background: var(--posts-soft);
   color: var(--posts-muted);
@@ -130,10 +132,11 @@
   background: var(--posts-border);
 }
 
+/* Date and time stack full width as in the Figma form. */
 .datetime {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  align-items: start;
+  gap: 1.25rem;
 }
 
 .stepper {
@@ -245,6 +248,162 @@
 .primary:focus-visible,
 .secondary:focus-visible,
 .linkButton:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.datePicker {
+  position: relative;
+}
+
+.dateTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dateTrigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dateTrigger[data-readonly="true"] {
+  background: var(--posts-soft);
+  color: var(--posts-muted);
+  cursor: not-allowed;
+}
+
+.dateTrigger[data-invalid="true"] {
+  border-color: var(--posts-danger);
+}
+
+.dateTrigger[aria-expanded="true"] {
+  border-color: var(--posts-primary);
+}
+
+.placeholder {
+  color: #9ea2aa;
+}
+
+.calendar {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 0.75rem;
+  width: min(22rem, 100%);
+  padding: 1rem;
+  border: 1px solid var(--posts-border);
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.calendarHeader {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+}
+
+.calendarTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendarNav {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--posts-text);
+  font-size: 1.5rem;
+}
+
+.calendarNav:hover:not(:disabled) {
+  background: var(--posts-soft);
+}
+
+.calendarNav:disabled {
+  opacity: 0.3;
+}
+
+.calendarGrid {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.calendarRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  justify-items: center;
+}
+
+.weekday {
+  padding-bottom: 0.25rem;
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.weekday[data-sunday="true"],
+.day[data-sunday="true"]:not(:disabled) {
+  color: #d64545;
+}
+
+.day {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--posts-text);
+  font-size: 0.875rem;
+}
+
+.day:hover:not(:disabled) {
+  background: #f6fbec;
+}
+
+.day[data-today="true"] {
+  box-shadow: inset 0 0 0 1px var(--posts-primary);
+  font-weight: 700;
+}
+
+[aria-selected="true"] > .day:not(:disabled) {
+  background: var(--posts-primary);
+  color: var(--posts-text);
+  font-weight: 700;
+}
+
+.day:disabled {
+  color: #c4c7cd;
+  cursor: not-allowed;
+}
+
+.calendarFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--posts-border);
+}
+
+.calendarLink {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.dateTrigger:focus-visible,
+.calendarNav:focus-visible,
+.day:focus-visible,
+.calendarLink:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
 }

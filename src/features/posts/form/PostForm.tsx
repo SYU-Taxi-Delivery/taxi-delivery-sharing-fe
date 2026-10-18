@@ -15,6 +15,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { PostCard } from "../PostCard";
+import { DatePicker } from "./DatePicker";
 import { toPostSummaries, type PostSummary } from "../posts";
 import {
   CAPACITY,
@@ -477,17 +478,16 @@ export function PostForm({
             label={`${timeLabel} 날짜`}
             error={shown("date")}
           >
-            <input
+            <DatePicker
               id={id("date")}
-              data-field="date"
-              className={styles.input}
-              type="date"
-              min={today}
+              name="date"
+              label={`${timeLabel} 날짜`}
               value={active.date}
+              min={today}
               readOnly={coreLocked}
-              aria-invalid={shown("date") ? true : undefined}
-              aria-describedby={describe(id, "date", shown("date"), coreLocked)}
-              onChange={(event) => setActive("date", event.target.value)}
+              invalid={!!shown("date")}
+              describedBy={describe(id, "date", shown("date"), coreLocked)}
+              onChange={(value) => setActive("date", value)}
               onBlur={() => touch("date")}
             />
           </Field>

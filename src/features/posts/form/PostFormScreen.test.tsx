@@ -214,6 +214,29 @@ describe("작성 폼", () => {
     expect(router.push).toHaveBeenCalledWith("/posts/new-1");
   });
 
+  it("AC-UI-FORM-02: 달력에서 고른 날짜와 시간으로 기준시각을 만든다", async () => {
+    const operations = ops();
+    await setup(operations);
+    fillTaxi();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("출발 날짜"));
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(
+          screen.getByRole("dialog", { name: "출발 날짜 선택" }),
+        ).getByRole("button", { name: /10월 7일 수요일/ }),
+      );
+    });
+    expect(screen.getByLabelText("출발 날짜")).toHaveTextContent(
+      "2026. 10. 7. (수)",
+    );
+    await submit();
+    expect(operations.create).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceTime: "2026-10-07T18:00:00+09:00" }),
+    );
+  });
+
   it("AC-DISC-005-01, AC-DISC-005-10~11: 유사 모집을 보여 주고 상세 이동 또는 새로 작성을 고르게 한다", async () => {
     const operations = ops({
       findSimilar: vi.fn(async () => [
