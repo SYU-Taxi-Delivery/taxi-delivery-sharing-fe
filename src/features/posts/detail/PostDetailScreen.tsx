@@ -213,7 +213,13 @@ function DetailView({
   const [latest, setLatest] = useState(initial);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
+  const reportNoticeRef = useRef<HTMLParagraphElement>(null);
   const id = initial.id;
+
+  // The report button disappears after reporting, so focus moves to the result.
+  useEffect(() => {
+    if (reportNotice) reportNoticeRef.current?.focus();
+  }, [reportNotice]);
 
   const participationOps = useMemo(
     () => ({
@@ -432,7 +438,12 @@ function DetailView({
       {!author && (
         <div className={styles.report}>
           {reportNotice && (
-            <p role="status" className={styles.success}>
+            <p
+              ref={reportNoticeRef}
+              tabIndex={-1}
+              role="status"
+              className={styles.success}
+            >
               {reportNotice}
             </p>
           )}
