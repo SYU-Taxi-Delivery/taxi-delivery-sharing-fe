@@ -126,6 +126,12 @@ function toPostSummary(value: unknown): PostSummary {
   return { ...base, type, restaurantName, pickupLocation };
 }
 
+/** Validates a plain list of cards, e.g. similar-post candidates. */
+export function toPostSummaries(value: unknown): PostSummary[] {
+  if (!Array.isArray(value)) throw new InvalidPostData();
+  return value.map(toPostSummary);
+}
+
 /** Validates the whole page; one broken card makes the page an error. */
 export function toPostPage(value: unknown): PostPage {
   if (typeof value !== "object" || value === null) throw new InvalidPostData();
