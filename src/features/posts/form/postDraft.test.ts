@@ -93,6 +93,21 @@ describe("validateDraft: 기준시각", () => {
     expect(errors.time === undefined).toBe(allowed);
   });
 
+  it("5분 단위가 아닌 시간을 막고, 수정에서 그대로 둔 기존 시간은 허용한다", () => {
+    expect(
+      validateDraft(taxiDraft({ time: "18:03" }), { nowMs: NOW }).time,
+    ).toBe("출발 시간은 5분 단위로 선택해 주세요.");
+    expect(
+      validateDraft(taxiDraft({ time: "18:05" }), { nowMs: NOW }).time,
+    ).toBeUndefined();
+    expect(
+      validateDraft(taxiDraft({ time: "18:03" }), {
+        nowMs: NOW,
+        originalReferenceTime: "2026-10-05T18:03:00+09:00",
+      }).time,
+    ).toBeUndefined();
+  });
+
   it("날짜·시간 미선택을 각각 안내한다", () => {
     expect(validateDraft(taxiDraft({ date: "" }), { nowMs: NOW }).date).toBe(
       "출발 날짜를 선택해 주세요.",
@@ -111,7 +126,7 @@ describe("validateDraft: 기준시각", () => {
       }).time,
     ).toBeUndefined();
     expect(
-      validateDraft(taxiDraft({ time: "18:04" }), {
+      validateDraft(taxiDraft({ time: "18:05" }), {
         nowMs: at("17:55:00"),
         originalReferenceTime: "2026-10-05T18:00:00+09:00",
       }).time,

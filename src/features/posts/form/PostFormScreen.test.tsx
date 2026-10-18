@@ -73,11 +73,18 @@ async function setup(
 const type = (label: string | RegExp, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+function pickTime(label: string, hour: string, minute: string) {
+  fireEvent.click(screen.getByLabelText(label));
+  const picker = screen.getByRole("dialog", { name: `${label} 선택` });
+  fireEvent.click(within(picker).getByRole("option", { name: `${hour}시` }));
+  fireEvent.click(within(picker).getByRole("option", { name: `${minute}분` }));
+}
+
 function fillTaxi() {
   type("제목", "정문에서 석계역까지");
   type("출발지", "삼육대학교 정문");
   type("도착지", "석계역 1번 출구");
-  type("출발 시간", "18:00");
+  pickTime("출발 시간", "18", "00");
   type("함께할 학생에게 전할 말", "정문 앞에서 만나요");
 }
 
@@ -183,16 +190,37 @@ describe("작성 폼", () => {
     expect(screen.getByText("전할 말을 입력해 주세요.")).toBeVisible();
   });
 
-  it("AC-POST-002-05: 정확히 10분 뒤 시각은 막는다", async () => {
-    const operations = ops();
-    await setup(operations);
-    fillTaxi();
-    type("출발 시간", "17:40");
-    await submit();
-    expect(operations.create).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
-      /10분이 넘게 남은/,
+  it("AC-POST-002-05: 오늘은 정확히 10분 뒤까지의 시각을 고를 수 없다", async () => {
+    await setup(ops());
+    fireEvent.click(screen.getByLabelText("출발 시간"));
+    const picker = screen.getByRole("dialog", { name: "출발 시간 선택" });
+    expect(
+      within(picker).getByRole("option", { name: "16시" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(within(picker).getByRole("option", { name: "17시" }));
+    expect(
+      within(picker).getByRole("option", { name: "40분" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      within(picker).getByRole("option", { name: "45분" }),
+    ).not.toHaveAttribute("aria-disabled");
+    fireEvent.click(within(picker).getByRole("option", { name: "40분" }));
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("시간 선택");
+    fireEvent.click(within(picker).getByRole("option", { name: "45분" }));
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("17:45");
+  });
+
+  it("다른 날짜를 고르면 그날의 모든 시각을 고를 수 있다", async () => {
+    await setup(ops());
+    fireEvent.click(screen.getByLabelText("출발 날짜"));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "출발 날짜 선택" })).getByRole(
+        "button",
+        { name: /10월 6일/ },
+      ),
     );
+    pickTime("출발 시간", "00", "05");
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("00:05");
   });
 
   it("AC-POST-002-01, AC-DISC-005-12: 유사 모집이 없으면 등록 후 생성된 상세로 이동한다", async () => {
@@ -506,7 +534,10 @@ describe("수정 폼", () => {
     await edit(operations);
     expect(screen.getByText(/참여한 학생이 있어/)).toBeVisible();
     expect(screen.getByLabelText("출발지")).toHaveAttribute("readonly");
-    expect(screen.getByLabelText("출발 시간")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("출발 시간")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     expect(
       screen.getByRole("button", { name: "정원 1명 줄이기" }),
     ).toBeDisabled();

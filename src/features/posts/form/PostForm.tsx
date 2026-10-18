@@ -16,13 +16,17 @@ import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { PostCard } from "../PostCard";
 import { DatePicker } from "./DatePicker";
+import { TimePicker } from "./TimePicker";
 import { toPostSummaries, type PostSummary } from "../posts";
 import {
   CAPACITY,
   FIELD_ORDER,
   LIMITS,
+  MIN_LEAD_MS,
+  MINUTE_STEP,
   PostFormError,
   toPostRequest,
+  toReferenceTime,
   toSeoulParts,
   toUpdateRequest,
   usedLength,
@@ -496,29 +500,35 @@ export function PostForm({
             label={`${timeLabel} 시간`}
             error={shown("time")}
           >
-            <input
+            <TimePicker
               id={id("time")}
-              data-field="time"
-              className={styles.input}
-              type="time"
-              step={60}
+              name="time"
+              label={`${timeLabel} 시간`}
               value={active.time}
+              step={MINUTE_STEP}
               readOnly={coreLocked}
-              aria-invalid={shown("time") ? true : undefined}
-              aria-describedby={describe(
+              invalid={!!shown("time")}
+              describedBy={describe(
                 id,
                 "time",
                 shown("time"),
                 coreLocked,
                 id("time-help"),
               )}
-              onChange={(event) => setActive("time", event.target.value)}
+              isDisabled={(time) => {
+                const reference = toReferenceTime(active.date, time);
+                if (!reference) return false;
+                if (reference === originalReferenceTime) return false;
+                return Date.parse(reference) - nowMs <= MIN_LEAD_MS;
+              }}
+              onChange={(value) => setActive("time", value)}
               onBlur={() => touch("time")}
             />
           </Field>
         </div>
         <p id={id("time-help")} className={`${styles.help} -mt-3`}>
-          서울 시간 기준 · 지금부터 10분이 넘게 남은 시각만 정할 수 있어요.
+          서울 시간 기준 · 5분 단위 · 지금부터 10분이 넘게 남은 시각만 정할 수
+          있어요.
         </p>
 
         <fieldset className={styles.field}>

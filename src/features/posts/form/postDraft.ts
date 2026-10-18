@@ -17,6 +17,9 @@ export const CAPACITY: Record<PostType, { min: number; max: number }> = {
 /** A reference time must be more than this far in the future. */
 export const MIN_LEAD_MS = 10 * 60 * 1000;
 
+/** Times are picked in 5-minute steps (product decision; the API accepts minutes). */
+export const MINUTE_STEP = 5;
+
 export type CommonDraft = {
   title: string;
   description: string;
@@ -282,12 +285,13 @@ export function validateDraft(
       const reference = toReferenceTime(active.date, active.time);
       if (!reference) {
         errors.date = `${label} 날짜와 시간을 다시 확인해 주세요.`;
-      } else if (
-        reference !== originalReferenceTime &&
-        Date.parse(reference) - nowMs <= MIN_LEAD_MS
-      ) {
-        // Exactly 10 minutes ahead is still too close (AC-POST-002-05).
-        errors.time = `${label} 시각은 지금부터 10분이 넘게 남은 시각으로 정해 주세요.`;
+      } else if (reference !== originalReferenceTime) {
+        if (Number(active.time.slice(3)) % MINUTE_STEP !== 0) {
+          errors.time = `${label} 시간은 ${MINUTE_STEP}분 단위로 선택해 주세요.`;
+        } else if (Date.parse(reference) - nowMs <= MIN_LEAD_MS) {
+          // Exactly 10 minutes ahead is still too close (AC-POST-002-05).
+          errors.time = `${label} 시각은 지금부터 10분이 넘게 남은 시각으로 정해 주세요.`;
+        }
       }
     }
   }
