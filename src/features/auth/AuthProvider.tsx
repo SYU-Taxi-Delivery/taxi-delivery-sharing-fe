@@ -128,6 +128,8 @@ export function AuthProvider({
     return () => {
       mounted.current = false;
       sequence.current += 1;
+      // The abandoned request must not block the next mount's check (Strict Mode).
+      checking.current = false;
     };
   }, [check]);
 

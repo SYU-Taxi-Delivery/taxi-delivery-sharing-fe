@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import type { AuthOperations, CurrentUser } from "./auth";
@@ -100,6 +100,23 @@ describe("AuthProvider 초기 확인", () => {
     await flush();
     expect(state()).toHaveTextContent("unavailable:-");
   });
+});
+
+it("Strict Mode의 재마운트 후에도 초기 확인을 마친다", async () => {
+  const me = vi.fn(async () => student);
+  function Probe() {
+    const { status } = useAuth();
+    return <p data-testid="strict">{status}</p>;
+  }
+  render(
+    <StrictMode>
+      <AuthProvider operations={{ me, login: vi.fn(), logout: vi.fn() }}>
+        <Probe />
+      </AuthProvider>
+    </StrictMode>,
+  );
+  await act(async () => {});
+  expect(screen.getByTestId("strict")).toHaveTextContent("authenticated");
 });
 
 describe("AuthProvider 재확인", () => {
