@@ -233,7 +233,10 @@ export function visibleDetails(
 }
 
 /** Effective status: an active post past its reference time is finished. */
-export function effectiveStatus(detail: PostDetail, nowMs: number): PostStatus {
+export function effectiveStatus(
+  detail: Pick<PostDetail, "status" | "referenceTime">,
+  nowMs: number,
+): PostStatus {
   const active = ["OPEN", "FULL", "CLOSED"].includes(detail.status);
   return active && nowMs >= Date.parse(detail.referenceTime)
     ? "FINISHED"
