@@ -1,0 +1,479 @@
+.back {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--posts-muted);
+}
+
+.form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.field {
+  display: grid;
+  /* Keep label and box at the top even when a sibling column shows an error. */
+  align-content: start;
+  gap: 0.5rem;
+  min-width: 0;
+  border: 0;
+}
+
+.label,
+.sectionTitle {
+  font-weight: 700;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.counter,
+.help {
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+}
+
+.counter[data-over="true"] {
+  color: var(--posts-danger);
+  font-weight: 700;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0.875rem;
+  border: 1px solid #dcdee3;
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 1rem;
+}
+
+.input {
+  min-height: 3rem;
+}
+
+.textarea {
+  min-height: 7.5rem;
+  padding: 0.75rem 0.875rem;
+  resize: vertical;
+}
+
+.input[aria-invalid="true"],
+.textarea[aria-invalid="true"] {
+  border-color: var(--posts-danger);
+}
+
+input.input:read-only,
+.textarea:read-only {
+  background: var(--posts-soft);
+  color: var(--posts-muted);
+}
+
+.error {
+  color: var(--posts-danger);
+  font-size: 0.75rem;
+}
+
+.categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.category {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid #dcdee3;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.category:has(input:checked) {
+  border-color: var(--posts-primary);
+  background: #f6fbec;
+  font-weight: 700;
+}
+
+.category:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.category:has(input:disabled:not(:checked)) {
+  opacity: 0.5;
+}
+
+.category:has(input:focus-visible) {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.category input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.divider {
+  height: 1px;
+  background: var(--posts-border);
+}
+
+/* Date and time stack full width as in the Figma form. */
+.datetime {
+  display: grid;
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+  align-items: center;
+  min-height: 3rem;
+  border: 1px solid #dcdee3;
+  border-radius: 0.5rem;
+}
+
+.stepper button {
+  min-height: 3rem;
+  font-size: 1.25rem;
+}
+
+.stepper button:disabled {
+  opacity: 0.3;
+}
+
+.stepper output {
+  font-weight: 700;
+  text-align: center;
+}
+
+.notice {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--posts-soft);
+  color: var(--posts-text);
+}
+
+.alert {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f3c2c2;
+  border-radius: 0.5rem;
+  background: #fff6f6;
+  color: var(--posts-danger);
+}
+
+.similar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--posts-primary);
+  border-radius: 0.75rem;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.primary,
+.secondary,
+.linkButton {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.primary {
+  background: var(--posts-primary);
+  color: var(--posts-text);
+}
+
+.secondary {
+  border: 1px solid #dcdee3;
+  background: white;
+}
+
+.linkButton {
+  min-height: 2.75rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.primary:disabled,
+.secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dialog {
+  width: min(22rem, calc(100vw - 2rem));
+  margin: auto;
+  padding: 1.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: var(--posts-text);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.back:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible,
+.stepper button:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.datePicker {
+  position: relative;
+}
+
+.dateTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dateTrigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dateTrigger[data-readonly="true"] {
+  background: var(--posts-soft);
+  color: var(--posts-muted);
+  cursor: not-allowed;
+}
+
+.dateTrigger[data-invalid="true"] {
+  border-color: var(--posts-danger);
+}
+
+.dateTrigger[aria-expanded="true"] {
+  border-color: var(--posts-primary);
+}
+
+.placeholder {
+  color: #9ea2aa;
+}
+
+.calendar {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 0.75rem;
+  width: min(22rem, 100%);
+  padding: 1rem;
+  border: 1px solid var(--posts-border);
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.calendarHeader {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+}
+
+.calendarTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendarNav {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--posts-text);
+  font-size: 1.5rem;
+}
+
+.calendarNav:hover:not(:disabled) {
+  background: var(--posts-soft);
+}
+
+.calendarNav:disabled {
+  opacity: 0.3;
+}
+
+.calendarGrid {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.calendarRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  justify-items: center;
+}
+
+.weekday {
+  padding-bottom: 0.25rem;
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.weekday[data-sunday="true"],
+.day[data-sunday="true"]:not(:disabled) {
+  color: #d64545;
+}
+
+.day {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--posts-text);
+  font-size: 0.875rem;
+}
+
+.day:hover:not(:disabled) {
+  background: #f6fbec;
+}
+
+.day[data-today="true"] {
+  box-shadow: inset 0 0 0 1px var(--posts-primary);
+  font-weight: 700;
+}
+
+[aria-selected="true"] > .day:not(:disabled) {
+  background: var(--posts-primary);
+  color: var(--posts-text);
+  font-weight: 700;
+}
+
+.day:disabled {
+  color: #c4c7cd;
+  cursor: not-allowed;
+}
+
+.calendarFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--posts-border);
+}
+
+.calendarLink {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.dateTrigger:focus-visible,
+.calendarNav:focus-visible,
+.day:focus-visible,
+.calendarLink:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.timeColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.timeColumn {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.timeHeading {
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.timeList {
+  position: relative;
+  display: grid;
+  gap: 0.125rem;
+  max-height: 13.5rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  background: var(--posts-soft);
+  overscroll-behavior: contain;
+}
+
+.timeList:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.timeOption {
+  display: grid;
+  min-height: 2.75rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  color: var(--posts-text);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.timeOption:hover:not([aria-disabled="true"]) {
+  background: #f6fbec;
+}
+
+.timeOption[data-active="true"] {
+  box-shadow: inset 0 0 0 2px var(--posts-focus);
+}
+
+.timeOption[aria-selected="true"] {
+  background: var(--posts-primary);
+  font-weight: 700;
+}
+
+.timeOption[aria-disabled="true"] {
+  color: #c4c7cd;
+  cursor: not-allowed;
+}
+
+.timeHint {
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
