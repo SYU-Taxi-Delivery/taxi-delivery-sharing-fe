@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getParticipationAvailability,
   hideUnavailableDetails,
+  participationDeadlineMs,
   type ParticipationSnapshot,
 } from "./participation";
 
@@ -27,6 +28,9 @@ export function useParticipation(
   );
   const [busy, setBusy] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
+  const needsRefreshRef = useRef(false);
+  // A focus/visibility recheck in flight; a click arriving meanwhile waits for it.
+  const refreshing = useRef<Promise<void> | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const snapshotRef = useRef(snapshot);
   const operationsRef = useRef(operations);
@@ -59,7 +63,10 @@ export function useParticipation(
 
   useEffect(() => {
     const referenceMs = Date.parse(snapshot.referenceTime);
-    const deadline = referenceMs - 600_000;
+    const deadline = participationDeadlineMs({
+      referenceTime: snapshot.referenceTime,
+      participationDeadline: snapshot.participationDeadline,
+    });
     const boundary = nowMs < deadline ? deadline : referenceMs;
     const remaining = boundary - serverNow();
     if (!Number.isFinite(remaining) || nowMs >= referenceMs) return;
@@ -74,7 +81,13 @@ export function useParticipation(
       Math.min(Math.max(0, remaining), 2_147_483_647),
     );
     return () => window.clearTimeout(timer);
-  }, [snapshot.referenceTime, snapshot.serverTime, nowMs, serverNow]);
+  }, [
+    snapshot.referenceTime,
+    snapshot.participationDeadline,
+    snapshot.serverTime,
+    nowMs,
+    serverNow,
+  ]);
 
   const readLatest = useCallback(
     async (requestId: number, outcome?: Outcome) => {
@@ -93,6 +106,7 @@ export function useParticipation(
         };
         setSnapshot(visible);
         setNowMs(clock.current.serverMs);
+        needsRefreshRef.current = false;
         setNeedsRefresh(false);
         if (outcome?.confirmed) {
           setFeedback({
@@ -123,6 +137,7 @@ export function useParticipation(
         }
       } catch {
         if (!current()) return;
+        needsRefreshRef.current = true;
         setNeedsRefresh(true);
         setFeedback({
           tone: "error",
@@ -140,16 +155,28 @@ export function useParticipation(
     [],
   );
 
-  const refresh = useCallback(async () => {
-    if (locked.current || !mounted.current) return;
-    locked.current = true;
-    setBusy(true);
-    await readLatest(++sequence.current);
-  }, [readLatest]);
+  const reload = useCallback(
+    async (silent: boolean) => {
+      if (locked.current || !mounted.current) return;
+      locked.current = true;
+      // A background recheck keeps the buttons usable; a click waits for it.
+      if (!silent) setBusy(true);
+      const latest = readLatest(++sequence.current);
+      refreshing.current = latest;
+      try {
+        await latest;
+      } finally {
+        if (refreshing.current === latest) refreshing.current = null;
+      }
+    },
+    [readLatest],
+  );
+
+  const refresh = useCallback(() => reload(false), [reload]);
 
   useEffect(() => {
     const recheck = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") void reload(true);
     };
     window.addEventListener("focus", recheck);
     document.addEventListener("visibilitychange", recheck);
@@ -157,11 +184,14 @@ export function useParticipation(
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", recheck);
     };
-  }, [refresh]);
+  }, [reload]);
 
   const mutate = useCallback(
     async (action: Action) => {
-      if (locked.current || !mounted.current || needsRefresh) return;
+      // Clicking back into the window fires focus first; finish that recheck
+      // instead of silently dropping the click.
+      if (refreshing.current) await refreshing.current;
+      if (locked.current || !mounted.current || needsRefreshRef.current) return;
       const availability = getParticipationAvailability(
         snapshotRef.current,
         serverNow(),
@@ -200,7 +230,7 @@ export function useParticipation(
       }
       await readLatest(requestId, { action, confirmed });
     },
-    [needsRefresh, readLatest, serverNow],
+    [readLatest, serverNow],
   );
 
   return {

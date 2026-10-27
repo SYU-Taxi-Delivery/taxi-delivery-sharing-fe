@@ -15,9 +15,34 @@ export type ParticipationSnapshot = {
   capacity: number;
   viewerRelation: ViewerRelation;
   joinable: boolean;
+  /** Server join/cancel cutoff (ISO with offset); T-10 is assumed when absent. */
+  participationDeadline?: string;
   participantNames?: readonly string[];
   communicationUrl?: string;
 };
+
+const FALLBACK_CUTOFF_MS = 10 * 60 * 1000;
+const offsetInstant = /(?:Z|[+-]\d{2}:\d{2})$/i;
+
+type DeadlineSource = { referenceTime: string; participationDeadline?: string };
+
+/** The server's join/cancel cutoff; falls back to T-10 when it is missing or invalid. */
+export function participationDeadlineMs(source: DeadlineSource): number {
+  const server = source.participationDeadline;
+  const serverMs =
+    server && offsetInstant.test(server) ? Date.parse(server) : Number.NaN;
+  return Number.isFinite(serverMs)
+    ? serverMs
+    : Date.parse(source.referenceTime) - FALLBACK_CUTOFF_MS;
+}
+
+/** Minutes between the cutoff and the reference time, for help text. */
+export function cutoffMinutes(source: DeadlineSource): number {
+  return Math.round(
+    (Date.parse(source.referenceTime) - participationDeadlineMs(source)) /
+      60_000,
+  );
+}
 
 export function getParticipationAvailability(
   snapshot: ParticipationSnapshot,
@@ -27,7 +52,7 @@ export function getParticipationAvailability(
   reason: string | null;
   deadline: number;
 } {
-  const deadline = Date.parse(snapshot.referenceTime) - 10 * 60 * 1000;
+  const deadline = participationDeadlineMs(snapshot);
   const unavailable = { action: null, reason: null, deadline };
   const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i;
 
@@ -76,13 +101,13 @@ export function getParticipationAvailability(
       reason: "모집 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
     };
   }
-  if (nowMs >= deadline + 600_000) {
+  if (nowMs >= Date.parse(snapshot.referenceTime)) {
     return { ...unavailable, reason: "완료된 모집입니다." };
   }
   if (nowMs >= deadline) {
     return {
       ...unavailable,
-      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} 10분 전부터 참여 신청과 취소가 마감됩니다.`,
+      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(snapshot)}분 전부터 참여 신청과 취소가 마감됩니다.`,
     };
   }
   if (snapshot.viewerRelation === "JOINED") {

@@ -13,13 +13,15 @@ type DetailBase = {
   description: string;
   status: PostStatus;
   referenceTime: string;
-  /** Server time of this response; drives the T-10 and T boundaries. */
+  /** Server time of this response; drives the cutoff and T boundaries. */
   serverTime: string;
   createdAt?: string;
   capacity: number;
   /** Includes the author. */
   currentMemberCount: number;
   joinable: boolean;
+  /** Server join/cancel cutoff, ISO with offset. */
+  participationDeadline?: string;
   relation: DetailRelation;
   authorName: string;
   /** Display names, author first. Only sent to the author and JOINED members. */
@@ -169,6 +171,9 @@ export function toPostDetail(value: unknown): PostDetail {
     capacity,
     currentMemberCount: current,
     joinable: raw.joinable,
+    ...(instant(raw.participationDeadline)
+      ? { participationDeadline: instant(raw.participationDeadline)! }
+      : {}),
     relation,
     authorName: text(raw.authorName)!,
     ...(names ? { participantNames: names as string[] } : {}),
@@ -207,6 +212,7 @@ export function toSnapshot(detail: PostDetail): ParticipationSnapshot {
     capacity: detail.capacity,
     viewerRelation: detail.relation,
     joinable: detail.joinable,
+    participationDeadline: detail.participationDeadline,
     participantNames: detail.participantNames,
     communicationUrl: detail.communicationUrl,
   });
@@ -249,7 +255,7 @@ export type AuthorActions = {
   cancel: boolean;
 };
 
-/** Author management; T-10 does not apply, only the reference time T (POST-005/006). */
+/** Author management; the participation cutoff does not apply, only T (POST-005/006). */
 export function authorActions(
   detail: PostDetail,
   nowMs: number,

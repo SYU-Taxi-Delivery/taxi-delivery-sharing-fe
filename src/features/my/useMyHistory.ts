@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ApiError } from "@/lib/api";
+import { participationDeadlineMs } from "@/features/participation/participation";
 import {
   toMyHistory,
   type MyHistory,
@@ -107,7 +108,7 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
     for (const item of history.content) {
       if (item.status === "REMOVED") continue;
       const referenceMs = Date.parse(item.referenceTime);
-      const deadline = referenceMs - 600_000;
+      const deadline = participationDeadlineMs(item);
       if (nowMs < deadline) boundary = Math.min(boundary, deadline);
       else if (nowMs < referenceMs) boundary = Math.min(boundary, referenceMs);
     }

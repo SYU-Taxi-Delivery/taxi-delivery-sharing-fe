@@ -6,6 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
+import {
+  cutoffMinutes,
+  participationDeadlineMs,
+} from "@/features/participation/participation";
 import { ParticipationPanel } from "@/features/participation/ParticipationPanel";
 import { useParticipation } from "@/features/participation/useParticipation";
 import { AppShell } from "../AppShell";
@@ -332,7 +336,7 @@ function DetailView({
         />
         <Row
           term="참여 취소 기한"
-          value={`${shortDateTime.format(reference - 600_000)}까지`}
+          value={`${shortDateTime.format(participationDeadlineMs(detail))}까지`}
         />
         {!taxi && detail.orderGuide && (
           <Row term="주문 안내" value={detail.orderGuide} multiline />
@@ -429,7 +433,8 @@ function DetailView({
             참여할 수 없어요.
           </li>
           <li>
-            참여 취소는 {taxi ? "출발" : "주문 마감"} 10분 전까지 할 수 있어요.
+            참여 취소는 {taxi ? "출발" : "주문 마감"} {cutoffMinutes(detail)}분
+            전까지 할 수 있어요.
           </li>
           <li>본인이 작성한 글에는 참여할 수 없어요.</li>
         </ul>
