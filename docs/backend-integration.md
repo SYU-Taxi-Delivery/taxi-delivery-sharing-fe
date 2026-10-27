@@ -1,7 +1,7 @@
 # 백엔드 연동 (#18)
 
 기준 백엔드: [SYU-Taxi-Delivery/taxi-delivery-sharing](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing)
-`codex/post-api` 브랜치(PR #12, 2026-10-27 기준 미병합)의 `docs/post-api.md`,
+`main`(PR #13으로 `codex/post-api` 병합, 2026-10-27)의 `docs/post-api.md`,
 `docs/participation-api.md`, `docs/running.md`.
 
 ## 구조
