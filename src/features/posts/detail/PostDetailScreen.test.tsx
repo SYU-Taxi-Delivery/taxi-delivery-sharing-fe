@@ -260,6 +260,87 @@ describe("상세 조회", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("로그인이 만료됐어요");
   });
 
+  it.each([
+    ["focus", new ApiError(401, "private")],
+    ["focus", new ApiError(403, "private")],
+    ["focus", new PostDetailError("forbidden")],
+    ["focus", new ApiError(404, "private")],
+    ["focus", new PostDetailError("notFound")],
+    ["manual", new ApiError(401, "private")],
+    ["manual", new ApiError(403, "private")],
+    ["manual", new PostDetailError("forbidden")],
+    ["manual", new ApiError(404, "private")],
+    ["manual", new PostDetailError("notFound")],
+  ] as const)(
+    "%s 재조회 권한·삭제 오류 %s는 기존 명단과 소통 링크를 제거한다",
+    async (trigger, error) => {
+      const load = vi
+        .fn<PostDetailOperations["load"]>()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockRejectedValue(error);
+      if (trigger === "manual")
+        load.mockRejectedValueOnce(new ApiError(500, "offline"));
+      await setup(ops({ load }));
+      expect(screen.getByText("이서연")).toBeVisible();
+      expect(
+        screen.getByRole("link", { name: /소통 링크 열기/ }),
+      ).toBeVisible();
+      await act(async () => window.dispatchEvent(new Event("focus")));
+      if (trigger === "manual") {
+        await act(async () => {
+          fireEvent.click(
+            screen.getByRole("button", { name: "최신 상태 다시 조회" }),
+          );
+        });
+      }
+      expect(document.body).not.toHaveTextContent("이서연");
+      expect(
+        screen.queryByRole("link", { name: /소통 링크/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          name:
+            error instanceof ApiError && error.status === 401
+              ? "로그인이 만료됐어요"
+              : (error instanceof ApiError && error.status === 404) ||
+                  (error instanceof PostDetailError &&
+                    error.kind === "notFound")
+                ? "모집을 찾을 수 없어요"
+                : "접근 권한이 없어요",
+        }),
+      ).toBeVisible();
+      expect(document.body).not.toHaveTextContent("private");
+    },
+  );
+
+  it("이전 사용자 상세의 늦은 401은 새 사용자를 로그아웃하지 않는다", async () => {
+    let fail!: (error: unknown) => void;
+    let user = { id: "1", displayName: "이전 사용자", role: "STUDENT" };
+    const load = vi
+      .fn<PostDetailOperations["load"]>()
+      .mockResolvedValueOnce(post({ relation: "JOINED" }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            fail = reject;
+          }),
+      )
+      .mockResolvedValue(post({ relation: "JOINED" }));
+    render(
+      <AuthProvider operations={{ ...auth, me: async () => user }}>
+        <PostDetailScreen postId="p1" operations={ops({ load })} />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+    user = { id: "2", displayName: "새 사용자", role: "STUDENT" };
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(screen.getByRole("button", { name: "새 사용자님" })).toBeVisible();
+    await act(async () => fail(new ApiError(401, "old session")));
+    expect(screen.getByRole("button", { name: "새 사용자님" })).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "로그인이 만료됐어요" }),
+    ).not.toBeInTheDocument();
+  });
   it("AC-UI-ERROR-01: 조회 실패는 다시 불러오기를 제공한다", async () => {
     const load = vi
       .fn<PostDetailOperations["load"]>()

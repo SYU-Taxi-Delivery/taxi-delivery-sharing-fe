@@ -412,6 +412,51 @@ describe("server clock", () => {
     expect(result.current.availability.action).toBeNull();
   });
 
+  it("a join clicked while the focus recheck runs waits for it instead of being dropped", async () => {
+    const { result, operations } = setup();
+    let finish: (value: ParticipationSnapshot) => void = () => {};
+    vi.mocked(operations.refresh).mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(operations.refresh).toHaveBeenCalledTimes(1);
+    // The background recheck must not disable the button the user is clicking.
+    expect(result.current.busy).toBe(false);
+    let joining: Promise<void> = Promise.resolve();
+    act(() => {
+      joining = result.current.join();
+    });
+    expect(operations.join).toHaveBeenCalledTimes(0);
+    await act(async () => {
+      finish(initial);
+      await joining;
+    });
+    expect(operations.join).toHaveBeenCalledTimes(1);
+  });
+
+  it("a join waiting on a failed focus recheck is not sent", async () => {
+    const { result, operations } = setup();
+    let fail: (error: Error) => void = () => {};
+    vi.mocked(operations.refresh).mockImplementationOnce(
+      () => new Promise((_, reject) => (fail = reject)),
+    );
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    let joining: Promise<void> = Promise.resolve();
+    act(() => {
+      joining = result.current.join();
+    });
+    await act(async () => {
+      fail(new Error("offline"));
+      await joining;
+    });
+    expect(operations.join).toHaveBeenCalledTimes(0);
+    expect(result.current.needsRefresh).toBe(true);
+  });
+
   it("visible-tab return reads server time and blocks writes after failed recheck", async () => {
     const { result, operations } = setup();
     vi.mocked(operations.refresh).mockRejectedValueOnce(new Error("offline"));

@@ -214,9 +214,9 @@ describe("toMySnapshot", () => {
   );
 });
 
-it("실제 이력을 가장하지 않고 기존 참여 취소 adapter를 재사용한다", async () => {
+it("작성 이력은 API가 없어 가장하지 않고, 참여 취소 adapter를 재사용한다", async () => {
   expect(myHistoryOperations.leave).toBe(postDetailOperations.leave);
-  await expect(myHistoryOperations.list("participated")).rejects.toBeInstanceOf(
+  await expect(myHistoryOperations.list("created")).rejects.toBeInstanceOf(
     MyHistoryNotConnectedError,
   );
 });

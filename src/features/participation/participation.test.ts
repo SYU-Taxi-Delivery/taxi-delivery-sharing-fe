@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  cutoffMinutes,
   getParticipationAvailability,
+  participationDeadlineMs,
   hideUnavailableDetails,
   type ParticipationSnapshot,
   type ParticipationStatus,
@@ -347,4 +349,33 @@ it("AC-COORD-004-07: 취소 관계로 바뀌면 명단·링크 프로퍼티 자�
   });
   expect(Object.hasOwn(cancelled, "participantNames")).toBe(false);
   expect(Object.hasOwn(cancelled, "communicationUrl")).toBe(false);
+});
+
+describe("서버 참여 마감 시각", () => {
+  it("participationDeadline이 오면 그 시각부터 신청·취소를 막고 안내 분을 맞춘다", () => {
+    const input = makeSnapshot({
+      viewerRelation: "JOINED",
+      currentMemberCount: 2,
+      participationDeadline: "2026-10-13T17:30:00+09:00",
+    });
+    const cutoff = Date.parse("2026-10-13T17:30:00+09:00");
+    expect(participationDeadlineMs(input)).toBe(cutoff);
+    expect(cutoffMinutes(input)).toBe(30);
+    expect(getParticipationAvailability(input, cutoff - 1).action).toBe(
+      "cancel",
+    );
+    expect(getParticipationAvailability(input, cutoff)).toMatchObject({
+      action: null,
+      reason: expect.stringContaining("30분 전부터"),
+    });
+  });
+
+  it.each([undefined, "invalid", "2026-10-13T17:30:00"])(
+    "participationDeadline=%s이면 T−10으로 판단한다",
+    (participationDeadline) => {
+      const input = makeSnapshot({ participationDeadline });
+      expect(participationDeadlineMs(input)).toBe(deadline);
+      expect(cutoffMinutes(input)).toBe(10);
+    },
+  );
 });

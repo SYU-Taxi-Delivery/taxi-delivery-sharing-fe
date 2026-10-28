@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-/** JSON REST request. Empty responses return undefined; auth follows RequestInit. */
+/** JSON REST request. Empty responses return undefined; cookies are sent by default. */
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
@@ -43,6 +43,8 @@ export async function apiFetch<T = unknown>(
 
   const response = await fetch(`${base.href.replace(/\/+$/, "")}${path}`, {
     cache: "no-store",
+    // The backend authenticates with a session cookie (JSESSIONID).
+    credentials: "include",
     ...options,
     headers,
   });

@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useId } from "react";
-import { getParticipationAvailability } from "@/features/participation/participation";
+import {
+  cutoffMinutes,
+  getParticipationAvailability,
+} from "@/features/participation/participation";
 import { effectiveStatus } from "@/features/posts/detail/postDetail";
 import { postStatusLabel } from "@/features/posts/posts";
 import { toMySnapshot, type MyHistoryItem } from "./myHistory";
@@ -122,8 +125,8 @@ export function MyHistoryCard({
         {active && (author || item.relation === "JOINED") && (
           <p className={styles.meta}>
             {nowMs < availability.deadline
-              ? `${author ? "참여자 취소 기한" : "참여 취소 기한"} ${time.format(availability.deadline)} · 기준시각 10분 전`
-              : "참여 취소 마감 · 기준시각 10분 전부터 취소할 수 없어요."}
+              ? `${author ? "참여자 취소 기한" : "참여 취소 기한"} ${time.format(availability.deadline)} · 기준시각 ${cutoffMinutes(item)}분 전`
+              : `참여 취소 마감 · 기준시각 ${cutoffMinutes(item)}분 전부터 취소할 수 없어요.`}
           </p>
         )}
       </div>

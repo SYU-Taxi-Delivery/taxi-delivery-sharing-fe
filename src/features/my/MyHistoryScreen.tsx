@@ -194,7 +194,7 @@ function History({
       <aside className={styles.help}>
         <Image src="/my/info.svg" width={20} height={20} alt="" />
         <div>
-          <p>참여 취소: 출발·주문 마감 10분 전부터 제한돼요.</p>
+          <p>참여 취소: 각 카드에 표시된 참여 취소 기한까지 가능해요.</p>
           <p>작성한 글의 상세에서 수정·모집 마감·모집 취소가 가능해요.</p>
           <Link href="/posts">모집글 목록으로</Link>
         </div>

@@ -111,5 +111,6 @@ export function toMySnapshot(
     capacity: item.capacity,
     viewerRelation: item.relation,
     joinable: item.joinable,
+    participationDeadline: item.participationDeadline,
   };
 }
