@@ -8,6 +8,7 @@ import type { MyHistoryOperations, MyTab } from "./myHistory";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/my",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("next/font/google", () => ({
   Noto_Sans_KR: () => ({ className: "test-font" }),
