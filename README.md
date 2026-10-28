@@ -1,7 +1,7 @@
 # SYU Taxi · Delivery Frontend
 
-삼육대학교 택시·배달 공유 서비스의 프론트엔드 보일러플레이트입니다.
-백엔드 API와 인증 명세는 미정이며, 서비스 기능과 실제 API 호출은 포함하지 않습니다.
+삼육대학교 택시·배달 공유 서비스의 프론트엔드입니다.
+로그인·모집글·참여 API를 연결했으며, 미제공 API와 남은 계약은 [백엔드 연동 안내](docs/backend-integration.md)에 정리합니다.
 
 ## 기술 구성
 
@@ -70,50 +70,35 @@ src/
 
 ## REST API 연동
 
-API 명세가 확정되면 `.env.local`의 다음 값을 설정합니다.
+같은 출처의 Next.js 프록시로 백엔드를 호출합니다. 로컬 `.env.local` 설정 예시는 다음과 같습니다.
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+BACKEND_ORIGIN=http://localhost:8080
 ```
 
-이 주소는 예시입니다. 실제 백엔드 주소로 변경해 주세요.
+`NEXT_PUBLIC_API_BASE_URL`은 브라우저에서 여는 **프론트엔드 origin**입니다. 어댑터가 이미
+`/api/...` 경로를 사용하므로 끝에 `/api`를 붙이지 않습니다. `BACKEND_ORIGIN`은 Next.js가
+`/api/*`와 `/logout`을 전달할 **백엔드 origin**이며 서버에서만 사용합니다.
+위 주소는 로컬 실행 예시로, 실제 사용 환경의 주소로 바꿉니다. 백엔드 주소가 없으면 프록시를 만들지 않습니다.
 `NEXT_PUBLIC_*`는 빌드 시 브라우저 번들에 포함됩니다. 비밀 값이나 토큰을 넣지 마세요.
-주소에는 HTTP(S) origin과 기본 경로만 사용하며, 인증 정보·쿼리·fragment는 허용하지 않습니다.
+설정은 프로젝트 루트의 `.env.local`에서 읽습니다. 환경변수를 바꾸면 개발 서버를 다시 시작하고,
+배포 환경에서는 다시 빌드·배포합니다.
 
-```ts
-import { ApiError, apiFetch } from "@/lib/api";
-
-// 엔드포인트와 타입은 예시입니다. 확정된 백엔드 명세에 맞춰 작성하세요.
-type Room = { id: number };
-
-try {
-  const room = await apiFetch<Room>("/rooms/1");
-  // 빈 응답이면 undefined이므로 사용 전에 확인하세요.
-  console.log(room);
-} catch (error) {
-  if (error instanceof ApiError) {
-    console.error(error.status); // 원문 응답은 error.body
-  }
-  throw error;
-}
-
-await apiFetch<Room>("/rooms", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({}),
-});
-```
-
-- 경로는 `/`로 시작합니다. 기본 주소의 `/api` 같은 접두 경로를 유지합니다.
+- `apiFetch` 경로는 `/`로 시작하며, 브라우저 요청은 기본적으로 세션 쿠키를 포함합니다.
 - JSON 응답을 반환하고, 204 등 빈 성공 응답은 `undefined`를 반환합니다.
 - HTTP 실패는 상태 코드와 응답 원문을 담은 `ApiError`를 발생시킵니다.
 - 잘못된 JSON, 네트워크 오류, 요청 취소는 원래 오류를 그대로 전달합니다.
 - 기본 `Accept`는 `application/json`, 캐시는 `no-store`이며 호출자가 변경할 수 있습니다.
 - 요청 본문과 `Content-Type`은 호출자가 설정합니다. `FormData`의 `Content-Type`은 직접 설정하지 않습니다.
-- 토큰 저장, 자동 재시도, 쿠키 인증, 자동 갱신은 구현하지 않았습니다. 확정된 인증 명세에 맞춰 추가하세요.
-- 브라우저가 백엔드에 직접 요청하므로 백엔드 CORS에 개발·Vercel 도메인을 허용해야 합니다.
-- 서버에서 쿠키가 필요한 요청은 수신 쿠키를 자동 전달하지 않습니다. 인증 명세 확정 후 별도로 처리합니다.
-- 제네릭 타입은 런타임 응답 검증을 대신하지 않습니다. 실제 계약이 생기면 필요한 경계에서 데이터를 검증하세요.
+- `backendGet`은 성공 envelope와 서버 시각을 확인하고, `backendSend`는 변경 요청에 CSRF 토큰을 붙입니다.
+  서버가 `CSRF_INVALID`로 거절한 요청만 토큰 재조회 후 한 번 재시도하며 네트워크 실패는 재전송하지 않습니다.
+- 같은 출처의 프록시를 사용하면 브라우저의 백엔드 직접 호출과 CORS 허용 설정이 필요하지 않습니다.
+- 현재 사용자 조회 API가 없어 로그인 응답을 브라우저에 기억하고 인증 요청으로 세션 유효 여부만 확인합니다.
+  현재 서버 사용자의 ID·역할을 재조회하는 기능은 남아 있습니다.
+- 제네릭 타입은 런타임 응답 검증을 대신하지 않습니다. 각 기능의 어댑터와 화면 모델에서 검증합니다.
+
+엔드포인트·응답 형식과 미연결 기능은 [백엔드 연동 안내](docs/backend-integration.md)를 참고하세요.
 
 ## 테스트와 CI
 
@@ -232,8 +217,9 @@ Install Command와 Output Directory는 자동 감지 기본값을 유지하고, 
 Vercel Git 연동이 Preview와 Production 배포를 담당하고, GitHub Actions는 검증을 담당합니다.
 CI 통과를 배포나 병합의 필수 조건으로 만들려면 GitHub 브랜치 규칙과 Vercel 배포 검사 설정을 별도로 구성합니다.
 
-API 주소가 정해지면 `NEXT_PUBLIC_API_BASE_URL`을 Development / Preview / Production 환경별로 등록합니다.
-공개 환경변수를 변경하면 새로 배포해야 브라우저 번들에 반영됩니다.
+Development / Preview / Production별로 `NEXT_PUBLIC_API_BASE_URL`에는 해당 프론트엔드 origin을,
+`BACKEND_ORIGIN`에는 연결할 백엔드 origin을 등록합니다. `/api` 접두 경로는 어댑터가 붙입니다.
+환경변수를 변경하면 새로 배포해야 프록시 설정과 브라우저 번들에 반영됩니다.
 
 ## 참고 문서
 
