@@ -25,21 +25,39 @@ const notConnected = async (): Promise<never> => {
  * read. Only id, display name and role are stored, never credentials.
  */
 const USER_KEY = "syu-session-user";
+let fallbackUser: unknown;
+let fallbackStored: string | null | undefined;
 
 function rememberedUser(): unknown {
   try {
-    return JSON.parse(window.localStorage.getItem(USER_KEY) ?? "null");
+    const stored = window.localStorage.getItem(USER_KEY);
+    if (fallbackUser !== undefined && fallbackStored === undefined) {
+      // Recovery cannot establish whether storage changed while reads failed.
+      fallbackUser = null;
+      fallbackStored = stored;
+    }
+    if (fallbackUser !== undefined && stored === fallbackStored) {
+      return fallbackUser;
+    }
+    // A later storage change or clear takes precedence over the page fallback.
+    fallbackUser = undefined;
+    return JSON.parse(stored ?? "null");
   } catch {
-    return null;
+    return fallbackUser ?? null;
   }
 }
 
 function remember(user: unknown) {
+  let stored: string | null | undefined;
   try {
+    stored = window.localStorage.getItem(USER_KEY);
     if (user === null) window.localStorage.removeItem(USER_KEY);
     else window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+    fallbackUser = undefined;
   } catch {
-    // Storage may be blocked; the session then lasts for this page only.
+    // Keep the latest identity (or sign-out) over an unchanged stale value.
+    fallbackUser = user;
+    fallbackStored = stored;
   }
 }
 
