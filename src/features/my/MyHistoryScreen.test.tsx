@@ -363,10 +363,18 @@ describe("my history screen", () => {
     await act(async () => vi.advanceTimersByTime(1_199_000));
     await openCancel();
     await act(async () => vi.advanceTimersByTime(1_000));
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByRole("button", { name: "참여 취소하기" }),
+    ).toBeDisabled();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("10분 전부터");
     await confirmCancel();
-    expect(screen.getByRole("alert")).toHaveTextContent("10분 전부터");
     expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
     expect(operations.leave).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    });
+    expect(rows()[0]).toHaveFocus();
   });
 
   it.each(["FINISHED", "CANCELLED"])(

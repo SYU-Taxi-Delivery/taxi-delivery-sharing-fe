@@ -50,7 +50,8 @@ export function ParticipationPanel({
   );
   const referenceTime = Date.parse(snapshot.referenceTime);
   const hasTime = Number.isFinite(referenceTime);
-  const timeFinished = active && nowMs >= referenceTime;
+  const timeFinished =
+    snapshot.status === "FINISHED" || (active && nowMs >= referenceTime);
   const today =
     hasTime &&
     Number.isFinite(nowMs) &&
