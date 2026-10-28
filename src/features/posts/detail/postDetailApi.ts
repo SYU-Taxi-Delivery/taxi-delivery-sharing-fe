@@ -4,6 +4,7 @@ import {
   backendGet,
   backendSend,
   errorCode,
+  serverTimeNow,
 } from "@/lib/backend";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
 
@@ -65,18 +66,27 @@ export function relationOf(detail: BackendDetail) {
 }
 
 /** Author first, then JOINED members; only the author and JOINED may read it. */
-async function participantNames(id: string): Promise<string[] | undefined> {
+async function participantNames(
+  id: string,
+): Promise<{ names?: string[]; evaluatedAt: string } | undefined> {
   try {
-    const { data } = await backendGet<{
+    const { data, evaluatedAt } = await backendGet<{
       author?: { displayName?: unknown };
       participants?: { displayName?: unknown }[];
     }>(`${path(id)}/participants`);
-    if (!Array.isArray(data?.participants)) return undefined;
-    return [data.author, ...data.participants].map((member) =>
-      typeof member?.displayName === "string" ? member.displayName : "",
-    );
+    if (!Array.isArray(data?.participants)) return { evaluatedAt };
+    return {
+      evaluatedAt,
+      names: [data.author, ...data.participants].map((member) =>
+        typeof member?.displayName === "string" ? member.displayName : "",
+      ),
+    };
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) throw error;
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    )
+      throw error;
     // Names are optional; the page still shows counts without them.
     return undefined;
   }
@@ -106,13 +116,17 @@ export function fromBackendDetail(
 export const postDetailOperations: PostDetailOperations = {
   load: async (id) => {
     const { detail, evaluatedAt } = await loadBackendDetail(id);
+    const now = serverTimeNow(evaluatedAt);
     const relation = relationOf(detail);
-    const names =
+    const participants =
       (relation === "AUTHOR" || relation === "JOINED") &&
       detail.postStatus !== "CANCELLED"
         ? await participantNames(id)
         : undefined;
-    return fromBackendDetail(detail, evaluatedAt, names);
+    const serverTime = new Date(
+      Math.max(now(), Date.parse(participants?.evaluatedAt ?? evaluatedAt)),
+    ).toISOString();
+    return fromBackendDetail(detail, serverTime, participants?.names);
   },
   // No backend endpoints yet for author close/cancel and reports.
   close: notConnected,

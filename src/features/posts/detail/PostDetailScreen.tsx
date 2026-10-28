@@ -218,6 +218,14 @@ function DetailView({
   const [reportOpen, setReportOpen] = useState(false);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const reportNoticeRef = useRef<HTMLParagraphElement>(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const id = initial.id;
 
   // The report button disappears after reporting, so focus moves to the result.
@@ -230,12 +238,28 @@ function DetailView({
       join: () => operations.join(id),
       cancel: () => operations.leave(id),
       refresh: async () => {
-        const next = toPostDetail(await operations.load(id));
-        setLatest(next);
-        return toSnapshot(next);
+        try {
+          const next = toPostDetail(await operations.load(id));
+          setLatest(next);
+          return toSnapshot(next);
+        } catch (error) {
+          if (mounted.current) {
+            if (error instanceof ApiError && error.status === 401) {
+              handleUnauthorized();
+            } else if (
+              (error instanceof ApiError &&
+                (error.status === 403 || error.status === 404)) ||
+              (error instanceof PostDetailError &&
+                (error.kind === "forbidden" || error.kind === "notFound"))
+            ) {
+              onReload();
+            }
+          }
+          throw error;
+        }
       },
     }),
-    [operations, id],
+    [operations, id, handleUnauthorized, onReload],
   );
   const participation = useParticipation(toSnapshot(initial), participationOps);
   const nowMs = participation.nowMs;

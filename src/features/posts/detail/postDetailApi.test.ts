@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EVALUATED_AT,
   envelope,
@@ -13,7 +13,10 @@ import {
   postDetailOperations,
 } from "./postDetailApi";
 
+beforeEach(() => vi.useFakeTimers());
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -52,10 +55,10 @@ describe("GET /api/posts/{id} 연동", () => {
       relation: "NONE",
       description: "모집 안내",
       authorName: "author",
-      serverTime: EVALUATED_AT,
       participationDeadline: "2026-10-27T11:15:00+09:00",
       reported: false,
     });
+    expect(Date.parse(result.serverTime)).toBe(Date.parse(EVALUATED_AT));
     expect(result).not.toHaveProperty("participantNames");
     expect(calls.some((call) => call.path.endsWith("/participants"))).toBe(
       false,
@@ -83,16 +86,79 @@ describe("GET /api/posts/{id} 연동", () => {
     expect(result.communicationUrl).toBe("https://open.kakao.com/o/abc");
   });
 
-  it("작성자는 AUTHOR 관계로 읽고, 명단 조회 실패는 화면을 막지 않는다", async () => {
+  it("작성자는 AUTHOR 관계로 읽고, 명단의 일시적 실패는 화면을 막지 않는다", async () => {
     fakeBackend({
       "GET /api/posts/1": () => detail({ isAuthor: true, canEdit: true }),
       "GET /api/posts/1/participants": () =>
-        failure(403, "PARTICIPANT_LIST_FORBIDDEN"),
+        failure(503, "PARTICIPATION_TEMPORARILY_UNAVAILABLE"),
     });
     const result = toPostDetail(await postDetailOperations.load("1"));
     expect(result.relation).toBe("AUTHOR");
     expect(result).not.toHaveProperty("participantNames");
   });
+
+  it.each([401, 403])(
+    "명단 조회 %i는 오래된 보호 상세 대신 접근 오류를 전달한다",
+    async (status) => {
+      fakeBackend({
+        "GET /api/posts/1": () =>
+          detail(
+            { myParticipationStatus: "JOINED" },
+            {
+              currentMemberCount: 2,
+              communicationUrl: "https://open.kakao.com/o/abc",
+            },
+          ),
+        "GET /api/posts/1/participants": () =>
+          failure(
+            status,
+            status === 401
+              ? "AUTHENTICATION_REQUIRED"
+              : "PARTICIPANT_LIST_FORBIDDEN",
+          ),
+      });
+      await expect(postDetailOperations.load("1")).rejects.toMatchObject({
+        name: "ApiError",
+        status,
+      });
+    },
+  );
+
+  it.each(["2026-10-27T11:24:59+09:00", "2026-10-27T11:25:10+09:00"])(
+    "명단 조회 지연과 더 최신 서버 시각 %s를 반영해 T 이후 소통 링크를 숨긴다",
+    async (memberTime) => {
+      const detailTime = "2026-10-27T11:24:59+09:00";
+      fakeBackend({
+        "GET /api/posts/1": () =>
+          Response.json({
+            ...envelope({
+              ...taxiDetail,
+              currentMemberCount: 2,
+              communicationUrl: "https://open.kakao.com/o/abc",
+              viewer: { ...taxiDetail.viewer, myParticipationStatus: "JOINED" },
+            }),
+            meta: { evaluatedAt: detailTime },
+          }),
+        "GET /api/posts/1/participants": () => {
+          vi.advanceTimersByTime(4_000);
+          return Response.json({
+            ...envelope({
+              author: { displayName: "author" },
+              participants: [{ displayName: "student1" }],
+            }),
+            meta: { evaluatedAt: memberTime },
+          });
+        },
+      });
+      const result = toPostDetail(await postDetailOperations.load("1"));
+      expect(Date.parse(result.serverTime)).toBe(
+        Math.max(Date.parse(detailTime) + 4_000, Date.parse(memberTime)),
+      );
+      const snapshot = toSnapshot(result);
+      expect(snapshot).not.toHaveProperty("communicationUrl");
+      expect(snapshot.participantNames).toEqual(["author", "student1"]);
+    },
+  );
 
   it.each([
     [404, "POST_NOT_FOUND", "notFound"],

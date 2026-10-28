@@ -7,6 +7,13 @@ import { ApiError, apiFetch } from "./api";
  */
 export type Envelope<T> = { data: T; evaluatedAt: string };
 
+/** Keep a server observation advancing while dependent requests complete. */
+export function serverTimeNow(evaluatedAt: string): () => number {
+  const serverMs = Date.parse(evaluatedAt);
+  const observedAt = performance.now();
+  return () => serverMs + performance.now() - observedAt;
+}
+
 type CsrfToken = { headerName: string; token: string };
 
 const offsetInstant = /(?:Z|[+-]\d{2}:\d{2})$/i;

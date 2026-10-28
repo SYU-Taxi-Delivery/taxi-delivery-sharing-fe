@@ -1,8 +1,13 @@
-import { InvalidBackendResponse, backendGet } from "@/lib/backend";
+import {
+  InvalidBackendResponse,
+  backendGet,
+  serverTimeNow,
+} from "@/lib/backend";
 import { PostDetailError } from "@/features/posts/detail/postDetail";
 import {
   loadBackendDetail,
   postDetailOperations,
+  relationOf,
 } from "@/features/posts/detail/postDetailApi";
 import { fromBackendSummary } from "@/features/posts/postsApi";
 import type { MyHistoryOperations } from "./myHistory";
@@ -33,6 +38,7 @@ export const myHistoryOperations: MyHistoryOperations = {
     const { data, evaluatedAt } = await backendGet<{ items?: unknown }>(
       `/api/users/me/participations?page=0&size=${HISTORY_SIZE}`,
     );
+    const clocks = [serverTimeNow(evaluatedAt)];
     if (!Array.isArray(data?.items)) throw new InvalidBackendResponse();
     const content = await Promise.all(
       (data.items as HistoryItem[]).map(async (item) => {
@@ -43,8 +49,13 @@ export const myHistoryOperations: MyHistoryOperations = {
         }
         if (typeof id !== "string") throw new InvalidBackendResponse();
         try {
-          const { detail } = await loadBackendDetail(id);
-          return { ...(fromBackendSummary(detail) as object), relation };
+          const { detail, evaluatedAt: detailTime } =
+            await loadBackendDetail(id);
+          clocks.push(serverTimeNow(detailTime));
+          return {
+            ...(fromBackendSummary(detail) as object),
+            relation: relationOf(detail),
+          };
         } catch (error) {
           // Removed after the list was read.
           if (error instanceof PostDetailError && error.kind === "notFound") {
@@ -54,7 +65,12 @@ export const myHistoryOperations: MyHistoryOperations = {
         }
       }),
     );
-    return { content, serverTime: evaluatedAt };
+    return {
+      content,
+      serverTime: new Date(
+        Math.max(...clocks.map((now) => now())),
+      ).toISOString(),
+    };
   },
   leave: postDetailOperations.leave,
 };

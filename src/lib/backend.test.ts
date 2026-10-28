@@ -6,6 +6,7 @@ import {
   backendGet,
   backendSend,
   errorCode,
+  serverTimeNow,
 } from "./backend";
 import {
   EVALUATED_AT,
@@ -15,11 +16,20 @@ import {
 } from "@/test/fakeBackend";
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
 describe("backend client", () => {
+  it("서버 시각에 추가 조회 동안의 경과 시간을 더하고 기기 시계 변경은 무시한다", () => {
+    vi.useFakeTimers();
+    const now = serverTimeNow(EVALUATED_AT);
+    vi.advanceTimersByTime(4_000);
+    vi.setSystemTime(new Date("2000-01-01T00:00:00Z"));
+    expect(now()).toBe(Date.parse(EVALUATED_AT) + 4_000);
+  });
+
   it("성공 envelope의 data와 서버 판정 시각을 꺼낸다", async () => {
     fakeBackend({ "GET /api/posts": () => Response.json(envelope({ a: 1 })) });
     await expect(backendGet("/api/posts")).resolves.toEqual({
