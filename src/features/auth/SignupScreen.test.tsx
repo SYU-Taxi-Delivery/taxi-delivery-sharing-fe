@@ -99,6 +99,17 @@ describe("SignupScreen", () => {
     expect(screen.getByLabelText("학교 이메일")).toHaveFocus();
   });
 
+  it("@가 여러 개인 이메일에는 인증번호를 요청하지 않는다", async () => {
+    const operations = await setup();
+    type("학교 이메일", "a@@syuin.ac.kr");
+    await click("인증번호 받기");
+    expect(operations.requestCode).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("학교 이메일")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
   it("AC-AUTH-001-09: 인증번호 발송 후 가입 여부와 무관한 안내와 입력칸을 제공한다", async () => {
     const operations = await setup();
     type("학교 이메일", "  a@syuin.ac.kr ");
@@ -128,6 +139,44 @@ describe("SignupScreen", () => {
     await act(async () => vi.advanceTimersByTime(1_000));
     await click("인증번호 다시 받기");
     expect(operations.requestCode).toHaveBeenCalledTimes(2);
+  });
+
+  it("이메일 변경 후 발송에 실패하면 이전 주소의 인증 대기로 돌아가지 않는다", async () => {
+    const requestCode = vi
+      .fn<SignupOperations["requestCode"]>()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await setup({ requestCode });
+    type("학교 이메일", "a@syuin.ac.kr");
+    await click("인증번호 받기");
+    type("학교 이메일", "b@syuin.ac.kr");
+    await act(async () => vi.advanceTimersByTime(60_000));
+    await click("인증번호 다시 받기");
+    expect(requestCode).toHaveBeenLastCalledWith("b@syuin.ac.kr");
+    expect(screen.getByRole("alert")).toHaveTextContent("네트워크");
+    expect(screen.queryByLabelText("인증번호")).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "학교 계정" })).toHaveTextContent(
+      "미인증",
+    );
+    expect(screen.getByRole("button", { name: "회원가입" })).toBeDisabled();
+  });
+
+  it("같은 주소의 재발송 실패는 기존 인증번호 입력을 유지한다", async () => {
+    const requestCode = vi
+      .fn<SignupOperations["requestCode"]>()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await setup({ requestCode });
+    type("학교 이메일", "a@syuin.ac.kr");
+    await click("인증번호 받기");
+    type("인증번호", "123456");
+    await act(async () => vi.advanceTimersByTime(60_000));
+    await click("인증번호 다시 받기");
+    expect(screen.getByRole("alert")).toHaveTextContent("네트워크");
+    expect(screen.getByLabelText("인증번호")).toHaveValue("123456");
+    expect(screen.getByRole("group", { name: "학교 계정" })).toHaveTextContent(
+      "인증 대기",
+    );
   });
 
   it("인증번호에는 숫자 6자리만 남긴다", async () => {

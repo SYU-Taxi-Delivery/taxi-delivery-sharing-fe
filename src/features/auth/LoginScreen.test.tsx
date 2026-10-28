@@ -143,13 +143,19 @@ describe("LoginScreen", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("AC-AUTH-001-15: 미인증 계정에는 이메일 인증을 안내한다", async () => {
+  it("403은 새로고침과 이메일 인증 상태 확인을 안내하고 서버 원문을 숨긴다", async () => {
     await setup({
-      login: vi.fn(async () => Promise.reject(new ApiError(403, ""))),
+      login: vi.fn(async () =>
+        Promise.reject(new ApiError(403, "missing CSRF token")),
+      ),
     });
     fill("a@syuin.ac.kr", "password");
     await submit();
-    expect(screen.getByRole("alert")).toHaveTextContent("이메일 인증");
+    expect(screen.getByRole("alert")).toHaveTextContent("새로고침");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "학교 이메일 인증 상태",
+    );
+    expect(screen.queryByText(/missing CSRF token/)).not.toBeInTheDocument();
   });
 
   it("AC-AUTH-002-07: 서버 로그아웃 실패 안내와 재시도를 제공한다", async () => {

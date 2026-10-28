@@ -110,6 +110,15 @@ describe("validateLogin", () => {
     });
   });
 
+  it.each(["a@@syuin.ac.kr", "a@b@syuin.ac.kr"])(
+    "@가 여러 개인 이메일 %s를 거절한다",
+    (email) => {
+      expect(validateLogin({ email, password: "password" }).email).toContain(
+        "@syuin.ac.kr",
+      );
+    },
+  );
+
   it("공백만 있는 비밀번호도 그대로 입력값으로 본다", () => {
     expect(
       validateLogin({ email: "a@syuin.ac.kr", password: "   " }).password,
@@ -127,8 +136,11 @@ describe("loginErrorMessage", () => {
     );
   });
 
-  it("AC-AUTH-001-15: 미인증 계정은 이메일 인증을 안내한다", () => {
-    expect(loginErrorMessage(new ApiError(403, ""))).toContain("이메일 인증");
+  it("403은 원인을 단정하지 않고 새로고침과 이메일 인증 상태 확인을 안내한다", () => {
+    const message = loginErrorMessage(new ApiError(403, "missing CSRF token"));
+    expect(message).toContain("새로고침");
+    expect(message).toContain("학교 이메일 인증 상태");
+    expect(message).not.toContain("missing CSRF token");
   });
 
   it("AC-AUTH-001-23: 시도 제한을 안내한다", () => {

@@ -32,6 +32,7 @@ export function schoolEmailError(email: string): string | null {
   if (address === "") return "학교 이메일을 입력해 주세요.";
   if (
     at < 1 ||
+    address.indexOf("@") !== at ||
     /\s/.test(address) ||
     address.slice(at + 1).toLowerCase() !== SCHOOL_EMAIL_DOMAIN
   ) {
@@ -67,7 +68,7 @@ export function loginErrorMessage(error: unknown): string {
       // Same message for unknown accounts and wrong passwords (AC-AUTH-001-14, -16).
       return "학교 이메일 또는 비밀번호를 확인한 후 다시 입력해 주세요.";
     case 403:
-      return "학교 이메일 인증이 필요해요. 가입할 때 받은 인증번호로 인증을 완료해 주세요.";
+      return "로그인 요청이 거절됐어요. 페이지를 새로고침한 뒤 다시 시도하고, 학교 이메일 인증 상태도 확인해 주세요.";
     case 429:
       return "로그인 시도가 많아 잠시 제한됐어요. 잠시 후 다시 시도해 주세요.";
     default:
