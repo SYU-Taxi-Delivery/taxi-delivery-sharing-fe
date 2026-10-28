@@ -6,6 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
+import {
+  cutoffMinutes,
+  participationDeadlineMs,
+} from "@/features/participation/participation";
 import { ParticipationPanel } from "@/features/participation/ParticipationPanel";
 import { useParticipation } from "@/features/participation/useParticipation";
 import { AppShell } from "../AppShell";
@@ -214,6 +218,14 @@ function DetailView({
   const [reportOpen, setReportOpen] = useState(false);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const reportNoticeRef = useRef<HTMLParagraphElement>(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const id = initial.id;
 
   // The report button disappears after reporting, so focus moves to the result.
@@ -226,12 +238,28 @@ function DetailView({
       join: () => operations.join(id),
       cancel: () => operations.leave(id),
       refresh: async () => {
-        const next = toPostDetail(await operations.load(id));
-        setLatest(next);
-        return toSnapshot(next);
+        try {
+          const next = toPostDetail(await operations.load(id));
+          setLatest(next);
+          return toSnapshot(next);
+        } catch (error) {
+          if (mounted.current) {
+            if (error instanceof ApiError && error.status === 401) {
+              handleUnauthorized();
+            } else if (
+              (error instanceof ApiError &&
+                (error.status === 403 || error.status === 404)) ||
+              (error instanceof PostDetailError &&
+                (error.kind === "forbidden" || error.kind === "notFound"))
+            ) {
+              onReload();
+            }
+          }
+          throw error;
+        }
       },
     }),
-    [operations, id],
+    [operations, id, handleUnauthorized, onReload],
   );
   const participation = useParticipation(toSnapshot(initial), participationOps);
   const nowMs = participation.nowMs;
@@ -332,7 +360,7 @@ function DetailView({
         />
         <Row
           term="참여 취소 기한"
-          value={`${shortDateTime.format(reference - 600_000)}까지`}
+          value={`${shortDateTime.format(participationDeadlineMs(detail))}까지`}
         />
         {!taxi && detail.orderGuide && (
           <Row term="주문 안내" value={detail.orderGuide} multiline />
@@ -429,7 +457,8 @@ function DetailView({
             참여할 수 없어요.
           </li>
           <li>
-            참여 취소는 {taxi ? "출발" : "주문 마감"} 10분 전까지 할 수 있어요.
+            참여 취소는 {taxi ? "출발" : "주문 마감"} {cutoffMinutes(detail)}분
+            전까지 할 수 있어요.
           </li>
           <li>본인이 작성한 글에는 참여할 수 없어요.</li>
         </ul>

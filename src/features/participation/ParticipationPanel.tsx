@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Noto_Sans_KR } from "next/font/google";
 import { useId, useRef } from "react";
+import { cutoffMinutes } from "./participation";
 import type { ParticipationController } from "./useParticipation";
 import styles from "./participation.module.css";
 
@@ -152,8 +153,8 @@ export function ParticipationPanel({
           참여 신청·취소는 {timeFormat.format(availability.deadline)} 이전까지
           가능해요.
           <br />
-          {snapshot.type === "TAXI" ? "출발" : "주문 마감"} 10분 전부터
-          마감돼요.
+          {snapshot.type === "TAXI" ? "출발" : "주문 마감"}{" "}
+          {cutoffMinutes(snapshot)}분 전부터 마감돼요.
         </p>
       )}
       {busy && <p role="status">참여 상태를 확인하고 있어요.</p>}

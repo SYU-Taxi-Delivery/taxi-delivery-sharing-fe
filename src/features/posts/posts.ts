@@ -1,3 +1,5 @@
+import { cutoffMinutes } from "@/features/participation/participation";
+
 export type PostType = "TAXI" | "DELIVERY";
 export type PostStatus =
   "OPEN" | "FULL" | "CLOSED" | "CANCELLED" | "FINISHED" | "REMOVED";
@@ -10,8 +12,10 @@ type PostBase = {
   capacity: number;
   /** Includes the author. */
   currentMemberCount: number;
-  /** Server decision: OPEN, seats left and now < T-10. */
+  /** Server decision: OPEN, seats left and now before the participation deadline. */
   joinable: boolean;
+  /** Server join/cancel cutoff, ISO with offset. */
+  participationDeadline?: string;
   authorName?: string;
 };
 
@@ -69,6 +73,12 @@ class InvalidPostData extends Error {
 
 const text = (value: unknown) =>
   typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+const instant = (value: unknown) => {
+  const raw = text(value);
+  return raw && hasTimezone.test(raw) && Number.isFinite(Date.parse(raw))
+    ? raw
+    : null;
+};
 const count = (value: unknown) =>
   Number.isSafeInteger(value) && (value as number) >= 0
     ? (value as number)
@@ -111,6 +121,9 @@ function toPostSummary(value: unknown): PostSummary {
     capacity,
     currentMemberCount: current,
     joinable: raw.joinable,
+    ...(instant(raw.participationDeadline)
+      ? { participationDeadline: instant(raw.participationDeadline)! }
+      : {}),
     ...(text(raw.authorName) ? { authorName: text(raw.authorName)! } : {}),
   };
   if (type === "TAXI") {
@@ -202,7 +215,7 @@ export function postStatusLabel(post: PostSummary): {
             reason:
               post.currentMemberCount >= post.capacity
                 ? "정원 마감"
-                : `${deadline} 10분 전 마감`,
+                : `${deadline} ${cutoffMinutes(post)}분 전 마감`,
             available: false,
           };
     case "FULL":

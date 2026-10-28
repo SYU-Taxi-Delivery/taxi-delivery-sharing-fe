@@ -1,5 +1,8 @@
 # 모집글 작성·수정 (#8)
 
+> 연동 상태(2026-10-27): `POST /api/posts`·`PATCH /api/posts/{id}`에 연결했다(`postFormApi.ts`). 유사 모집 API가 없어 `findSimilar`는 빈 결과를 반환한다. 설정·불일치·요청 목록은
+> [docs/backend-integration.md](../../../../docs/backend-integration.md)를 참고한다.
+
 API 명세가 미정인 상태의 1차 구현이다. 로그인 사용자용 `/posts/new`(배달은
 `?type=DELIVERY`)와 작성자용 `/posts/[id]/edit` 화면, 입력 검증, 유사 모집 제안,
 서버 거절 안내, 수정 잠금을 구현했다. 운영 화면에는 가짜 모집·API를 추가하지
