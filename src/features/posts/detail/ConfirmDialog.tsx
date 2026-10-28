@@ -12,17 +12,21 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
+  confirmDisabled = false,
   danger = false,
   onConfirm,
   onClose,
+  restoreFocus,
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  confirmDisabled?: boolean;
   danger?: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  restoreFocus?: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const back = useRef<HTMLButtonElement>(null);
@@ -53,7 +57,8 @@ export function ConfirmDialog({
         onClose();
       }}
       onClose={() => {
-        if (opener.current instanceof HTMLElement) opener.current.focus();
+        if (restoreFocus) restoreFocus();
+        else if (opener.current instanceof HTMLElement) opener.current.focus();
       }}
     >
       <div className={styles.dialogHeading}>
@@ -82,6 +87,7 @@ export function ConfirmDialog({
         <button
           type="button"
           className={danger ? styles.danger : styles.primary}
+          disabled={confirmDisabled}
           onClick={onConfirm}
         >
           {confirmLabel}

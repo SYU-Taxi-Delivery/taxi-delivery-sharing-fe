@@ -162,7 +162,7 @@ export function SignupScreen({
         text: "입력한 학교 이메일로 인증번호를 보냈어요. 인증번호는 10분 동안 유효해요.",
       });
     } catch (failure) {
-      setStep(sentAt === null ? "idle" : "sent");
+      setStep(step === "sent" ? "sent" : "idle");
       setEmailMessage({
         tone: "error",
         text: requestCodeErrorMessage(failure),

@@ -7,9 +7,11 @@ import { AuthProvider, useAuth } from "./AuthProvider";
 import { RequireAuth } from "./RequireAuth";
 
 const router = { replace: vi.fn() };
+const location = { pathname: "/posts/1", search: "" };
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
-  usePathname: () => "/posts/1",
+  usePathname: () => location.pathname,
+  useSearchParams: () => new URLSearchParams(location.search),
 }));
 
 const student: CurrentUser = {
@@ -19,7 +21,11 @@ const student: CurrentUser = {
 };
 const admin: CurrentUser = { id: "2", displayName: "운영자", role: "ADMIN" };
 
-beforeEach(() => router.replace.mockReset());
+beforeEach(() => {
+  router.replace.mockReset();
+  location.pathname = "/posts/1";
+  location.search = "";
+});
 
 function renderWith(me: AuthOperations["me"], ui: ReactNode) {
   const operations: AuthOperations = {
@@ -58,6 +64,23 @@ describe("RequireAuth", () => {
       screen.getByRole("link", { name: "로그인하러 가기" }),
     ).toHaveAttribute("href", "/login?next=%2Fposts%2F1");
     expect(screen.queryByText("보호 내용")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["/my", "tab=created"],
+    ["/posts/new", "type=DELIVERY"],
+    ["/posts", "type=DELIVERY&page=2&joinable=true"],
+  ])("로그인 후 %s의 검색 조건 %s로 돌아온다", async (pathname, search) => {
+    location.pathname = pathname;
+    location.search = search;
+    renderWith(async () => null, <RequireAuth>보호 내용</RequireAuth>);
+    await act(async () => {});
+    expect(
+      screen.getByRole("link", { name: "로그인하러 가기" }),
+    ).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent(`${pathname}?${search}`)}`,
+    );
   });
 
   it("AC-AUTH-002-06: 세션 만료 시 보호 내용을 지우고 만료를 알린다", async () => {

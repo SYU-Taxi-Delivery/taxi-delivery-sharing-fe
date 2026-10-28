@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useId, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useId, type ReactNode } from "react";
 import { loginHref, type UserRole } from "./auth";
 import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
@@ -82,9 +82,11 @@ export function RequireAuth({
             ? (notice?.message ?? "다시 로그인해 주세요.")
             : "삼육대학교 학생만 이용할 수 있어요. 학교 이메일로 로그인해 주세요."}
         </p>
-        <Link href={loginHref(pathname ?? "/")} className={styles.primary}>
-          로그인하러 가기
-        </Link>
+        <Suspense
+          fallback={<p role="status">로그인 경로를 확인하고 있어요.</p>}
+        >
+          <LoginLink pathname={pathname ?? "/"} />
+        </Suspense>
       </section>
     );
   }
@@ -92,4 +94,16 @@ export function RequireAuth({
   if (role && user.role !== role) return <AccessDenied />;
 
   return children;
+}
+
+function LoginLink({ pathname }: { pathname: string }) {
+  const search = useSearchParams().toString();
+  return (
+    <Link
+      href={loginHref(`${pathname}${search ? `?${search}` : ""}`)}
+      className={styles.primary}
+    >
+      로그인하러 가기
+    </Link>
+  );
 }

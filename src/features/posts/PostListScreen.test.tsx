@@ -10,6 +10,7 @@ const router = { push: vi.fn(), replace: vi.fn() };
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => "/posts",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("next/font/google", () => ({
   Noto_Sans_KR: () => ({ className: "test-noto-sans-kr" }),

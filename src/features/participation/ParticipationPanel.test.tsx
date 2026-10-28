@@ -236,6 +236,17 @@ describe("participation panel", () => {
     },
   );
 
+  it("FINISHED participation history shows completion instead of an active participation", () => {
+    setup({
+      ...initial,
+      status: "FINISHED",
+      serverTime: "2026-10-13T18:00:00+09:00",
+    });
+    expect(screen.getByRole("heading", { name: "모집 완료" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "참여 중이에요" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
+  });
+
   it("AC-NFR-TIME-01-01: both types show Seoul reference and 10-minute deadline", () => {
     setup({
       ...initial,

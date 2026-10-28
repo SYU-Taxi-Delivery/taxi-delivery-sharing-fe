@@ -127,8 +127,14 @@ export function ParticipationCancellation({
         open={open}
         title="내 참여를 취소할까요?"
         confirmLabel="참여 취소하기"
+        confirmDisabled={
+          participation.busy ||
+          participation.needsRefresh ||
+          participation.availability.action !== "cancel"
+        }
         danger
         onClose={() => setOpen(false)}
+        restoreFocus={restoreFocus}
         onConfirm={() => {
           setOpen(false);
           void participation.cancel();
@@ -139,6 +145,10 @@ export function ParticipationCancellation({
           취소하면 자리를 잃을 수 있어요. 참가자 명단과 소통 링크도 볼 수 없게
           돼요.
         </p>
+        {participation.availability.action !== "cancel" &&
+          participation.availability.reason && (
+            <p role="alert">{participation.availability.reason}</p>
+          )}
       </ConfirmDialog>
     </>
   );
