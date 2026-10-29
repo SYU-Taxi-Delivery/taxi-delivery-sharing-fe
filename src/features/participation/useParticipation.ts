@@ -236,6 +236,7 @@ export function useParticipation(
   return {
     snapshot,
     nowMs,
+    serverNow,
     availability: getParticipationAvailability(snapshot, nowMs),
     busy,
     needsRefresh,

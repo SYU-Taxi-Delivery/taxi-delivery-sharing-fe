@@ -2,6 +2,10 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import {
+  CommentsError,
+  type CommentsOperations,
+} from "@/features/comments/comments";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
 import { PostDetailScreen } from "./PostDetailScreen";
 
@@ -76,10 +80,17 @@ function ops(patch: Partial<PostDetailOperations> = {}): PostDetailOperations {
   };
 }
 
-async function setup(operations: PostDetailOperations) {
+async function setup(
+  operations: PostDetailOperations,
+  commentOperations?: CommentsOperations,
+) {
   render(
     <AuthProvider operations={auth}>
-      <PostDetailScreen postId="p1" operations={operations} />
+      <PostDetailScreen
+        postId="p1"
+        operations={operations}
+        commentOperations={commentOperations}
+      />
     </AuthProvider>,
   );
   await act(async () => {});
@@ -88,6 +99,72 @@ async function setup(operations: PostDetailOperations) {
 
 const members = () =>
   screen.getByRole("heading", { name: /함께하는 학생/ }).closest("section")!;
+
+describe("상세 댓글 영역", () => {
+  const comments = (
+    patch: Partial<CommentsOperations> = {},
+  ): CommentsOperations => ({
+    list: vi.fn(async () => ({
+      content: [
+        {
+          id: "c1",
+          authorName: "학생",
+          content: "댓글 내용 표시 확인",
+          createdAt: new Date().toISOString(),
+          isMine: false,
+        },
+      ],
+    })),
+    create: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+    ...patch,
+  });
+
+  it("기본 화면은 가짜 댓글 대신 연동 준비를 안내한다", async () => {
+    await setup(ops());
+    expect(await screen.findByText(/댓글 연동을 준비/)).toBeVisible();
+    expect(screen.queryByLabelText("댓글 내용")).toBeNull();
+  });
+
+  it("비참여자도 같은 모집의 공개 댓글을 조회하고 작성할 수 있다", async () => {
+    const operations = comments();
+    await setup(ops(), operations);
+    expect(await screen.findByText("댓글 내용 표시 확인")).toBeVisible();
+    expect(operations.list).toHaveBeenCalledWith("p1");
+    expect(screen.getByLabelText("댓글 내용")).toBeVisible();
+    expect(screen.getByRole("button", { name: "참여하기" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "내 댓글 삭제" })).toBeNull();
+  });
+
+  it("삭제된 모집에서는 댓글을 조회하지 않는다", async () => {
+    const operations = comments();
+    await setup(
+      ops({ load: vi.fn(async () => post({ status: "REMOVED" })) }),
+      operations,
+    );
+    expect(operations.list).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "댓글" })).toBeNull();
+    expect(screen.queryByText("댓글 내용 표시 확인")).toBeNull();
+  });
+
+  it("댓글 조회 중 모집이 사라지면 상세도 재확인하고 이전 콘텐츠를 지운다", async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(post())
+      .mockRejectedValue(new ApiError(404, ""));
+    await setup(
+      ops({ load }),
+      comments({
+        list: vi.fn(async () => {
+          throw new CommentsError("notFound");
+        }),
+      }),
+    );
+    expect(await screen.findByText("모집을 찾을 수 없어요")).toBeVisible();
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(screen.queryByLabelText("댓글 내용")).toBeNull();
+  });
+});
 
 describe("상세 조회", () => {
   it("AC-DISC-004-01: 택시 정보·설명·작성자 포함 인원을 보여 주고 비참여자에게 명단·링크·개인정보를 숨긴다", async () => {
