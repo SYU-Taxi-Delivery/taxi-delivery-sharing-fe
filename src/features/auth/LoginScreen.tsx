@@ -159,6 +159,9 @@ export function LoginScreen({ next = "/" }: { next?: string }) {
             {busy ? "로그인 중…" : "로그인"}
           </button>
         </form>
+        <Link href="/forgot-password" className={styles.textLink}>
+          비밀번호를 잊으셨나요?
+        </Link>
         <Link href="/signup" className={styles.secondary}>
           회원가입
         </Link>
