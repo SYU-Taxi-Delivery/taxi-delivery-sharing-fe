@@ -1,13 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { roleLabels } from "./auth";
 import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
 
-/** Signed-in user's name button with role and logout (AC-UI-ACCOUNT-01, -02). */
+/** Signed-in user's account button and logout (AC-UI-ACCOUNT-01, -02). */
 export function AccountMenu({
   afterLogout = "/login",
 }: {
@@ -51,28 +51,37 @@ export function AccountMenu({
         ref={trigger}
         type="button"
         className={styles.menuButton}
+        aria-label={`${user.displayName}님`}
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
       >
-        {user.displayName}님
+        <span className={styles.avatar} aria-hidden="true">
+          {Array.from(user.displayName).slice(-2).join("")}
+        </span>
+        <span className={styles.accountDetails}>
+          <span className={styles.accountName}>{user.displayName} 님</span>
+          <Image
+            src="/auth/chevron-down.svg"
+            width={16}
+            height={16}
+            alt=""
+            aria-hidden="true"
+            className={styles.chevron}
+          />
+        </span>
       </button>
       {open && (
         <div id={menuId} className={styles.menu}>
-          <p>
-            <span className="font-bold">{user.displayName}</span>
-            <br />
-            <span className={styles.muted}>{roleLabels[user.role]}</span>
-          </p>
           {/* Only a menu entry; the server still answers 403 to non-admins. */}
           {user.role === "ADMIN" && (
-            <Link href="/admin" className={styles.secondary}>
+            <Link href="/admin" className={styles.menuItem}>
               관리자 화면
             </Link>
           )}
           <button
             type="button"
-            className={styles.primary}
+            className={styles.menuItem}
             disabled={loggingOut}
             onClick={() => void signOut()}
           >

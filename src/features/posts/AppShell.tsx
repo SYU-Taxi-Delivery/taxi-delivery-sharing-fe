@@ -7,7 +7,7 @@ import styles from "./posts.module.css";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
@@ -26,7 +26,7 @@ export function AppShell({
       <header>
         <div className={styles.header}>
           <p className={styles.brand}>
-            <Image src="/auth/logo.svg" width={24} height={24} alt="" />
+            <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟
           </p>
           <AccountMenu />
