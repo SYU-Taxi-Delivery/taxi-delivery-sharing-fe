@@ -26,7 +26,7 @@ export function AppShell({
       <header>
         <div className={styles.header}>
           <p className={styles.brand}>
-            <Image src="/auth/logo.svg" width={24} height={24} alt="" />
+            <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟
           </p>
           <AccountMenu />
