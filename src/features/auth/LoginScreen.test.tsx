@@ -68,6 +68,9 @@ describe("LoginScreen", () => {
       "href",
       "/signup",
     );
+    expect(
+      screen.getByRole("link", { name: "비밀번호를 잊으셨나요?" }),
+    ).toHaveAttribute("href", "/forgot-password");
   });
 
   it("AC-AUTH-001-08: 학교 도메인이 아니면 요청하지 않고 이메일로 포커스를 옮긴다", async () => {
