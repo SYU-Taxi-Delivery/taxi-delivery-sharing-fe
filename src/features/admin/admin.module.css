@@ -1,0 +1,66 @@
+.stack,
+.list,
+.card,
+.facts {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.list {
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 1rem;
+  border: 1px solid var(--posts-border);
+  border-radius: 0.75rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--posts-soft);
+  color: var(--posts-muted);
+  white-space: nowrap;
+}
+
+.badge[data-pending="true"] {
+  background: #eef7dc;
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.facts > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.facts dt {
+  color: var(--posts-muted);
+  font-size: 0.75rem;
+}
+
+.content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions > button {
+  flex: 1 1 8rem;
+}

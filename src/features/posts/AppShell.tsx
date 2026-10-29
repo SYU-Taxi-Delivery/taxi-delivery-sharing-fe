@@ -17,7 +17,7 @@ export function AppShell({
   postsPath = "/posts",
   children,
 }: {
-  current: "posts" | "my";
+  current: "posts" | "my" | "admin";
   postsPath?: string;
   children: ReactNode;
 }) {
