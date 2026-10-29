@@ -10,6 +10,9 @@ API·인증 명세가 미정인 상태의 1차 구현이다. 학교 이메일(`@
 사용하고 회원가입·비밀번호 재설정은 요청 시 연동 준비 안내를 표시한다.
 학교 도메인은 `auth.ts`의 `SCHOOL_EMAIL_DOMAIN` 한 곳에서 정한다.
 
+첫 화면(`/`)은 같은 로그인 화면을 제공한다. 로그인 성공 또는 이미 인증된 상태에서는
+`/posts`로 이동한다. `/login?next=...`의 보호 화면 복귀 동작은 유지한다.
+
 개발 서버의 `/auth-preview`에서 모의 계정(`student@syuin.ac.kr`, `admin@syuin.ac.kr`,
 미인증 `unverified@syuin.ac.kr`, 비밀번호 `preview-password`)으로 로그인·권한·세션
 만료·로그아웃 실패를 확인할 수 있다. `/signup-preview`에서는 인증번호 `123456`으로
