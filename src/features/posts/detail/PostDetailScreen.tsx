@@ -6,6 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
+import { CommentsPanel } from "@/features/comments/CommentsPanel";
+import {
+  commentsOperations,
+  type CommentsOperations,
+} from "@/features/comments/comments";
 import {
   cutoffMinutes,
   participationDeadlineMs,
@@ -54,10 +59,12 @@ export function PostDetailScreen({
   postId,
   listPath = "/posts",
   operations = postDetailOperations,
+  commentOperations = commentsOperations,
 }: {
   postId: string;
   listPath?: string;
   operations?: PostDetailOperations;
+  commentOperations?: CommentsOperations;
 }) {
   return (
     <AppShell current="posts" postsPath={listPath}>
@@ -69,6 +76,7 @@ export function PostDetailScreen({
           postId={postId}
           listPath={listPath}
           operations={operations}
+          commentOperations={commentOperations}
         />
       </RequireAuth>
     </AppShell>
@@ -87,10 +95,12 @@ function DetailLoader({
   postId,
   listPath,
   operations,
+  commentOperations,
 }: {
   postId: string;
   listPath: string;
   operations: PostDetailOperations;
+  commentOperations: CommentsOperations;
 }) {
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
@@ -194,6 +204,7 @@ function DetailLoader({
       key={attempt}
       initial={detail}
       operations={operations}
+      commentOperations={commentOperations}
       notice={notice}
       onReload={reload}
     />
@@ -203,11 +214,13 @@ function DetailLoader({
 function DetailView({
   initial,
   operations,
+  commentOperations,
   notice,
   onReload,
 }: {
   initial: PostDetail;
   operations: PostDetailOperations;
+  commentOperations: CommentsOperations;
   notice: { tone: "success" | "error"; text: string } | null;
   onReload: (
     notice?: { tone: "success" | "error"; text: string } | null,
@@ -463,6 +476,15 @@ function DetailView({
           <li>본인이 작성한 글에는 참여할 수 없어요.</li>
         </ul>
       </aside>
+
+      <CommentsPanel
+        postId={id}
+        status={status}
+        referenceTime={detail.referenceTime}
+        serverNow={participation.serverNow}
+        operations={commentOperations}
+        onUnavailable={() => onReload()}
+      />
 
       {!author && (
         <div className={styles.report}>
