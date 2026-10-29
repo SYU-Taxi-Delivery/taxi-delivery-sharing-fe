@@ -392,6 +392,32 @@ describe("댓글 삭제와 접근 변경", () => {
     expect(screen.queryByText(mine.content)).toBeNull();
   });
 
+  it.each(["Escape", "돌아가기"] as const)(
+    "삭제 응답 대기 중 %s로 닫으면 비활성 버튼 대신 댓글 제목으로 포커스를 옮긴다",
+    async (close) => {
+      const pending = deferred<void>();
+      const remove = vi.fn(() => pending.promise);
+      await setup(operations({ remove }));
+      const trigger = within(mineRow()).getByRole("button", { name: /삭제/ });
+      trigger.focus();
+      await openDelete();
+      await confirmDelete();
+      expect(trigger).toBeDisabled();
+      const dialog = screen.getByRole("dialog");
+      await act(async () => {
+        if (close === "Escape")
+          fireEvent(dialog, new Event("cancel", { cancelable: true }));
+        else
+          fireEvent.click(
+            within(dialog).getByRole("button", { name: "돌아가기" }),
+          );
+      });
+      expect(screen.getByRole("heading", { name: "댓글" })).toHaveFocus();
+      expect(remove).toHaveBeenCalledTimes(1);
+      await act(async () => pending.resolve());
+    },
+  );
+
   it("삭제 응답 유실은 목록 확인 전 완료로 표시하거나 DELETE를 재전송하지 않는다", async () => {
     const list = vi
       .fn()

@@ -429,7 +429,8 @@ function Comments({
             onClose={() => setTarget(null)}
             onConfirm={() => void mutate("remove")}
             restoreFocus={() => {
-              if (opener.current?.isConnected) opener.current.focus();
+              if (opener.current?.isConnected && !opener.current.disabled)
+                opener.current.focus();
               else heading.current?.focus();
             }}
           >
