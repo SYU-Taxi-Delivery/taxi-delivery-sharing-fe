@@ -6,7 +6,7 @@
 작업 PR의 검증 기록을 함께 본다.
 
 2026-10-30 실행 기록: `pnpm typecheck`, `pnpm lint`,
-`pnpm test --maxWorkers=1 --no-file-parallelism`(40파일·859건), `pnpm build`가 통과했다.
+`pnpm test --maxWorkers=1 --no-file-parallelism`(40파일·860건), `pnpm build`가 통과했다.
 이 수치는 전체 요구사항 TC의 완료율이나 실제 API 통합 성공률이 아니다.
 
 이슈 #14의 FE 준비 범위는 기존 실행 환경 유지, 공통 fixture, 대표 기능·권한·시간·오류

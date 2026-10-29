@@ -295,7 +295,7 @@ export function createAdminPreview(scenario: AdminPreviewScenario) {
     list: async (query) => {
       await pause();
       const available = [...posts.values()]
-        .filter((post) => post.status !== "REMOVED")
+        .filter((post) => post.status === "OPEN" || post.status === "FULL")
         .map(card)
         .filter(
           (post) =>

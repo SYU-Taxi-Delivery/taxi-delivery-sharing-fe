@@ -45,7 +45,7 @@ describe("관리자와 일반 화면이 공유하는 모의 상태", () => {
       toPostPage(await finish(model.posts.list(query))).content.map(
         (post) => post.id,
       ),
-    ).toEqual(["p1", "p2"]);
+    ).toEqual(["p1"]);
     expect(toPostDetail(await finish(model.detail.load("p1"))).status).toBe(
       "OPEN",
     );
@@ -62,7 +62,7 @@ describe("관리자와 일반 화면이 공유하는 모의 상태", () => {
       toPostPage(await finish(model.posts.list(query))).content.map(
         (post) => post.id,
       ),
-    ).toEqual(["p2"]);
+    ).toEqual([]);
     await expect(finish(model.detail.load("p1"))).rejects.toMatchObject({
       kind: "notFound",
     });
@@ -95,6 +95,24 @@ describe("관리자와 일반 화면이 공유하는 모의 상태", () => {
     expect(toReportDetail(await finish(model.admin.load("r1"))).status).toBe(
       "PENDING",
     );
+  });
+
+  it("완료된 모집은 일반 목록에서 제외하고 상세와 참여 이력에는 유지한다", async () => {
+    const model = createAdminPreview("normal");
+    const page = toPostPage(await finish(model.posts.list(query)));
+    expect(page.content.map((post) => post.id)).toEqual(["p1"]);
+    expect(page.totalElements).toBe(1);
+    expect(toPostDetail(await finish(model.detail.load("p2"))).status).toBe(
+      "FINISHED",
+    );
+    const history = toMyHistory(
+      await finish(model.history.list("participated")),
+      "participated",
+    );
+    expect(history.content.find((item) => item.id === "p2")).toMatchObject({
+      status: "FINISHED",
+      relation: "JOINED",
+    });
   });
 
   it("완료된 모집 숨김은 최종 참가 관계를 유지한다", async () => {
@@ -147,7 +165,7 @@ describe("관리자와 일반 화면이 공유하는 모의 상태", () => {
       );
       expect(
         toPostPage(await finish(model.posts.list(query))).content,
-      ).toHaveLength(2);
+      ).toHaveLength(1);
     },
   );
 
