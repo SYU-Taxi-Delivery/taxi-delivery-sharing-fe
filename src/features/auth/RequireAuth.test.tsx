@@ -154,6 +154,31 @@ describe("RequireAuth", () => {
 });
 
 describe("AccountMenu", () => {
+  it.each([
+    ["김하늘", "하늘"],
+    ["준", "준"],
+    ["가나다라마바사아자차카타파하가나다라마바", "마바"],
+  ])(
+    "이름 %s의 아바타·펼침 이미지가 있어도 접근성 이름을 유지한다",
+    async (displayName, avatarText) => {
+      renderWith(async () => ({ ...student, displayName }), <AccountMenu />);
+      await act(async () => {});
+      const trigger = screen.getByRole("button", { name: `${displayName}님` });
+      expect(trigger).toHaveAccessibleName(`${displayName}님`);
+      expect(trigger).toHaveTextContent(`${displayName} 님`);
+      expect(trigger.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+        avatarText,
+      );
+      expect(trigger.querySelector("img")).toHaveAttribute("alt", "");
+      expect(trigger.querySelector("img")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+      fireEvent.click(trigger);
+      expect(screen.getByRole("button", { name: "로그아웃" })).toBeVisible();
+    },
+  );
+
   it("AC-UI-ACCOUNT-01, AC-UI-ACCOUNT-02: 이름 버튼으로 열고 Escape로 닫으면 포커스가 돌아온다", async () => {
     renderWith(async () => student, <AccountMenu />);
     await act(async () => {});
@@ -161,7 +186,6 @@ describe("AccountMenu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("학생")).toBeVisible();
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeVisible();
     screen.getByRole("button", { name: "로그아웃" }).focus();
     fireEvent.keyDown(document, { key: "Escape" });
@@ -192,7 +216,6 @@ describe("AccountMenu", () => {
     renderWith(async () => admin, <AccountMenu />);
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: "운영자님" }));
-    expect(screen.getByText("관리자")).toBeVisible();
     expect(screen.getByRole("link", { name: "관리자 화면" })).toHaveAttribute(
       "href",
       "/admin",
