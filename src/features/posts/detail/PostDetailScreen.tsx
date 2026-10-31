@@ -34,6 +34,7 @@ import {
 import { postDetailOperations } from "./postDetailApi";
 import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -66,9 +67,10 @@ export function PostDetailScreen({
   operations?: PostDetailOperations;
   commentOperations?: CommentsOperations;
 }) {
+  const path = useAppPath();
   return (
-    <AppShell current="posts" postsPath={listPath}>
-      <Link href={listPath} className={styles.back}>
+    <AppShell current="posts" postsPath={listPath} wide>
+      <Link href={path(listPath)} className={styles.back}>
         <span aria-hidden="true">‹</span> 모집글 목록
       </Link>
       <RequireAuth>
@@ -103,6 +105,7 @@ function DetailLoader({
   operations: PostDetailOperations;
   commentOperations: CommentsOperations;
 }) {
+  const path = useAppPath();
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -163,7 +166,7 @@ function DetailLoader({
       <div className={styles.state}>
         <h1 className={styles.stateTitle}>모집을 찾을 수 없어요</h1>
         <p>삭제되었거나 주소가 잘못된 모집이에요.</p>
-        <Link href={listPath} className={styles.secondary}>
+        <Link href={path(listPath)} className={styles.secondary}>
           모집글 목록으로
         </Link>
       </div>
@@ -194,7 +197,7 @@ function DetailLoader({
       <div className={styles.state}>
         <h1 className={styles.stateTitle}>삭제된 모집이에요</h1>
         <p>운영 정책에 따라 삭제되어 내용을 볼 수 없어요.</p>
-        <Link href={listPath} className={styles.secondary}>
+        <Link href={path(listPath)} className={styles.secondary}>
           모집글 목록으로
         </Link>
       </div>
@@ -338,199 +341,202 @@ function DetailView({
         <p className={styles.postTitle}>{detail.title}</p>
       </header>
 
-      {notice && (
-        <p
-          role={notice.tone === "error" ? "alert" : "status"}
-          className={notice.tone === "error" ? styles.alert : styles.success}
-        >
-          {notice.text}
-        </p>
-      )}
-      {history && (
-        <p className={styles.notice}>
-          {status === "CANCELLED"
-            ? "작성자가 취소한 모집이에요. 기록으로만 볼 수 있어요."
-            : "완료된 모집이에요. 기록으로만 볼 수 있어요."}
-        </p>
-      )}
-
-      <dl className={styles.info}>
-        {taxi ? (
-          <>
-            <Row term="출발지" value={detail.departure} />
-            <Row term="도착지" value={detail.destination} />
-            <Row term="출발 시간" value={dateTime.format(reference)} strong />
-          </>
+      <div className={styles.decision}>
+        {author ? (
+          <AuthorPanel
+            detail={detail}
+            nowMs={nowMs}
+            serverNow={participation.serverNow}
+            operations={operations}
+            onReload={onReload}
+            onUnauthorized={handleUnauthorized}
+          />
         ) : (
-          <>
-            <Row term="음식점" value={detail.restaurantName} />
-            <Row term="수령 장소" value={detail.pickupLocation} />
-            <Row term="주문 마감" value={dateTime.format(reference)} strong />
-          </>
+          <ParticipationPanel participation={participation} />
         )}
-        <Row
-          term="정원"
-          value={`${detail.currentMemberCount} / ${detail.capacity}명 · 작성자 포함`}
-        />
-        <Row
-          term="참여 취소 기한"
-          value={`${shortDateTime.format(participationDeadlineMs(detail))}까지`}
-        />
-        {!taxi && detail.orderGuide && (
-          <Row term="주문 안내" value={detail.orderGuide} multiline />
+        {author && (
+          <p className={styles.notice}>
+            본인이 작성한 글이에요. 작성자도 정원에 포함돼요.
+          </p>
         )}
-      </dl>
+      </div>
 
-      <section className={styles.section} aria-labelledby="post-description">
-        <h2 id="post-description" className={styles.sectionTitle}>
-          모임 안내
-        </h2>
-        <p className={styles.description}>{detail.description}</p>
-      </section>
+      <div className={styles.body}>
+        {notice && (
+          <p
+            role={notice.tone === "error" ? "alert" : "status"}
+            className={notice.tone === "error" ? styles.alert : styles.success}
+          >
+            {notice.text}
+          </p>
+        )}
+        {history && (
+          <p className={styles.notice}>
+            {status === "CANCELLED"
+              ? "작성자가 취소한 모집이에요. 기록으로만 볼 수 있어요."
+              : "완료된 모집이에요. 기록으로만 볼 수 있어요."}
+          </p>
+        )}
 
-      <section className={styles.section} aria-labelledby="post-members">
-        <h2 id="post-members" className={styles.sectionTitle}>
-          함께하는 학생 {detail.currentMemberCount} / {detail.capacity}명
-        </h2>
-        {visible.participantNames ? (
-          <ul className={styles.members}>
-            {visible.participantNames.map((name, index) => (
-              <li key={`${name}-${index}`} className={styles.member}>
-                <span className={styles.avatar} aria-hidden="true">
-                  {Array.from(name).slice(-2).join("")}
-                </span>
-                <span className="font-bold">{name}</span>
-                <span className={styles.meta}>
-                  {index === 0 ? "작성자" : "참여자"}
-                </span>
-              </li>
-            ))}
-            {!history &&
-              Array.from({ length: Math.max(0, remaining) }, (_, index) => (
-                <li key={`seat-${index}`} className={styles.seat}>
-                  <span>빈자리</span>
+        <dl className={styles.info}>
+          {taxi ? (
+            <>
+              <Row term="출발지" value={detail.departure} />
+              <Row term="도착지" value={detail.destination} />
+              <Row term="출발 시간" value={dateTime.format(reference)} strong />
+            </>
+          ) : (
+            <>
+              <Row term="음식점" value={detail.restaurantName} />
+              <Row term="수령 장소" value={detail.pickupLocation} />
+              <Row term="주문 마감" value={dateTime.format(reference)} strong />
+            </>
+          )}
+          <Row
+            term="정원"
+            value={`${detail.currentMemberCount} / ${detail.capacity}명 · 작성자 포함`}
+          />
+          <Row
+            term="참여 취소 기한"
+            value={`${shortDateTime.format(participationDeadlineMs(detail))}까지`}
+          />
+          {!taxi && detail.orderGuide && (
+            <Row term="주문 안내" value={detail.orderGuide} multiline />
+          )}
+        </dl>
+
+        <section className={styles.section} aria-labelledby="post-description">
+          <h2 id="post-description" className={styles.sectionTitle}>
+            모임 안내
+          </h2>
+          <p className={styles.description}>{detail.description}</p>
+        </section>
+
+        <section className={styles.section} aria-labelledby="post-members">
+          <h2 id="post-members" className={styles.sectionTitle}>
+            함께하는 학생 {detail.currentMemberCount} / {detail.capacity}명
+          </h2>
+          {visible.participantNames ? (
+            <ul className={styles.members}>
+              {visible.participantNames.map((name, index) => (
+                <li key={`${name}-${index}`} className={styles.member}>
+                  <span className={styles.avatar} aria-hidden="true">
+                    {Array.from(name).slice(-2).join("")}
+                  </span>
+                  <span className="font-bold">{name}</span>
                   <span className={styles.meta}>
-                    {status === "OPEN" ? "참여 가능" : "참여 마감"}
+                    {index === 0 ? "작성자" : "참여자"}
                   </span>
                 </li>
               ))}
-          </ul>
-        ) : (
-          <p className={styles.help}>
-            {remaining > 0 && !history ? `${remaining}자리 남았어요. ` : ""}
-            참가자 이름은 작성자와 참여한 학생에게만 보여요.
-          </p>
-        )}
-      </section>
-
-      {visible.communicationUrl && (
-        <section className={styles.section} aria-labelledby="post-link">
-          <h2 id="post-link" className={styles.sectionTitle}>
-            소통 링크
-          </h2>
-          <a
-            href={visible.communicationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            소통 링크 열기 <span className={styles.srOnly}>(새 창)</span>
-          </a>
-          <p className={styles.help}>
-            작성자와 참여한 학생에게만 보여요. 출발 시간이 지나면 사라져요.
-          </p>
-        </section>
-      )}
-
-      {author ? (
-        <AuthorPanel
-          detail={detail}
-          nowMs={nowMs}
-          serverNow={participation.serverNow}
-          operations={operations}
-          onReload={onReload}
-          onUnauthorized={handleUnauthorized}
-        />
-      ) : (
-        <ParticipationPanel participation={participation} />
-      )}
-
-      {author && (
-        <p className={styles.notice}>
-          본인이 작성한 글이에요. 작성자도 정원에 포함돼요.
-        </p>
-      )}
-
-      <aside className={styles.guide} aria-labelledby="post-guide">
-        <h2 id="post-guide" className={styles.label}>
-          참여 안내
-        </h2>
-        <ul>
-          <li>정원이 차면 자동으로 모집이 마감돼요.</li>
-          <li>
-            작성자가 마감하거나 {taxi ? "출발" : "주문 마감"} 시간이 지나면
-            참여할 수 없어요.
-          </li>
-          <li>
-            참여 취소는 {taxi ? "출발" : "주문 마감"} {cutoffMinutes(detail)}분
-            전까지 할 수 있어요.
-          </li>
-          <li>본인이 작성한 글에는 참여할 수 없어요.</li>
-        </ul>
-      </aside>
-
-      <CommentsPanel
-        postId={id}
-        status={status}
-        referenceTime={detail.referenceTime}
-        serverNow={participation.serverNow}
-        operations={commentOperations}
-        onUnavailable={() => onReload()}
-      />
-
-      {!author && (
-        <div className={styles.report}>
-          {reportNotice && (
-            <p
-              ref={reportNoticeRef}
-              tabIndex={-1}
-              role="status"
-              className={styles.success}
-            >
-              {reportNotice}
+              {!history &&
+                Array.from({ length: Math.max(0, remaining) }, (_, index) => (
+                  <li key={`seat-${index}`} className={styles.seat}>
+                    <span>빈자리</span>
+                    <span className={styles.meta}>
+                      {status === "OPEN" ? "참여 가능" : "참여 마감"}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className={styles.help}>
+              {remaining > 0 && !history ? `${remaining}자리 남았어요. ` : ""}
+              참가자 이름은 작성자와 참여한 학생에게만 보여요.
             </p>
           )}
-          {canReport(latest) ? (
-            <button
-              type="button"
-              className={styles.reportButton}
-              onClick={() => setReportOpen(true)}
-            >
-              이 모집글 신고하기
-            </button>
-          ) : (
-            latest.reported && (
-              <p className={styles.meta}>이미 신고한 모집이에요.</p>
-            )
-          )}
-        </div>
-      )}
+        </section>
 
-      <ReportDialog
-        open={reportOpen}
-        onSubmit={(request) => operations.report(id, request)}
-        onClose={() => setReportOpen(false)}
-        onUnauthorized={handleUnauthorized}
-        onDone={(outcome) => {
-          setReportOpen(false);
-          setLatest((value) => ({ ...value, reported: true }));
-          setReportNotice(
-            outcome === "submitted"
-              ? "신고가 접수됐어요. 운영자가 확인할 예정이에요."
-              : "이미 신고한 모집이에요. 같은 모집은 한 번만 신고할 수 있어요.",
-          );
-        }}
-      />
+        {visible.communicationUrl && (
+          <section className={styles.section} aria-labelledby="post-link">
+            <h2 id="post-link" className={styles.sectionTitle}>
+              소통 링크
+            </h2>
+            <a
+              href={visible.communicationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.secondary}
+            >
+              소통 링크 열기 <span className={styles.srOnly}>(새 창)</span>
+            </a>
+            <p className={styles.help}>
+              작성자와 참여한 학생에게만 보여요. 출발 시간이 지나면 사라져요.
+            </p>
+          </section>
+        )}
+
+        <aside className={styles.guide} aria-labelledby="post-guide">
+          <h2 id="post-guide" className={styles.label}>
+            참여 안내
+          </h2>
+          <ul>
+            <li>정원이 차면 자동으로 모집이 마감돼요.</li>
+            <li>
+              작성자가 마감하거나 {taxi ? "출발" : "주문 마감"} 시간이 지나면
+              참여할 수 없어요.
+            </li>
+            <li>
+              참여 취소는 {taxi ? "출발" : "주문 마감"} {cutoffMinutes(detail)}
+              분 전까지 할 수 있어요.
+            </li>
+            <li>본인이 작성한 글에는 참여할 수 없어요.</li>
+          </ul>
+        </aside>
+
+        <CommentsPanel
+          postId={id}
+          status={status}
+          referenceTime={detail.referenceTime}
+          serverNow={participation.serverNow}
+          operations={commentOperations}
+          onUnavailable={() => onReload()}
+        />
+
+        {!author && (
+          <div className={styles.report}>
+            {reportNotice && (
+              <p
+                ref={reportNoticeRef}
+                tabIndex={-1}
+                role="status"
+                className={styles.success}
+              >
+                {reportNotice}
+              </p>
+            )}
+            {canReport(latest) ? (
+              <button
+                type="button"
+                className={styles.reportButton}
+                onClick={() => setReportOpen(true)}
+              >
+                이 모집글 신고하기
+              </button>
+            ) : (
+              latest.reported && (
+                <p className={styles.meta}>이미 신고한 모집이에요.</p>
+              )
+            )}
+          </div>
+        )}
+
+        <ReportDialog
+          open={reportOpen}
+          onSubmit={(request) => operations.report(id, request)}
+          onClose={() => setReportOpen(false)}
+          onUnauthorized={handleUnauthorized}
+          onDone={(outcome) => {
+            setReportOpen(false);
+            setLatest((value) => ({ ...value, reported: true }));
+            setReportNotice(
+              outcome === "submitted"
+                ? "신고가 접수됐어요. 운영자가 확인할 예정이에요."
+                : "이미 신고한 모집이에요. 같은 모집은 한 번만 신고할 수 있어요.",
+            );
+          }}
+        />
+      </div>
     </article>
   );
 }
@@ -579,6 +585,7 @@ function AuthorPanel({
   onUnauthorized: () => void;
 }) {
   const [confirm, setConfirm] = useState<Action | null>(null);
+  const path = useAppPath();
   const [busy, setBusy] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
   const locked = useRef(false);
@@ -673,7 +680,7 @@ function AuthorPanel({
 
       {actions.edit && (
         <Link
-          href={`/posts/${encodeURIComponent(detail.id)}/edit`}
+          href={path(`/posts/${encodeURIComponent(detail.id)}/edit`)}
           className={styles.secondary}
         >
           모집글 수정

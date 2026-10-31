@@ -6,9 +6,11 @@ import { Suspense, useId, type ReactNode } from "react";
 import { loginHref, type UserRole } from "./auth";
 import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 /** Server 403 answer, or a role the screen does not allow (AC-AUTH-004-07). */
 export function AccessDenied() {
+  const path = useAppPath();
   const titleId = useId();
   return (
     <section className={styles.notice} aria-labelledby={titleId}>
@@ -18,7 +20,7 @@ export function AccessDenied() {
       <p className={styles.muted}>
         이 화면은 권한이 있는 사용자만 볼 수 있어요.
       </p>
-      <Link href="/" className={styles.secondary}>
+      <Link href={path("/")} className={styles.secondary}>
         홈으로 돌아가기
       </Link>
     </section>
@@ -31,9 +33,11 @@ export function AccessDenied() {
  */
 export function RequireAuth({
   role,
+  loginLabel = "로그인하러 가기",
   children,
 }: {
   role?: UserRole;
+  loginLabel?: string;
   children: ReactNode;
 }) {
   const { status, user, notice, check } = useAuth();
@@ -85,7 +89,7 @@ export function RequireAuth({
         <Suspense
           fallback={<p role="status">로그인 경로를 확인하고 있어요.</p>}
         >
-          <LoginLink pathname={pathname ?? "/"} />
+          <LoginLink pathname={pathname ?? "/"} label={loginLabel} />
         </Suspense>
       </section>
     );
@@ -96,14 +100,15 @@ export function RequireAuth({
   return children;
 }
 
-function LoginLink({ pathname }: { pathname: string }) {
+function LoginLink({ pathname, label }: { pathname: string; label: string }) {
+  const path = useAppPath();
   const search = useSearchParams().toString();
   return (
     <Link
-      href={loginHref(`${pathname}${search ? `?${search}` : ""}`)}
+      href={path(loginHref(`${pathname}${search ? `?${search}` : ""}`))}
       className={styles.primary}
     >
-      로그인하러 가기
+      {label}
     </Link>
   );
 }

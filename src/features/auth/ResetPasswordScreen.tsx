@@ -16,6 +16,7 @@ import {
   passwordError,
 } from "./signup";
 import styles from "./auth.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 export function ResetPasswordScreen({
   token,
@@ -36,6 +37,7 @@ function ResetPasswordForm({
   token?: string;
   operations: PasswordResetOperations;
 }) {
+  const path = useAppPath();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<{
@@ -119,7 +121,7 @@ function ResetPasswordForm({
             <p role="alert" className={styles.error}>
               {passwordResetErrorMessage(new PasswordResetError("invalidLink"))}
             </p>
-            <Link href="/forgot-password" className={styles.primary}>
+            <Link href={path("/forgot-password")} className={styles.primary}>
               새 재설정 링크 받기
             </Link>
           </>
@@ -216,7 +218,7 @@ function ResetPasswordForm({
             </form>
           </>
         )}
-        <Link href="/login" className={styles.secondary}>
+        <Link href={path("/login")} className={styles.secondary}>
           로그인으로 돌아가기
         </Link>
       </section>

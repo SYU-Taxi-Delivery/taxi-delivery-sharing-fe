@@ -11,6 +11,32 @@
   gap: 1.5rem;
 }
 
+.body,
+.decision {
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .detail {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+    column-gap: 2rem;
+  }
+
+  .top,
+  .body {
+    grid-column: 1;
+  }
+
+  .decision {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
 .top {
   display: grid;
   gap: 0.5rem;

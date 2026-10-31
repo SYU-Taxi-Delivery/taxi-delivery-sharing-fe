@@ -31,7 +31,7 @@ const pickups = ["정문", "후문", "기숙사 앞"];
 const names = ["박지민", "최유진", "정민수", "오수빈", "이도윤", "한지우"];
 
 function makePosts(now: number): PostSummary[] {
-  return Array.from({ length: 41 }, (_, index): PostSummary => {
+  return Array.from({ length: 121 }, (_, index): PostSummary => {
     const type = index % 3 === 1 ? "DELIVERY" : "TAXI";
     const referenceMs = now + (index * 12 - 25) * 60_000;
     const capacity = type === "TAXI" ? 4 : 2 + (index % 5);
@@ -104,7 +104,7 @@ export function PostsPreview({ query }: { query: PostQuery }) {
   return (
     <AuthProvider operations={auth}>
       <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>개발 전용 모의 목록 · 새로고침하면 시각 기준이 바뀌어요.</span>
+        <span>모집 목록 데모 · 새로고침하면 시각 기준이 바뀌어요.</span>
         <label className="flex items-center gap-1">
           상황
           <select

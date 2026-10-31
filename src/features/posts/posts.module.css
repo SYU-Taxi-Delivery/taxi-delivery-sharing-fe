@@ -24,6 +24,12 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.625rem 1rem 0.375rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.frameHeader {
+  border-bottom: 1px solid var(--posts-border);
 }
 
 .brand {
@@ -42,7 +48,8 @@
   display: flex;
   gap: 1.25rem;
   padding: 0 1rem;
-  border-bottom: 1px solid var(--posts-border);
+  max-width: 64rem;
+  margin: 0 auto;
 }
 
 .navLink {
@@ -71,6 +78,15 @@
 .title {
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+.listHeading {
+  display: grid;
+  gap: 1rem;
+}
+
+.listHeading .cta {
+  margin-top: 0;
 }
 
 .muted,
@@ -224,6 +240,10 @@
   margin-top: 0.75rem;
 }
 
+.cardBody {
+  min-width: 0;
+}
+
 .time,
 .people {
   font-size: 1.125rem;
@@ -292,6 +312,61 @@
 
 .pageLink[aria-disabled="true"] {
   opacity: 0.4;
+}
+
+.pageNumber {
+  display: none;
+}
+
+.pagePosition {
+  display: inline-grid;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 24rem) {
+  .pageNumber {
+    display: inline-grid;
+  }
+
+  .pagePosition {
+    display: none;
+  }
+}
+
+@media (min-width: 64rem) {
+  .mainWide {
+    max-width: 64rem;
+  }
+
+  .listHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .listHeading .cta {
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+  }
+
+  .card {
+    align-items: center;
+    padding: 1.25rem 0.75rem;
+  }
+
+  .cardBody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .figures {
+    margin-top: 0;
+  }
 }
 
 .footer {

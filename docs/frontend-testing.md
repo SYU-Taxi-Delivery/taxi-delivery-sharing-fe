@@ -57,7 +57,7 @@ BE-I/FLOW까지 통과했다는 뜻은 아니다. `~`·`/`로 축약된 이름�
 
 API 어댑터의 DTO·오류 매핑은 각 기능의 `*Api.test.ts`와
 [api.test.ts](../src/lib/api.test.ts)·[backend.test.ts](../src/lib/backend.test.ts)에서 별도로 검사한다.
-개발 경로의 운영 404도 `src/app/*-preview` 테스트와 운영 서버 확인을 구분해 기록한다.
+공개 데모 경로는 `src/app/*-preview` 테스트와 운영 모드 서버에서 200 응답·데모 내부 이동·실제 API 호출 격리를 구분해 확인한다.
 
 ## fixture·시각·모의 응답 규칙
 

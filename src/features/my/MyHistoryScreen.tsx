@@ -12,6 +12,7 @@ import { MyHistoryCard, type LiveHistoryItem } from "./MyHistoryCard";
 import { ParticipationCancellation } from "./ParticipationCancellation";
 import { useMyHistory } from "./useMyHistory";
 import styles from "./my.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 const tabs: { tab: MyTab; label: string }[] = [
   { tab: "participated", label: "참여한 글" },
@@ -27,14 +28,15 @@ export function MyHistoryScreen({
   basePath?: string;
   operations?: MyHistoryOperations;
 }) {
+  const path = useAppPath();
   return (
     <AppShell current="my">
       <h1 className={common.title}>내 참여 · 모집</h1>
       <p className={`${common.muted} mt-1`}>참여한 글·작성한 글 관리</p>
-      <Link href="/posts/new" className={common.cta}>
-        <Image src="/my/plus.svg" width={18} height={18} alt="" /> 모집글 쓰기
-      </Link>
-      <RequireAuth>
+      <RequireAuth loginLabel="로그인하고 내 내역 보기">
+        <Link href={path("/posts/new")} className={common.cta}>
+          <Image src="/my/plus.svg" width={18} height={18} alt="" /> 모집글 쓰기
+        </Link>
         <History
           key={tab}
           tab={tab}
@@ -55,6 +57,7 @@ function History({
   basePath: string;
   operations: MyHistoryOperations;
 }) {
+  const path = useAppPath();
   const {
     history,
     loading,
@@ -101,11 +104,11 @@ function History({
         {tabs.map((entry) => (
           <Link
             key={entry.tab}
-            href={
+            href={path(
               entry.tab === "participated"
                 ? basePath
-                : `${basePath}?tab=created`
-            }
+                : `${basePath}?tab=created`,
+            )}
             scroll={false}
             className={styles.tab}
             aria-current={entry.tab === tab ? "page" : undefined}
@@ -183,7 +186,7 @@ function History({
                 : "아직 참여한 모집이 없어요."}
             </p>
             <Link
-              href={tab === "created" ? "/posts/new" : "/posts"}
+              href={path(tab === "created" ? "/posts/new" : "/posts")}
               className={styles.button}
             >
               {tab === "created" ? "모집글 쓰기" : "모집글 둘러보기"}
@@ -196,7 +199,7 @@ function History({
         <div>
           <p>참여 취소: 각 카드에 표시된 참여 취소 기한까지 가능해요.</p>
           <p>작성한 글의 상세에서 수정·모집 마감·모집 취소가 가능해요.</p>
-          <Link href="/posts">모집글 목록으로</Link>
+          <Link href={path("/posts")}>모집글 목록으로</Link>
         </div>
       </aside>
     </>

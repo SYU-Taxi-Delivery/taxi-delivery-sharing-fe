@@ -19,7 +19,11 @@ const student: CurrentUser = {
 
 beforeEach(() => router.replace.mockReset());
 
-async function setup(overrides: Partial<AuthOperations> = {}, next = "/") {
+async function setup(
+  overrides: Partial<AuthOperations> = {},
+  next = "/",
+  showIntroduction = false,
+) {
   const operations: AuthOperations = {
     me: vi.fn(async () => null),
     login: vi.fn(async () => {}),
@@ -28,7 +32,7 @@ async function setup(overrides: Partial<AuthOperations> = {}, next = "/") {
   };
   render(
     <AuthProvider operations={operations}>
-      <LoginScreen next={next} />
+      <LoginScreen next={next} showIntroduction={showIntroduction} />
     </AuthProvider>,
   );
   await act(async () => {});
@@ -50,6 +54,25 @@ const submit = () =>
   });
 
 describe("LoginScreen", () => {
+  it("첫 화면은 서비스 소개와 로그인 폼을 함께 제공한다", async () => {
+    await setup({}, "/posts", true);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "택시도 배달도, 삼육대 학생과 함께",
+    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "로그인" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("학교 이메일")).toBeVisible();
+    expect(screen.getByText("이용 예시 · 택시")).toBeInTheDocument();
+  });
+
+  it("계정 복구 경로에도 원래 화면과 탭을 보존한다", async () => {
+    await setup({}, "/my?tab=created");
+    expect(
+      screen.getByRole("link", { name: "비밀번호를 잊으셨나요?" }),
+    ).toHaveAttribute("href", "/forgot-password?next=%2Fmy%3Ftab%3Dcreated");
+  });
+
   it("AC-UI-AUTH-01, AC-NFR-PRV-01-01: 학교 이메일·비밀번호만 레이블과 함께 받는다", async () => {
     await setup();
     expect(

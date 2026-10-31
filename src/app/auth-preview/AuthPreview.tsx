@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import type { AuthOperations, CurrentUser } from "@/features/auth/auth";
@@ -26,9 +27,14 @@ function PreviewBody({
   setFailLogout: (value: boolean) => void;
 }) {
   const auth = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (auth.status === "authenticated") router.replace("/posts-preview");
+  }, [auth.status, router]);
 
   if (auth.status !== "authenticated") {
-    return <LoginScreen next="/auth-preview" />;
+    return <LoginScreen next="/posts-preview" />;
   }
 
   return (
@@ -92,7 +98,7 @@ export function AuthPreview() {
   return (
     <AuthProvider operations={operations}>
       <p className="bg-yellow-100 px-4 py-2 text-xs">
-        개발 전용 모의 화면 · student@syuin.ac.kr / admin@syuin.ac.kr /
+        로그인 데모 · student@syuin.ac.kr / admin@syuin.ac.kr /
         unverified@syuin.ac.kr, 비밀번호 {PASSWORD} · 새로고침하면 초기화돼요.
       </p>
       <PreviewBody failLogout={failLogout} setFailLogout={setFailLogout} />

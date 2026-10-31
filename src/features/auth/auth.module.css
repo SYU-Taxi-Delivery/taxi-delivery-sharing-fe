@@ -47,7 +47,6 @@
 .tagline,
 .muted,
 .help,
-.caption,
 .footer {
   color: var(--auth-muted);
 }
@@ -111,6 +110,92 @@
   border-color: var(--auth-error);
 }
 
+.input::placeholder {
+  color: var(--auth-muted);
+  opacity: 1;
+}
+
+.landing {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
+}
+
+.intro {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.headline {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.introDescription {
+  color: var(--auth-muted);
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.example {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .landing {
+    max-width: 64rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26.25rem);
+    align-items: start;
+    gap: 4rem;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .intro {
+    gap: 1rem;
+    padding-top: 1.5rem;
+  }
+
+  .headline {
+    font-size: 2.5rem;
+  }
+
+  .introDescription {
+    max-width: 24rem;
+    font-size: 1rem;
+  }
+
+  .example {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.25rem 0 0.25rem 1rem;
+    border-left: 3px solid var(--auth-primary);
+  }
+
+  .exampleLabel {
+    color: var(--auth-primary-text);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .exampleRoute {
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+}
+
 .help {
   font-size: 0.75rem;
 }
@@ -171,12 +256,6 @@
 .box {
   display: grid;
   gap: 0.25rem;
-}
-
-.caption {
-  margin-top: 1.5rem;
-  font-size: 0.75rem;
-  text-align: center;
 }
 
 .footer {

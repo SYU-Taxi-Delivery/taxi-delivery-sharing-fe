@@ -135,14 +135,27 @@ describe("ForgotPasswordScreen", () => {
     ).toBeNull();
   });
 
-  it("운영 기본 화면은 API 준비 안내를 표시하며 발송 완료로 넘어가지 않는다", async () => {
+  it("운영 기본 화면은 입력 전에 준비 상태를 알린다", () => {
     render(<ForgotPasswordScreen />);
-    type("학교 이메일", "a@syuin.ac.kr");
-    await click("재설정 링크 받기");
-    expect(screen.getByRole("alert")).toHaveTextContent("준비");
+    expect(screen.getByText(/현재 재설정 메일 발송/)).toBeVisible();
+    expect(screen.getByLabelText("학교 이메일")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "재설정 링크 받기" }),
+    ).toBeEnabled();
     expect(
       screen.queryByRole("heading", { name: "메일함을 확인해 주세요" }),
     ).toBeNull();
+  });
+
+  it.each([
+    ["/my?tab=created", "/login?next=%2Fmy%3Ftab%3Dcreated"],
+    ["https://outside.example", "/login"],
+    ["//outside.example", "/login"],
+  ])("복구 후 %s로 돌아가는 경로를 검증한다", (next, href) => {
+    render(<ForgotPasswordScreen next={next} />);
+    expect(
+      screen.getByRole("link", { name: "로그인으로 돌아가기" }),
+    ).toHaveAttribute("href", href);
   });
 });
 

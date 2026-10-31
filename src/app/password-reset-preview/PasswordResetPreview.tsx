@@ -15,7 +15,13 @@ const commonScenarios = [
   ["error", "네트워크 오류"],
 ] as const;
 
-export function PasswordResetPreview({ mode }: { mode: "request" | "reset" }) {
+export function PasswordResetPreview({
+  mode,
+  next,
+}: {
+  mode: "request" | "reset";
+  next?: string;
+}) {
   const [scenario, setScenario] = useState("success");
   const pause = () =>
     new Promise<void>((resolve) => window.setTimeout(resolve, 400));
@@ -43,7 +49,7 @@ export function PasswordResetPreview({ mode }: { mode: "request" | "reset" }) {
   return (
     <>
       <aside className="grid gap-2 bg-yellow-100 px-4 py-2 text-sm">
-        <p>개발 전용 모의 화면 · 실제 메일 발송이나 비밀번호 변경은 없어요.</p>
+        <p>비밀번호 복구 데모 · 예시 이메일과 비밀번호로 진행해 주세요.</p>
         <nav aria-label="비밀번호 재설정 미리보기" className="flex gap-4">
           <Link href="/password-reset-preview" className="underline">
             링크 요청 화면
@@ -74,7 +80,11 @@ export function PasswordResetPreview({ mode }: { mode: "request" | "reset" }) {
         </label>
       </aside>
       {mode === "request" ? (
-        <ForgotPasswordScreen key={scenario} operations={operations} />
+        <ForgotPasswordScreen
+          key={scenario}
+          operations={operations}
+          next={next}
+        />
       ) : (
         <ResetPasswordScreen
           key={scenario}

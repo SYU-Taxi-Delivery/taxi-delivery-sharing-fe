@@ -24,6 +24,7 @@ import {
   type SignupOperations,
 } from "./signup";
 import styles from "./auth.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 type EmailStep = "idle" | "sending" | "sent" | "verifying" | "verified";
 type Field = "email" | "code" | "displayName" | "password" | "confirm";
@@ -41,6 +42,7 @@ export function SignupScreen({
   operations?: SignupOperations;
 }) {
   const auth = useAuth();
+  const path = useAppPath();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [step, setStep] = useState<EmailStep>("idle");
@@ -72,8 +74,8 @@ export function SignupScreen({
   const id = (name: string) => `${baseId}-${name}`;
 
   useEffect(() => {
-    if (auth.status === "authenticated") router.replace("/");
-  }, [auth.status, router]);
+    if (auth.status === "authenticated") router.replace(path("/"));
+  }, [auth.status, router, path]);
 
   useEffect(() => {
     const target = pendingFocus.current;
@@ -255,7 +257,7 @@ export function SignupScreen({
           <p className={styles.muted} role="status">
             {done}님, 학교 이메일과 비밀번호로 로그인해 주세요.
           </p>
-          <Link href="/login" className={styles.primary}>
+          <Link href={path("/login")} className={styles.primary}>
             로그인하러 가기
           </Link>
         </section>
@@ -274,6 +276,15 @@ export function SignupScreen({
             학교 이메일 인증으로 두유팟 시작
           </p>
         </div>
+        {operations === defaultOperations && (
+          <p className={styles.terms}>
+            현재 이메일 인증과 가입 요청을 연결하고 있어요. 데모에서는 가입
+            과정을 체험할 수 있어요.{" "}
+            <Link href="/signup-preview" className={styles.textLink}>
+              가입 데모 보기
+            </Link>
+          </p>
+        )}
         <form
           className={styles.form}
           noValidate
@@ -539,9 +550,9 @@ export function SignupScreen({
           )}
         </form>
         <p className={`${styles.muted} text-center`}>
-          기존 회원{" "}
-          <Link href="/login" className={styles.textLink}>
-            로그인
+          기존 회원이세요?{" "}
+          <Link href={path("/login")} className={styles.textLink}>
+            로그인으로 돌아가기
           </Link>
         </p>
       </section>

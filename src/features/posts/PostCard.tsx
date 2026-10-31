@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { postStatusLabel, type PostSummary } from "./posts";
 import styles from "./posts.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 const dateFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -17,6 +20,7 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
 });
 
 export function PostCard({ post }: { post: PostSummary }) {
+  const path = useAppPath();
   const { label, reason, available } = postStatusLabel(post);
   const reference = Date.parse(post.referenceTime);
   const remaining = post.capacity - post.currentMemberCount;
@@ -24,7 +28,7 @@ export function PostCard({ post }: { post: PostSummary }) {
 
   return (
     <Link
-      href={`/posts/${encodeURIComponent(post.id)}`}
+      href={path(`/posts/${encodeURIComponent(post.id)}`)}
       className={styles.card}
       data-available={available}
     >
@@ -36,28 +40,30 @@ export function PostCard({ post }: { post: PostSummary }) {
           alt=""
         />
       </span>
-      <span>
-        <span className={styles.cardTitle}>
-          {taxi ? (
-            <>
-              {post.departure}
-              <span className={styles.srOnly}>에서</span>
-              <Image src="/posts/arrow.svg" width={16} height={16} alt="" />
-              {post.destination}
-              <span className={styles.srOnly}>까지</span>
-            </>
-          ) : (
-            post.restaurantName
-          )}
-        </span>
-        <span className={styles.chips}>
-          <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
-          <span className={styles.status}>{label}</span>
-        </span>
-        <span className={`${styles.meta} block`}>
-          {!taxi && <>수령 장소 · {post.pickupLocation}</>}
-          {!taxi && post.authorName && <br />}
-          {post.authorName}
+      <span className={styles.cardBody}>
+        <span>
+          <span className={styles.cardTitle}>
+            {taxi ? (
+              <>
+                {post.departure}
+                <span className={styles.srOnly}>에서</span>
+                <Image src="/posts/arrow.svg" width={16} height={16} alt="" />
+                {post.destination}
+                <span className={styles.srOnly}>까지</span>
+              </>
+            ) : (
+              post.restaurantName
+            )}
+          </span>
+          <span className={styles.chips}>
+            <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
+            <span className={styles.status}>{label}</span>
+          </span>
+          <span className={`${styles.meta} block`}>
+            {!taxi && <>수령 장소 · {post.pickupLocation}</>}
+            {!taxi && post.authorName && <br />}
+            {post.authorName}
+          </span>
         </span>
         <span className={styles.figures}>
           <span>

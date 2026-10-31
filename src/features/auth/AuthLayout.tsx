@@ -10,7 +10,13 @@ const notoSansKr = Noto_Sans_KR({
 });
 
 /** Header, centered card column and footer shared by the login and sign-up designs. */
-export function AuthLayout({ children }: { children: ReactNode }) {
+export function AuthLayout({
+  children,
+  intro,
+}: {
+  children: ReactNode;
+  intro?: ReactNode;
+}) {
   return (
     <div className={`${styles.screen} ${notoSansKr.className}`}>
       <header className={styles.header}>
@@ -20,13 +26,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </p>
         <p className={styles.tagline}>삼육대학교 재학생 커뮤니티</p>
       </header>
-      <main className={styles.main}>
+      <main className={intro ? styles.landing : styles.main}>
+        {intro}
         {children}
-        <p className={styles.caption}>
-          삼육대학교 재학생 커뮤니티
-          <br />
-          학교 공식 서비스와 별도 운영
-        </p>
       </main>
       <footer className={styles.footer}>
         <p>두유팟 · 학생끼리 함께하는 이동과 배달</p>

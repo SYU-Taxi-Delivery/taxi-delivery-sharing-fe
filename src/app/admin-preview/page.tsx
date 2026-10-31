@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
 import { AdminPreview } from "./AdminPreview";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 export default function AdminPreviewPage() {
-  if (process.env.NODE_ENV !== "development") notFound();
   return <AdminPreview />;
 }

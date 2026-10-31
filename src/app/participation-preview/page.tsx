@@ -1,10 +1,10 @@
-import { notFound } from "next/navigation";
 import type { ParticipationSnapshot } from "@/features/participation/participation";
 import { ParticipationPreview } from "./ParticipationPreview";
 
-export default function ParticipationPreviewPage() {
-  if (process.env.NODE_ENV !== "development") notFound();
+export const metadata = { robots: { index: false, follow: false } };
+export const dynamic = "force-dynamic";
 
+export default function ParticipationPreviewPage() {
   const serverTime = new Date().toISOString();
   const referenceTime = new Date(
     Date.parse(serverTime) + 3_600_000,
@@ -42,8 +42,8 @@ export default function ParticipationPreviewPage() {
     <main className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-2xl font-bold">참여 신청·취소 미리보기</h1>
       <p className="mt-3 mb-8 text-sm leading-6 text-neutral-600">
-        모의 데이터로 동작을 확인하는 개발 전용 화면입니다. 새로고침하면 초기
-        상태로 돌아갑니다.
+        예시 데이터로 동작을 확인하는 데모 화면입니다. 새로고침하면 초기 상태로
+        돌아갑니다.
       </p>
       <div className="grid items-start gap-8 md:grid-cols-2">
         {examples.map((snapshot) => (

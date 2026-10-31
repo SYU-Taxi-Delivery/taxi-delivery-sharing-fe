@@ -32,6 +32,9 @@ describe("첫 화면", () => {
   it("비로그인 첫 진입에서 로그인 폼과 가입·재설정 링크를 제공한다", async () => {
     await setup();
     expect(screen.getByRole("heading", { name: "로그인" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "택시도 배달도, 삼육대 학생과 함께",
+    );
     expect(screen.getByLabelText("학교 이메일")).toBeVisible();
     expect(screen.getByLabelText("비밀번호")).toBeVisible();
     expect(screen.getByRole("link", { name: "회원가입" })).toHaveAttribute(
@@ -40,7 +43,7 @@ describe("첫 화면", () => {
     );
     expect(
       screen.getByRole("link", { name: "비밀번호를 잊으셨나요?" }),
-    ).toHaveAttribute("href", "/forgot-password");
+    ).toHaveAttribute("href", "/forgot-password?next=%2Fposts");
     expect(screen.queryByText("서비스 준비 중")).not.toBeInTheDocument();
     expect(router.replace).not.toHaveBeenCalled();
   });

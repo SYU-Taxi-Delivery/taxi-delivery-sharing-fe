@@ -54,9 +54,7 @@ describe("PasswordResetPreview", () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     render(<PasswordResetPreview mode="request" />);
-    expect(
-      screen.getByText(/실제 메일 발송이나 비밀번호 변경은 없어요/),
-    ).toBeVisible();
+    expect(screen.getByText(/비밀번호 복구 데모/)).toBeVisible();
     await expect(
       finish(requestProps().operations.requestLink("a@syuin.ac.kr")),
     ).resolves.toBeUndefined();
@@ -110,14 +108,15 @@ describe("PasswordResetPreview", () => {
     expect(screen.getByLabelText(label)).toHaveValue("");
   });
 
-  it("개발 환경에서만 요청·변경 화면을 선택하며 그 외 환경은 404다", async () => {
+  it("운영 환경에서도 요청·변경 화면을 선택할 수 있다", async () => {
     for (const environment of ["test", "production"] as const) {
       vi.stubEnv("NODE_ENV", environment);
-      await expect(
-        PasswordResetPreviewPage({ searchParams: Promise.resolve({}) }),
-      ).rejects.toThrow("preview not found");
+      const page = await PasswordResetPreviewPage({
+        searchParams: Promise.resolve({}),
+      });
+      expect(page.props.mode).toBe("request");
     }
-    expect(notFound).toHaveBeenCalledTimes(2);
+    expect(notFound).not.toHaveBeenCalled();
     vi.stubEnv("NODE_ENV", "development");
     const reset = await PasswordResetPreviewPage({
       searchParams: Promise.resolve({ mode: "reset" }),
