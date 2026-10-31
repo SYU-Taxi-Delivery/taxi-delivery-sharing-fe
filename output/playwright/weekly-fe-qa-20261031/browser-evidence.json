@@ -1,0 +1,107 @@
+{
+  "transport": "browser-intercepted HTTP, synthetic data",
+  "backendConnected": false,
+  "mutations": [
+    {
+      "method": "POST",
+      "path": "/api/auth/local/login",
+      "fields": ["identifier", "password"]
+    },
+    {
+      "method": "POST",
+      "path": "/api/posts/101/participants",
+      "fields": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/posts/101/participants",
+      "fields": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/posts/201/participants",
+      "fields": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/posts/201/participants",
+      "fields": []
+    },
+    {
+      "method": "POST",
+      "path": "/logout",
+      "fields": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/local/login",
+      "fields": ["identifier", "password"]
+    },
+    {
+      "method": "POST",
+      "path": "/api/posts",
+      "fields": [
+        "type",
+        "title",
+        "communicationUrl",
+        "restaurantName",
+        "pickupLocation",
+        "referenceTime",
+        "capacity",
+        "orderGuide",
+        "content"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/posts/303",
+      "fields": [
+        "title",
+        "communicationUrl",
+        "restaurantName",
+        "pickupLocation",
+        "referenceTime",
+        "capacity",
+        "orderGuide",
+        "content"
+      ]
+    }
+  ],
+  "finalPosts": [
+    {
+      "id": "101",
+      "type": "TAXI",
+      "title": "QA 택시 모집",
+      "participants": 0
+    },
+    {
+      "id": "201",
+      "type": "DELIVERY",
+      "title": "QA 배달 모집",
+      "participants": 0
+    },
+    {
+      "id": "303",
+      "type": "DELIVERY",
+      "title": "QA 수정된 배달 모집",
+      "participants": 0
+    }
+  ],
+  "authorDeadline": {
+    "clock": "fastForward 2 hours",
+    "disabled": true,
+    "escapeFocusRestored": true
+  },
+  "anonymousRoutes": [
+    "/posts",
+    "/posts/101",
+    "/posts/new",
+    "/posts/101/edit",
+    "/my"
+  ],
+  "viewportWidths": [320, 375, 768, 1440],
+  "expiry": {
+    "protectedDetailRemoved": true,
+    "backEditHidden": true
+  }
+}

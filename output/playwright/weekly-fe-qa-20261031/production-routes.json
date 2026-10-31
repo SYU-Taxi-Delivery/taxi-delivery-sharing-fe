@@ -1,0 +1,57 @@
+[
+  {
+    "path": "/posts",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/posts/101",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/posts/new",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/posts/101/edit",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/my",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/auth-preview",
+    "status": 404,
+    "expected": 404
+  },
+  {
+    "path": "/posts-preview",
+    "status": 404,
+    "expected": 404
+  },
+  {
+    "path": "/post-detail-preview",
+    "status": 404,
+    "expected": 404
+  },
+  {
+    "path": "/post-form-preview",
+    "status": 404,
+    "expected": 404
+  },
+  {
+    "path": "/my-preview",
+    "status": 404,
+    "expected": 404
+  },
+  {
+    "path": "/participation-preview",
+    "status": 404,
+    "expected": 404
+  }
+]

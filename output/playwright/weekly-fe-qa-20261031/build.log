@@ -1,0 +1,46 @@
+
+> taxi-delivery-sharing-fe@0.1.0 build <repo>
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 636ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.9s
+  Running TypeScript ...
+  Finished TypeScript in 17.6s ...
+  Collecting page data using 21 workers ...
+  Generating static pages using 21 workers (0/21) ...
+  Generating static pages using 21 workers (5/21)
+  Generating static pages using 21 workers (10/21)
+  Generating static pages using 21 workers (15/21)
+✓ Generating static pages using 21 workers (21/21) in 859ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin-preview
+├ ○ /auth-preview
+├ ○ /comments-preview
+├ ○ /forgot-password
+├ ƒ /login
+├ ƒ /my
+├ ○ /my-preview
+├ ○ /participation-preview
+├ ○ /password-reset-preview
+├ ○ /post-detail-preview
+├ ○ /post-form-preview
+├ ƒ /posts
+├ ○ /posts-preview
+├ ƒ /posts/[id]
+├ ƒ /posts/[id]/edit
+├ ƒ /posts/new
+├ ƒ /reset-password
+├ ○ /signup
+└ ○ /signup-preview
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
