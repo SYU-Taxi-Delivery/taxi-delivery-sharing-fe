@@ -73,6 +73,7 @@ export function PostDetailScreen({
       </Link>
       <RequireAuth>
         <DetailLoader
+          key={postId}
           postId={postId}
           listPath={listPath}
           operations={operations}
@@ -445,6 +446,7 @@ function DetailView({
         <AuthorPanel
           detail={detail}
           nowMs={nowMs}
+          serverNow={participation.serverNow}
           operations={operations}
           onReload={onReload}
           onUnauthorized={handleUnauthorized}
@@ -562,12 +564,14 @@ type Action = "close" | "cancel";
 function AuthorPanel({
   detail,
   nowMs,
+  serverNow,
   operations,
   onReload,
   onUnauthorized,
 }: {
   detail: PostDetail;
   nowMs: number;
+  serverNow: () => number;
   operations: PostDetailOperations;
   onReload: (
     notice?: { tone: "success" | "error"; text: string } | null,
@@ -578,13 +582,14 @@ function AuthorPanel({
   const [busy, setBusy] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
   const locked = useRef(false);
+  const panel = useRef<HTMLElement>(null);
   const actions = authorActions(detail, nowMs);
   const status = effectiveStatus(detail, nowMs);
   const remaining = detail.capacity - detail.currentMemberCount;
   const taxi = detail.type === "TAXI";
 
   async function run(action: Action) {
-    if (locked.current) return;
+    if (locked.current || !authorActions(detail, serverNow())[action]) return;
     setConfirm(null);
     locked.current = true;
     setBusy(action);
@@ -636,6 +641,8 @@ function AuthorPanel({
 
   return (
     <section
+      ref={panel}
+      tabIndex={-1}
       className={styles.card}
       aria-labelledby="author-panel"
       aria-busy={!!busy}
@@ -733,6 +740,8 @@ function AuthorPanel({
         open={confirm === "close"}
         title="모집을 마감할까요?"
         confirmLabel="모집 마감"
+        confirmDisabled={!actions.close}
+        restoreFocus={!actions.close ? () => panel.current?.focus() : undefined}
         onClose={() => setConfirm(null)}
         onConfirm={() => void run("close")}
       >
@@ -740,11 +749,20 @@ function AuthorPanel({
           현재 {detail.currentMemberCount}명으로 마감해요. 마감한 뒤에는 새로
           참여할 수 없고, 참여자가 줄어도 다시 열리지 않아요.
         </p>
+        {!actions.close && (
+          <p role="status">
+            모집 상태가 바뀌었거나 기준시각이 지나 더 이상 처리할 수 없어요.
+          </p>
+        )}
       </ConfirmDialog>
       <ConfirmDialog
         open={confirm === "cancel"}
         title="모집을 취소할까요?"
         confirmLabel="모집 취소"
+        confirmDisabled={!actions.cancel}
+        restoreFocus={
+          !actions.cancel ? () => panel.current?.focus() : undefined
+        }
         danger
         onClose={() => setConfirm(null)}
         onConfirm={() => void run("cancel")}
@@ -753,6 +771,11 @@ function AuthorPanel({
           참여한 학생의 참여도 함께 취소되고, 되돌릴 수 없어요.
           {taxi ? " 출발" : " 주문 마감"} 시간 전까지만 취소할 수 있어요.
         </p>
+        {!actions.cancel && (
+          <p role="status">
+            모집 상태가 바뀌었거나 기준시각이 지나 더 이상 처리할 수 없어요.
+          </p>
+        )}
       </ConfirmDialog>
     </section>
   );

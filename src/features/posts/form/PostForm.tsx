@@ -227,7 +227,7 @@ export function PostForm({
             kind: "error",
             message:
               "등록 결과를 확인하지 못했어요. 이미 등록됐을 수 있으니 내 모집에서 확인한 뒤 다시 시도해 주세요.",
-            link: { href: "/my", label: "내 참여 · 모집 확인" },
+            link: { href: "/my?tab=created", label: "내 참여 · 모집 확인" },
           }
         : {
             kind: "error",

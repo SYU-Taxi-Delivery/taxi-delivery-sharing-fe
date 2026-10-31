@@ -42,6 +42,7 @@ export function PostFormScreen({
           />
         ) : (
           <EditForm
+            key={postId}
             postId={postId ?? ""}
             listPath={listPath}
             operations={operations}

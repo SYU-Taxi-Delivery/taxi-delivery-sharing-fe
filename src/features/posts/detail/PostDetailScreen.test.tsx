@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import {
@@ -35,6 +35,8 @@ beforeEach(() => {
     },
   });
 });
+
+afterEach(() => vi.useRealTimers());
 
 const auth = {
   me: vi.fn(async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" })),
@@ -440,6 +442,44 @@ describe("상세 조회", () => {
     await setup(ops({ load: vi.fn(async () => post({ capacity: 9 })) }));
     expect(screen.getByRole("alert")).toHaveTextContent("불러오지 못했어요");
   });
+
+  it("다른 모집으로 이동하면 이전 상세와 명단·링크를 지우고 새 상세를 표시한다", async () => {
+    let resolveNext!: (value: unknown) => void;
+    const operations = ops({
+      load: vi
+        .fn<PostDetailOperations["load"]>()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockImplementationOnce(
+          () => new Promise((resolve) => (resolveNext = resolve)),
+        )
+        .mockResolvedValue(
+          post({ id: "p2", departure: "새 출발지", relation: "JOINED" }),
+        ),
+    });
+    const view = (postId: string) => (
+      <AuthProvider operations={auth}>
+        <PostDetailScreen postId={postId} operations={operations} />
+      </AuthProvider>
+    );
+    const { rerender } = render(view("p1"));
+    await act(async () => {});
+    expect(screen.getByRole("link", { name: /소통 링크 열기/ })).toBeVisible();
+
+    rerender(view("p2"));
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("불러오고 있어요");
+    await act(async () =>
+      resolveNext(post({ id: "p2", departure: "새 출발지" })),
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "새 출발지",
+    );
+    expect(screen.queryByRole("link", { name: /소통 링크 열기/ })).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    expect(operations.join).toHaveBeenCalledWith("p2");
+  });
 });
 
 describe("작성자 관리", () => {
@@ -596,6 +636,45 @@ describe("작성자 관리", () => {
       screen.queryByRole("link", { name: "모집글 수정" }),
     ).not.toBeInTheDocument();
   });
+});
+
+describe("작성자 확인창 시간 경계", () => {
+  it.each([
+    ["close", "모집 마감하기", "모집을 마감할까요?", "모집 마감"],
+    ["cancel", "모집 취소하기", "모집을 취소할까요?", "모집 취소"],
+  ] as const)(
+    "%s 확인 중 기준시각에 도달하면 요청을 막고 닫은 뒤 관리 영역으로 포커스를 돌린다",
+    async (action, triggerName, title, confirmName) => {
+      vi.useFakeTimers();
+      const now = Date.now();
+      const operations = ops({
+        load: vi.fn(async () =>
+          post({
+            relation: "AUTHOR",
+            referenceTime: new Date(now + 1_000).toISOString(),
+            serverTime: new Date(now).toISOString(),
+          }),
+        ),
+      });
+      await setup(operations);
+      const trigger = screen.getByRole("button", { name: triggerName });
+      trigger.focus();
+      fireEvent.click(trigger);
+      const dialog = screen.getByRole("dialog", { name: title });
+      await act(async () => vi.advanceTimersByTime(1_000));
+      const confirm = within(dialog).getByRole("button", { name: confirmName });
+      expect(confirm).toBeDisabled();
+      expect(dialog).toHaveTextContent(
+        "기준시각이 지나 더 이상 처리할 수 없어요",
+      );
+      fireEvent.click(confirm);
+      expect(operations[action]).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
+      expect(
+        screen.getByRole("region", { name: "내 모집글 관리" }),
+      ).toHaveFocus();
+    },
+  );
 });
 
 describe("신고", () => {

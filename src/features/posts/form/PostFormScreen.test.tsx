@@ -412,7 +412,7 @@ describe("작성 폼", () => {
     );
     expect(
       screen.getByRole("link", { name: "내 참여 · 모집 확인" }),
-    ).toHaveAttribute("href", "/my");
+    ).toHaveAttribute("href", "/my?tab=created");
     expect(operations.create).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
   });
@@ -509,6 +509,51 @@ describe("수정 폼", () => {
     ).toBeVisible();
     expect(screen.getByLabelText("택시")).toBeDisabled();
     expect(screen.getByLabelText("배달")).toBeDisabled();
+  });
+
+  it("다른 모집 수정으로 이동하면 이전 초안을 지우고 새 모집의 값으로만 저장한다", async () => {
+    let resolveNext!: (value: EditablePost) => void;
+    const next = post({ id: "p2" });
+    next.draft.common.title = "두 번째 모집";
+    const operations = ops({
+      load: vi
+        .fn<PostFormOperations["load"]>()
+        .mockResolvedValueOnce(post())
+        .mockImplementationOnce(
+          () => new Promise((resolve) => (resolveNext = resolve)),
+        ),
+    });
+    const view = (postId: string) => (
+      <AuthProvider operations={auth}>
+        <PostFormScreen mode="edit" postId={postId} operations={operations} />
+      </AuthProvider>
+    );
+    const { rerender } = render(view("p1"));
+    await act(async () => {});
+    type("제목", "첫 번째 모집의 미저장 초안");
+    rerender(view("p2"));
+    expect(screen.queryByLabelText("제목")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "저장하기" })).toBeNull();
+    await act(async () => resolveNext(next));
+    expect(screen.getByLabelText("제목")).toHaveValue("두 번째 모집");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
+    });
+    expect(operations.update).toHaveBeenCalledWith(
+      "p2",
+      expect.objectContaining({ title: "두 번째 모집" }),
+    );
+    expect(router.push).toHaveBeenCalledWith("/posts/p2");
+  });
+
+  it("타인의 모집 수정 주소로 직접 들어와도 폼과 저장 기능을 제공하지 않는다", async () => {
+    const operations = ops({
+      load: vi.fn(async () => post({ isAuthor: false })),
+    });
+    await edit(operations);
+    expect(screen.queryByLabelText("제목")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "저장하기" })).toBeNull();
+    expect(operations.update).not.toHaveBeenCalled();
   });
 
   it("AC-POST-004-01: 참여자가 없으면 핵심 필드를 고쳐 저장하고 상세로 이동한다", async () => {
