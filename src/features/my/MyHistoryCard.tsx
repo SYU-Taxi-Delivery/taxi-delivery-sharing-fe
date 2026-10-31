@@ -11,6 +11,7 @@ import { effectiveStatus } from "@/features/posts/detail/postDetail";
 import { postStatusLabel } from "@/features/posts/posts";
 import { toMySnapshot, type MyHistoryItem } from "./myHistory";
 import styles from "./my.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -43,6 +44,7 @@ export function MyHistoryCard({
   busy: boolean;
   onCancel: (trigger: HTMLButtonElement) => void;
 }) {
+  const path = useAppPath();
   const titleId = useId();
   const snapshot = toMySnapshot(item, serverTime);
   const availability = getParticipationAvailability(snapshot, nowMs);
@@ -132,7 +134,7 @@ export function MyHistoryCard({
       </div>
       <div className={styles.actions}>
         <Link
-          href={`/posts/${encodeURIComponent(item.id)}`}
+          href={path(`/posts/${encodeURIComponent(item.id)}`)}
           className={styles.button}
         >
           {author && active ? "모집 관리" : "상세 보기"}

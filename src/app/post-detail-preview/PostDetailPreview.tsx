@@ -9,6 +9,7 @@ import {
   type PostDetailOperations,
 } from "@/features/posts/detail/postDetail";
 import { PostDetailScreen } from "@/features/posts/detail/PostDetailScreen";
+import { createPreview as createCommentsPreview } from "../comments-preview/CommentsPreview";
 
 const auth: AuthOperations = {
   me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
@@ -100,12 +101,30 @@ function initialState(scenario: Scenario) {
       };
 }
 
-export function PostDetailPreview() {
-  const [scenario, setScenario] = useState<Scenario>("viewer");
+export function PostDetailPreview({
+  postId = "preview-detail",
+}: {
+  postId?: string;
+}) {
+  const initialScenario: Scenario =
+    postId.startsWith("created-") ||
+    ["preview-created", "preview-edit"].includes(postId)
+      ? "author"
+      : postId.startsWith("participated-")
+        ? "joined"
+        : /^preview-\d+$/.test(postId) &&
+            (Number(postId.slice(8)) - 1) % 3 === 1
+          ? "delivery"
+          : "viewer";
+  const [scenario, setScenario] = useState<Scenario>(initialScenario);
   const [version, setVersion] = useState(0);
+  const [comments] = useState(() => createCommentsPreview("normal"));
 
   const operations = useMemo<PostDetailOperations>(() => {
-    const state: Record<string, unknown> = initialState(scenario);
+    const state: Record<string, unknown> = {
+      ...initialState(scenario),
+      id: postId,
+    };
     const snapshot = () => {
       const count = state.currentMemberCount as number;
       const capacity = state.capacity as number;
@@ -152,12 +171,12 @@ export function PostDetailPreview() {
         }
       },
     };
-  }, [scenario]);
+  }, [scenario, postId]);
 
   return (
     <AuthProvider operations={auth}>
       <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>개발 전용 모의 상세 · 새로고침하면 초기화돼요.</span>
+        <span>모집 상세 데모 · 새로고침하면 초기화돼요.</span>
         <label className="flex items-center gap-1">
           상황
           <select
@@ -178,9 +197,10 @@ export function PostDetailPreview() {
       </div>
       <PostDetailScreen
         key={version}
-        postId="preview-detail"
+        postId={postId}
         listPath="/posts-preview"
         operations={operations}
+        commentOperations={comments.operations}
       />
     </AuthProvider>
   );

@@ -40,7 +40,7 @@ export function Pagination({
       {pages.map((page) => (
         <Link
           key={page}
-          className={styles.pageLink}
+          className={`${styles.pageLink} ${styles.pageNumber}`}
           href={href(page)}
           aria-current={page === current ? "page" : undefined}
           aria-label={`${page + 1}페이지`}
@@ -48,6 +48,12 @@ export function Pagination({
           {page + 1}
         </Link>
       ))}
+      <span
+        className={styles.pagePosition}
+        aria-label={`전체 ${totalPages}페이지 중 ${current + 1}페이지`}
+      >
+        {current + 1} / {totalPages}
+      </span>
       {step(current + 1, "다음 페이지", "›")}
     </nav>
   );

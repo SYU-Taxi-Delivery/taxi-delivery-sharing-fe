@@ -139,16 +139,17 @@ describe("MyPreview", () => {
     expect((await list(props().operations)).content[0].relation).toBe("JOINED");
   });
 
-  it("미리보기 라우트는 개발 환경에서만 열리고 탭 query를 전달한다", async () => {
+  it("미리보기 라우트는 운영 환경에서도 열리고 탭 query를 전달한다", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const page = await MyPreviewPage({
       searchParams: Promise.resolve({ tab: "created" }),
     });
     expect(page.props.tab).toBe("created");
     vi.stubEnv("NODE_ENV", "production");
-    await expect(
-      MyPreviewPage({ searchParams: Promise.resolve({}) }),
-    ).rejects.toThrow("preview not found");
-    expect(notFound).toHaveBeenCalledOnce();
+    const production = await MyPreviewPage({
+      searchParams: Promise.resolve({}),
+    });
+    expect(production.props.tab).toBe("participated");
+    expect(notFound).not.toHaveBeenCalled();
   });
 });

@@ -146,7 +146,7 @@ export function MyPreview({ tab }: { tab: MyTab }) {
   return (
     <AuthProvider operations={auth}>
       <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>개발 전용 모의 이력 · 상황 변경·새로고침 시 초기화돼요.</span>
+        <span>참여·모집 내역 데모 · 상황 변경·새로고침 시 초기화돼요.</span>
         <label className="flex items-center gap-1">
           상황
           <select

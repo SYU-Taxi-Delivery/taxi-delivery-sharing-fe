@@ -71,9 +71,7 @@ export function AdminPreview() {
   return (
     <>
       <aside className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-sm">
-        <p>
-          개발 전용 모의 관리자 · 실제 신고·모집·참여 데이터는 변경하지 않아요.
-        </p>
+        <p>관리자 데모 · 예시 신고·모집·참여 데이터로 동작해요.</p>
         <label>
           상황{" "}
           <select

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 /** Signed-in user's account button and logout (AC-UI-ACCOUNT-01, -02). */
 export function AccountMenu({
@@ -13,6 +14,7 @@ export function AccountMenu({
 }: {
   afterLogout?: string;
 }) {
+  const path = useAppPath();
   const { user, loggingOut, logout } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -42,7 +44,7 @@ export function AccountMenu({
 
   async function signOut() {
     await logout();
-    router.replace(afterLogout);
+    router.replace(path(afterLogout));
   }
 
   return (
@@ -75,7 +77,7 @@ export function AccountMenu({
         <div id={menuId} className={styles.menu}>
           {/* Only a menu entry; the server still answers 403 to non-admins. */}
           {user.role === "ADMIN" && (
-            <Link href="/admin" className={styles.menuItem}>
+            <Link href={path("/admin")} className={styles.menuItem}>
               관리자 화면
             </Link>
           )}

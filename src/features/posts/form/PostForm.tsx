@@ -39,6 +39,7 @@ import {
   type TaxiDraft,
 } from "./postDraft";
 import styles from "./form.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 type Phase =
   | { kind: "idle" }
@@ -79,6 +80,7 @@ export function PostForm({
   onConflict,
   initialMessage,
 }: PostFormProps) {
+  const path = useAppPath();
   const router = useRouter();
   const { handleUnauthorized } = useAuth();
   const [draft, setDraft] = useState(initialDraft);
@@ -249,11 +251,11 @@ export function PostForm({
     try {
       if (mode === "create") {
         const created = await operations.create(toPostRequest(draft));
-        router.push(`/posts/${encodeURIComponent(created)}`);
+        router.push(path(`/posts/${encodeURIComponent(created)}`));
         return; // stay locked while leaving the page
       }
       await operations.update(postId ?? "", toUpdateRequest(draft, coreLocked));
-      router.push(`/posts/${encodeURIComponent(postId ?? "")}`);
+      router.push(path(`/posts/${encodeURIComponent(postId ?? "")}`));
       return;
     } catch (error) {
       locked.current = false;
@@ -319,7 +321,7 @@ export function PostForm({
         ? `/posts/${encodeURIComponent(postId)}`
         : listPath;
     if (!dirty || busy) {
-      if (!busy) router.push(target);
+      if (!busy) router.push(path(target));
       return;
     }
     dialogReturn.current = trigger;
@@ -337,7 +339,7 @@ export function PostForm({
   return (
     <>
       <Link
-        href={leaveTarget}
+        href={path(leaveTarget)}
         className={styles.back}
         onClick={(event) => {
           event.preventDefault();
@@ -681,7 +683,7 @@ export function PostForm({
           <div className={styles.alert} role="alert">
             <p>{phase.message}</p>
             {phase.link && (
-              <Link href={phase.link.href} className={styles.linkButton}>
+              <Link href={path(phase.link.href)} className={styles.linkButton}>
                 {phase.link.label}
               </Link>
             )}
@@ -757,7 +759,7 @@ export function PostForm({
             onClick={() => {
               dialogReturn.current = null;
               dialog.current?.close();
-              router.push(leaveTarget);
+              router.push(path(leaveTarget));
             }}
           >
             입력 폐기

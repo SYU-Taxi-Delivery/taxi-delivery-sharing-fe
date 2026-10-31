@@ -17,6 +17,7 @@ import {
 import { postFormOperations } from "./postFormApi";
 import { PostForm } from "./PostForm";
 import styles from "./form.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 export function PostFormScreen({
   mode,
@@ -86,6 +87,7 @@ function EditForm({
   listPath: string;
   operations: PostFormOperations;
 }) {
+  const path = useAppPath();
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -145,7 +147,7 @@ function EditForm({
           >
             다시 불러오기
           </button>
-          <Link href={listPath} className={styles.secondary}>
+          <Link href={path(listPath)} className={styles.secondary}>
             모집글 목록
           </Link>
         </div>
@@ -159,7 +161,7 @@ function EditForm({
       <div className={`${styles.notice} mt-4 grid gap-3`}>
         <p role="status">{access.reason}</p>
         <Link
-          href={`/posts/${encodeURIComponent(postId)}`}
+          href={path(`/posts/${encodeURIComponent(postId)}`)}
           className={styles.secondary}
         >
           모집 상세로 돌아가기

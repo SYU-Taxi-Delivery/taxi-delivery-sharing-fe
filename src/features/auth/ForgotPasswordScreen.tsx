@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { schoolEmailError, SCHOOL_EMAIL_DOMAIN } from "./auth";
+import { loginHref, schoolEmailError, SCHOOL_EMAIL_DOMAIN } from "./auth";
 import { AuthLayout } from "./AuthLayout";
 import {
   passwordResetErrorMessage,
@@ -10,12 +10,16 @@ import {
   type PasswordResetOperations,
 } from "./passwordReset";
 import styles from "./auth.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 export function ForgotPasswordScreen({
   operations = passwordResetOperations,
+  next,
 }: {
   operations?: PasswordResetOperations;
+  next?: string;
 }) {
+  const path = useAppPath();
   const [email, setEmail] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,18 @@ export function ForgotPasswordScreen({
           </>
         ) : (
           <>
+            {operations === passwordResetOperations && (
+              <p className={styles.terms}>
+                현재 재설정 메일 발송을 연결하고 있어요. 데모에서는 복구 과정을
+                체험할 수 있어요.{" "}
+                <Link
+                  href="/password-reset-preview"
+                  className={styles.textLink}
+                >
+                  복구 데모 보기
+                </Link>
+              </p>
+            )}
             <p className={styles.muted}>
               가입할 때 사용한 학교 이메일을 입력해 주세요.
             </p>
@@ -142,7 +158,10 @@ export function ForgotPasswordScreen({
             </form>
           </>
         )}
-        <Link href="/login" className={styles.secondary}>
+        <Link
+          href={path(next ? loginHref(next) : "/login")}
+          className={styles.secondary}
+        >
           로그인으로 돌아가기
         </Link>
       </section>

@@ -64,6 +64,29 @@ async function fillAll() {
 }
 
 describe("SignupScreen", () => {
+  it("운영 가입 화면은 인증과 약관 준비 상태를 입력 전에 알린다", async () => {
+    render(
+      <AuthProvider
+        operations={{
+          me: async () => null,
+          login: async () => {},
+          logout: async () => {},
+        }}
+      >
+        <SignupScreen />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+    expect(screen.getByText(/현재 이메일 인증과 가입 요청/)).toBeVisible();
+    expect(screen.getByLabelText("학교 이메일")).toBeVisible();
+    expect(screen.getByText("기존 회원이세요?")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "가입 데모 보기" }),
+    ).toHaveAttribute("href", "/signup-preview");
+    expect(
+      screen.getByRole("link", { name: "로그인으로 돌아가기" }),
+    ).toHaveAttribute("href", "/login");
+  });
   it("AC-NFR-PRV-01-01: 학교 이메일·닉네임·비밀번호와 필수 동의만 받는다", async () => {
     await setup();
     expect(
@@ -82,10 +105,9 @@ describe("SignupScreen", () => {
     );
     expect(screen.queryByLabelText(/학번|전화/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "회원가입" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "로그인" })).toHaveAttribute(
-      "href",
-      "/login",
-    );
+    expect(
+      screen.getByRole("link", { name: "로그인으로 돌아가기" }),
+    ).toHaveAttribute("href", "/login");
   });
 
   it("AC-AUTH-001-08: 학교 도메인이 아니면 인증번호를 요청하지 않는다", async () => {

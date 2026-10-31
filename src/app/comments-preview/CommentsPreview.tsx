@@ -34,7 +34,7 @@ const scenarios = {
 } as const;
 type Scenario = keyof typeof scenarios;
 
-function createPreview(scenario: Scenario) {
+export function createPreview(scenario: Scenario) {
   const now = Date.now();
   const serverNow = serverTimeNow(new Date(now).toISOString());
   const referenceTime = new Date(
@@ -176,7 +176,7 @@ export function CommentsPreview() {
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-sm">
-        <p>개발 전용 모의 댓글 · 실제 서버에 저장하지 않아요.</p>
+        <p>댓글 데모 · 예시 데이터로 동작해요.</p>
         <label>
           상황{" "}
           <select

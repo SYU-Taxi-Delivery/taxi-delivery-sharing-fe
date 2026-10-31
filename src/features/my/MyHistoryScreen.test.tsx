@@ -420,8 +420,9 @@ describe("my history screen", () => {
     );
     expect(operations.list).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("link", { name: "로그인하러 가기" }),
+      screen.getByRole("link", { name: "로그인하고 내 내역 보기" }),
     ).toHaveAttribute("href", "/login?next=%2Fmy");
+    expect(screen.queryByRole("link", { name: "모집글 쓰기" })).toBeNull();
   });
 
   it("AUTH-003: 참여 취소 401은 기존 이력을 제거하고 만료 안내로 전환한다", async () => {

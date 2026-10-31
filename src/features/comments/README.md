@@ -41,7 +41,7 @@
 개발 서버의 `/comments-preview`에서 실제 `CommentsPanel`을 확인한다. 상단 "상황"으로
 모집 중·정원/직접 마감·빈 댓글·조회 실패·등록 거절·저장 후 응답 유실·삭제 거절·5초 후
 종료·완료/취소·로그인 만료·권한 없음·삭제 모집을 재현한다. 실제 서버에 저장하지 않으며
-운영 환경에서는 404다.
+운영 환경에서도 공개 데모로 열린다.
 
 ```sh
 pnpm exec vitest run src/features/comments src/features/posts/detail src/app/comments-preview

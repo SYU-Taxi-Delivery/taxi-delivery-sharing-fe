@@ -16,6 +16,7 @@ import {
 import { postListOperations } from "./postsApi";
 import { usePostList } from "./usePostList";
 import styles from "./posts.module.css";
+import { useAppPath } from "@/features/demo/AppProviders";
 
 const tabs: { type: PostFilter; label: string; description: string }[] = [
   { type: "ALL", label: "전체", description: "교내 택시·배달 모집" },
@@ -34,22 +35,27 @@ export function PostListScreen({
   basePath?: string;
   operations?: PostListOperations;
 }) {
+  const path = useAppPath();
   const active = tabs.find((tab) => tab.type === query.type) ?? tabs[0];
 
   return (
-    <AppShell current="posts" postsPath={basePath}>
-      <h1 className={styles.title}>함께할 학생 모집</h1>
-      <p className={`${styles.muted} mt-1`}>{active.description}</p>
-      <Link
-        href={
-          query.type === "DELIVERY"
-            ? `${NEW_POST_PATH}?type=DELIVERY`
-            : NEW_POST_PATH
-        }
-        className={styles.cta}
-      >
-        <span aria-hidden="true">+</span> 모집글 쓰기
-      </Link>
+    <AppShell current="posts" postsPath={basePath} wide>
+      <div className={styles.listHeading}>
+        <div>
+          <h1 className={styles.title}>함께할 학생 모집</h1>
+          <p className={`${styles.muted} mt-1`}>{active.description}</p>
+        </div>
+        <Link
+          href={path(
+            query.type === "DELIVERY"
+              ? `${NEW_POST_PATH}?type=DELIVERY`
+              : NEW_POST_PATH,
+          )}
+          className={styles.cta}
+        >
+          <span aria-hidden="true">+</span> 모집글 쓰기
+        </Link>
+      </div>
       <RequireAuth>
         <PostList query={query} basePath={basePath} operations={operations} />
       </RequireAuth>
@@ -66,6 +72,7 @@ function PostList({
   basePath: string;
   operations: PostListOperations;
 }) {
+  const path = useAppPath();
   const router = useRouter();
   const checkId = useId();
   const { loading, page, error, retry } = usePostList(
@@ -77,7 +84,7 @@ function PostList({
   const active = tabs.find((tab) => tab.type === query.type) ?? tabs[0];
   // Changing a filter always starts from the first page (AC-UI-PAGE-01).
   const href = (next: Partial<PostQuery>) =>
-    postQueryHref(basePath, { ...query, page: 0, ...next });
+    path(postQueryHref(basePath, { ...query, page: 0, ...next }));
   const filtered = query.type !== "ALL" || query.joinableOnly;
   const posts = page?.content.filter((post) => post.status !== "REMOVED") ?? [];
 
@@ -155,14 +162,14 @@ function PostList({
         ) : filtered ? (
           <div className={styles.state}>
             <p role="status">조건에 맞는 모집글이 없어요.</p>
-            <Link href={basePath} className={styles.secondary}>
+            <Link href={path(basePath)} className={styles.secondary}>
               전체 모집글 보기
             </Link>
           </div>
         ) : (
           <div className={styles.state}>
             <p role="status">아직 모집글이 없어요. 첫 모집글을 써 보세요.</p>
-            <Link href={NEW_POST_PATH} className={styles.secondary}>
+            <Link href={path(NEW_POST_PATH)} className={styles.secondary}>
               모집글 쓰기
             </Link>
           </div>
@@ -172,7 +179,9 @@ function PostList({
           <Pagination
             current={page.number}
             totalPages={page.totalPages}
-            href={(next) => postQueryHref(basePath, { ...query, page: next })}
+            href={(next) =>
+              path(postQueryHref(basePath, { ...query, page: next }))
+            }
           />
         )}
       </section>
