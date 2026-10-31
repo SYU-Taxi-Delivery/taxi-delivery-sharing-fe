@@ -1,0 +1,16 @@
+
+> taxi-delivery-sharing-fe@0.1.0 test <repo>
+> vitest run "--maxWorkers=1" "--no-file-parallelism"
+
+
+ RUN  v5.0.3 <repo>
+
+
+ Test Files  40 passed (40)
+      Tests  871 passed (871)
+   Start at  23:35:36
+   Duration  60.33s (environment 38%, tests 31%, setup 20%, import 7%, transform 4%)
+
+Environment  jsdom was created 40 times · 20.32s total, 38% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
