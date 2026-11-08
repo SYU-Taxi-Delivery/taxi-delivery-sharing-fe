@@ -103,11 +103,13 @@ describe("my history requests", () => {
       .mockResolvedValueOnce({ content: "invalid" });
     const { result } = setup(list);
     await act(async () => {});
-    expect(result.current.error).toContain("연동을 준비");
+    expect(result.current.error).toContain("아직 준비 중");
+    expect(result.current.notConnected).toBe(true);
     act(() => result.current.retry());
     await act(async () => {});
     expect(result.current.history).toBeNull();
     expect(result.current.error).toContain("이력 정보를 확인");
+    expect(result.current.notConnected).toBe(false);
   });
 
   it("clears the previous tab immediately and ignores its delayed response", async () => {

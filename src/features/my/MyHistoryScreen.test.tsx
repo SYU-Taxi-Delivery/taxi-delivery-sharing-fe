@@ -100,6 +100,22 @@ afterEach(() => {
 });
 
 describe("my history screen", () => {
+  it("API가 없는 작성한 글 탭은 다시 불러오기 대신 모집글 목록으로 안내한다", async () => {
+    const missing = new Error("adapter internals");
+    missing.name = "MyHistoryNotConnectedError";
+    await setup(async () => Promise.reject(missing), undefined, "created");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "작성한 글 목록은 아직 준비 중이에요.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "다시 불러오기" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "모집글 목록 보기" }),
+    ).toHaveAttribute("href", "/posts");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("AC-MY-002-05/004-01: 모집 상태와 내 참여 상태·유형·서울 시각·작성자 포함 정원을 구분한다", async () => {
     await setup(async () =>
       history([
@@ -121,7 +137,7 @@ describe("my history screen", () => {
     expect(rows()[0]).toHaveTextContent("참여 중");
     expect(rows()[0]).toHaveTextContent("18:00 · 출발");
     expect(rows()[0]).toHaveTextContent("3 / 4명 · 작성자 포함");
-    expect(rows()[0]).toHaveTextContent("17:50");
+    expect(rows()[0]).toHaveTextContent("17:50 · 출발 10분 전");
     expect(rows()[1]).toHaveTextContent("모집 마감");
     expect(rows()[2]).toHaveTextContent("모집 완료");
     expect(rows()[2]).toHaveTextContent("참여 이력");

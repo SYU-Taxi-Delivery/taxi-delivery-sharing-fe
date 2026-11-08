@@ -508,6 +508,25 @@ describe("작성자 관리", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("서버에 마감·취소 API가 없으면 버튼을 비활성화하고 준비 중으로 안내한다", async () => {
+    await setup({
+      ...author(),
+      close: undefined,
+      cancel: undefined,
+    });
+    const close = screen.getByRole("button", { name: "모집 마감하기" });
+    const cancel = screen.getByRole("button", { name: "모집 취소하기" });
+    expect(close).toBeDisabled();
+    expect(cancel).toBeDisabled();
+    expect(screen.getByText(/모집 마감 기능은 준비 중/)).toBeVisible();
+    expect(screen.getByText("모집 취소 기능은 준비 중이에요.")).toBeVisible();
+    fireEvent.click(close);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "모집글 수정" }),
+    ).toBeInTheDocument();
+  });
+
   it("AC-POST-005-09, AC-POST-005-07: 마감 확인창을 열고 돌아가면 요청하지 않고 포커스를 돌린다", async () => {
     const operations = author();
     await setup(operations);
@@ -684,6 +703,15 @@ describe("신고", () => {
     return screen.getByRole("dialog", { name: "모집글 신고" });
   }
 
+  it("서버에 신고 API가 없으면 신고 버튼 대신 준비 중으로 안내한다", async () => {
+    await setup({ ...ops(), report: undefined });
+    expect(
+      screen.queryByRole("button", { name: "이 모집글 신고하기" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("신고 기능은 준비 중이에요.")).toBeVisible();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("AC-REPORT-001-05: 다섯 가지 사유와 선택 상세 내용을 제공한다", async () => {
     const dialog = await openReport();
     for (const label of [
@@ -761,7 +789,7 @@ describe("신고", () => {
 
   it("AC-REPORT-001-09: 실패하면 입력을 유지하고 다시 제출할 수 있다", async () => {
     const report = vi
-      .fn<PostDetailOperations["report"]>()
+      .fn<NonNullable<PostDetailOperations["report"]>>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValue(undefined);
     const dialog = await openReport(ops({ report }));

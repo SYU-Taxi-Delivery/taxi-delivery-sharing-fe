@@ -63,6 +63,7 @@ function History({
     loading,
     error,
     forbidden,
+    notConnected,
     nowMs,
     serverNow,
     retry,
@@ -142,10 +143,21 @@ function History({
           <AccessDenied />
         ) : error ? (
           <div className={common.state}>
-            <p role="alert">{error}</p>
-            <button type="button" className={styles.button} onClick={retry}>
-              다시 불러오기
-            </button>
+            {notConnected ? (
+              <>
+                <p role="status">{error}</p>
+                <Link href={path("/posts")} className={styles.button}>
+                  모집글 목록 보기
+                </Link>
+              </>
+            ) : (
+              <>
+                <p role="alert">{error}</p>
+                <button type="button" className={styles.button} onClick={retry}>
+                  다시 불러오기
+                </button>
+              </>
+            )}
           </div>
         ) : history && history.content.length > 0 ? (
           <ul className={styles.list}>
@@ -198,7 +210,9 @@ function History({
         <Image src="/my/info.svg" width={20} height={20} alt="" />
         <div>
           <p>참여 취소: 각 카드에 표시된 참여 취소 기한까지 가능해요.</p>
-          <p>작성한 글의 상세에서 수정·모집 마감·모집 취소가 가능해요.</p>
+          <p>
+            작성한 글은 상세 화면의 &lsquo;내 모집글 관리&rsquo;에서 관리해요.
+          </p>
           <Link href={path("/posts")}>모집글 목록으로</Link>
         </div>
       </aside>

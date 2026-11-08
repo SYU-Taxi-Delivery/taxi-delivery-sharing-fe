@@ -1,6 +1,6 @@
 # 내 참여 · 모집 (#10)
 
-> 연동 상태(2026-10-27): "참여한 글"을 `GET /api/users/me/participations`에 연결했다(`myHistoryApi.ts`). "작성한 글"은 백엔드 API가 없어 미연결이다. 설정·불일치·요청 목록은
+> 연동 상태(2026-11-09): "참여한 글"을 `GET /api/users/me/participations`에 연결했다(`myHistoryApi.ts`). "작성한 글"은 백엔드 API가 없어 "준비 중" 안내와 모집글 목록 링크를 보여 준다. 설정·불일치·요청 목록은
 > [docs/backend-integration.md](../../../docs/backend-integration.md)를 참고한다.
 
 로그인 사용자용 `/my`에서 내가 참여한 모집과 내가 만든 모집을 전환한다. 모집 상태와

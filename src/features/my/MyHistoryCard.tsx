@@ -127,8 +127,8 @@ export function MyHistoryCard({
         {active && (author || item.relation === "JOINED") && (
           <p className={styles.meta}>
             {nowMs < availability.deadline
-              ? `${author ? "참여자 취소 기한" : "참여 취소 기한"} ${time.format(availability.deadline)} · 기준시각 ${cutoffMinutes(item)}분 전`
-              : `참여 취소 마감 · 기준시각 ${cutoffMinutes(item)}분 전부터 취소할 수 없어요.`}
+              ? `${author ? "참여자 취소 기한" : "참여 취소 기한"} ${time.format(availability.deadline)} · ${item.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(item)}분 전`
+              : `참여 취소 마감 · ${item.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(item)}분 전부터 취소할 수 없어요.`}
           </p>
         )}
       </div>

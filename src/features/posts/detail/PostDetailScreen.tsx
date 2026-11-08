@@ -233,6 +233,7 @@ function DetailView({
   const { handleUnauthorized } = useAuth();
   const [latest, setLatest] = useState(initial);
   const [reportOpen, setReportOpen] = useState(false);
+  const report = operations.report;
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const reportNoticeRef = useRef<HTMLParagraphElement>(null);
   const mounted = useRef(true);
@@ -506,13 +507,17 @@ function DetailView({
               </p>
             )}
             {canReport(latest) ? (
-              <button
-                type="button"
-                className={styles.reportButton}
-                onClick={() => setReportOpen(true)}
-              >
-                이 모집글 신고하기
-              </button>
+              report ? (
+                <button
+                  type="button"
+                  className={styles.reportButton}
+                  onClick={() => setReportOpen(true)}
+                >
+                  이 모집글 신고하기
+                </button>
+              ) : (
+                <p className={styles.meta}>신고 기능은 준비 중이에요.</p>
+              )
             ) : (
               latest.reported && (
                 <p className={styles.meta}>이미 신고한 모집이에요.</p>
@@ -522,8 +527,10 @@ function DetailView({
         )}
 
         <ReportDialog
-          open={reportOpen}
-          onSubmit={(request) => operations.report(id, request)}
+          open={reportOpen && !!report}
+          onSubmit={(request) =>
+            report ? report(id, request) : Promise.resolve()
+          }
           onClose={() => setReportOpen(false)}
           onUnauthorized={handleUnauthorized}
           onDone={(outcome) => {
@@ -596,13 +603,19 @@ function AuthorPanel({
   const taxi = detail.type === "TAXI";
 
   async function run(action: Action) {
-    if (locked.current || !authorActions(detail, serverNow())[action]) return;
+    const operation = operations[action];
+    if (
+      !operation ||
+      locked.current ||
+      !authorActions(detail, serverNow())[action]
+    )
+      return;
     setConfirm(null);
     locked.current = true;
     setBusy(action);
     setError(null);
     try {
-      await operations[action](detail.id);
+      await operation(detail.id);
       onReload({
         tone: "success",
         text:
@@ -691,14 +704,15 @@ function AuthorPanel({
           <button
             type="button"
             className={styles.primary}
-            disabled={!!busy}
+            disabled={!!busy || !operations.close}
             onClick={() => setConfirm("close")}
           >
             {busy === "close" ? "마감하는 중…" : "모집 마감하기"}
           </button>
           <p className={styles.help}>
-            현재 인원으로 {taxi ? "출발" : "주문"}해요. 마감하면 새로 참여할 수
-            없어요.
+            {operations.close
+              ? `현재 인원으로 ${taxi ? "출발" : "주문"}해요. 마감하면 새로 참여할 수 없어요.`
+              : "모집 마감 기능은 준비 중이에요. 정원이 차면 자동으로 마감돼요."}
           </p>
         </div>
       )}
@@ -707,13 +721,15 @@ function AuthorPanel({
           <button
             type="button"
             className={styles.dangerOutline}
-            disabled={!!busy}
+            disabled={!!busy || !operations.cancel}
             onClick={() => setConfirm("cancel")}
           >
             {busy === "cancel" ? "취소하는 중…" : "모집 취소하기"}
           </button>
           <p className={styles.help}>
-            일정이 취소되면 모집을 취소해요. 취소한 글에는 참여할 수 없어요.
+            {operations.cancel
+              ? "일정이 취소되면 모집을 취소해요. 취소한 글에는 참여할 수 없어요."
+              : "모집 취소 기능은 준비 중이에요."}
           </p>
         </div>
       )}

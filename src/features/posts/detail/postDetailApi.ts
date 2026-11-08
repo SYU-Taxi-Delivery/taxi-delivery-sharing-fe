@@ -15,10 +15,6 @@ export class PostDetailNotConnectedError extends Error {
   }
 }
 
-const notConnected = async (): Promise<never> => {
-  throw new PostDetailNotConnectedError();
-};
-
 /** GET /api/posts/{postId} data (docs/post-api.md §3). */
 export type BackendDetail = Record<string, unknown> & {
   postId?: unknown;
@@ -128,9 +124,8 @@ export const postDetailOperations: PostDetailOperations = {
     ).toISOString();
     return fromBackendDetail(detail, serverTime, participants?.names);
   },
-  // No backend endpoints yet for author close/cancel and reports.
-  close: notConnected,
-  cancel: notConnected,
+  // No backend endpoints yet for author close/cancel and reports, so they are
+  // omitted and the screen shows them as not available yet.
   join: async (id) => {
     try {
       await backendSend("POST", `${path(id)}/participants`);
@@ -145,5 +140,4 @@ export const postDetailOperations: PostDetailOperations = {
       throw toDetailError(error);
     }
   },
-  report: notConnected,
 };
