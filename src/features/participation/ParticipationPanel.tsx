@@ -148,23 +148,35 @@ export function ParticipationPanel({
         !timeFinished &&
         !author &&
         snapshot.viewerRelation !== "GUEST" && (
-          <button
-            type="button"
-            ref={joined ? cancelTrigger : undefined}
-            className={styles.primary}
-            data-tone={joined ? "danger" : undefined}
-            data-bottom-action="true"
-            disabled={busy || needsRefresh || availability.action === null}
-            aria-describedby={availability.reason ? reasonId : undefined}
-            onClick={() => {
-              if (joined) {
-                dialog.current?.showModal();
-                returnButton.current?.focus();
-              } else void participation.join();
-            }}
-          >
-            {busy ? "처리 중…" : actionLabel}
-          </button>
+          <div className={styles.action} data-bottom-action="true">
+            {Number.isFinite(availability.deadline) && hasTime && (
+              /* Phones only: the two times, named apart, beside the button */
+              <p className={styles.actionHint} data-bottom-hint="true">
+                <span>
+                  {`신청·취소 기한 ${timeFormat.format(availability.deadline)}`}
+                </span>
+                <span>
+                  {`${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${timeFormat.format(referenceTime)}`}
+                </span>
+              </p>
+            )}
+            <button
+              type="button"
+              ref={joined ? cancelTrigger : undefined}
+              className={styles.primary}
+              data-tone={joined ? "danger" : undefined}
+              disabled={busy || needsRefresh || availability.action === null}
+              aria-describedby={availability.reason ? reasonId : undefined}
+              onClick={() => {
+                if (joined) {
+                  dialog.current?.showModal();
+                  returnButton.current?.focus();
+                } else void participation.join();
+              }}
+            >
+              {busy ? "처리 중…" : actionLabel}
+            </button>
+          </div>
         )}
       {active && !timeFinished && Number.isFinite(availability.deadline) && (
         <p className={styles.help}>

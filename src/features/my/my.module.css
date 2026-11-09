@@ -381,3 +381,16 @@ p.meta {
     align-items: start;
   }
 }
+
+/* "내 참여 [참여 중]" and "모집 [모집 중]": the word says whose state it is */
+.statePair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stateKey {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}

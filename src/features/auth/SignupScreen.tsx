@@ -97,6 +97,12 @@ export function SignupScreen({
 
   const verified = step === "verified";
   const ready = verified && agreed.terms && agreed.privacy;
+  // What still keeps the submit button disabled, from the same two checks.
+  const blocker = !verified
+    ? "학교 이메일 인증을 완료해 주세요."
+    : !(agreed.terms && agreed.privacy)
+      ? "필수 약관에 동의해 주세요."
+      : null;
 
   function showErrors(next: Partial<Record<Field, string>>, order: Field[]) {
     setErrors(next);
@@ -291,241 +297,296 @@ export function SignupScreen({
           aria-busy={submitting}
           onSubmit={(event) => void submit(event)}
         >
-          <div
-            className={styles.field}
-            role="group"
-            aria-labelledby={id("account")}
+          <section
+            className={styles.formSection}
+            aria-labelledby={id("step-email")}
           >
-            <div className={styles.sectionHeader}>
-              <p id={id("account")} className={styles.label}>
-                학교 계정
-              </p>
-              <span className={styles.badge}>
-                {verified
-                  ? "인증 완료"
-                  : step === "sent" || step === "verifying"
-                    ? "인증 대기"
-                    : "미인증"}
+            <h2 id={id("step-email")} className={styles.stepTitle}>
+              <span className={styles.stepNo} aria-hidden="true">
+                1
               </span>
-            </div>
-            <label htmlFor={id("email")} className={styles.srOnly}>
-              학교 이메일
-            </label>
-            <input
-              ref={emailInput}
-              id={id("email")}
-              className={styles.input}
-              type="email"
-              name="email"
-              inputMode="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder={`example@${SCHOOL_EMAIL_DOMAIN}`}
-              value={email}
-              readOnly={verified || step === "sending" || step === "verifying"}
-              aria-invalid={errors.email ? true : undefined}
-              aria-describedby={describe("email", id("email-help"))}
-              onChange={(event) => changeEmail(event.target.value)}
-            />
-            {fieldError("email")}
-            {verified ? (
-              <button
-                type="button"
-                className={styles.secondary}
-                onClick={resetVerification}
-              >
-                다른 이메일로 변경
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.primary}
-                disabled={step === "sending" || step === "verifying" || cooling}
-                onClick={() => void requestCode()}
-              >
-                {step === "sending"
-                  ? "인증번호 보내는 중…"
-                  : sentAt === null
-                    ? "인증번호 받기"
-                    : cooling
-                      ? `인증번호 다시 받기 (${waitSeconds}초)`
-                      : "인증번호 다시 받기"}
-              </button>
-            )}
-            <p id={id("email-help")} className={styles.help}>
-              삼육대학교 이메일(@{SCHOOL_EMAIL_DOMAIN})로 학교 계정 인증
-            </p>
-            {(step === "sent" || step === "verifying") && (
-              <div className={styles.field}>
-                <label htmlFor={id("code")} className={styles.label}>
-                  인증번호
-                </label>
-                <div className={styles.inline}>
-                  <input
-                    ref={codeInput}
-                    id={id("code")}
-                    className={styles.input}
-                    name="code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    placeholder="6자리 숫자"
-                    value={code}
-                    readOnly={step === "verifying"}
-                    aria-invalid={errors.code ? true : undefined}
-                    aria-describedby={describe("code")}
-                    onChange={(event) => {
-                      setCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6),
-                      );
-                      clearError("code");
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void verify();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles.secondary}
-                    disabled={step === "verifying"}
-                    onClick={() => void verify()}
-                  >
-                    {step === "verifying" ? "확인 중…" : "확인"}
-                  </button>
-                </div>
-                {fieldError("code")}
+              학교 이메일 인증
+            </h2>
+            <div
+              className={styles.field}
+              role="group"
+              aria-labelledby={id("account")}
+            >
+              <div className={styles.sectionHeader}>
+                <p id={id("account")} className={styles.label}>
+                  학교 계정
+                </p>
+                <span className={styles.badge}>
+                  {verified
+                    ? "인증 완료"
+                    : step === "sent" || step === "verifying"
+                      ? "인증 대기"
+                      : "미인증"}
+                </span>
               </div>
-            )}
-            {emailMessage && (
-              <p
-                role={emailMessage.tone === "error" ? "alert" : "status"}
-                className={
-                  emailMessage.tone === "error" ? styles.error : styles.success
+              <label htmlFor={id("email")} className={styles.srOnly}>
+                학교 이메일
+              </label>
+              <input
+                ref={emailInput}
+                id={id("email")}
+                className={styles.input}
+                type="email"
+                name="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder={`example@${SCHOOL_EMAIL_DOMAIN}`}
+                value={email}
+                readOnly={
+                  verified || step === "sending" || step === "verifying"
                 }
-              >
-                {emailMessage.text}
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={describe("email", id("email-help"))}
+                onChange={(event) => changeEmail(event.target.value)}
+              />
+              {fieldError("email")}
+              {verified ? (
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={resetVerification}
+                >
+                  다른 이메일로 변경
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={
+                    step === "sending" || step === "verifying" || cooling
+                  }
+                  onClick={() => void requestCode()}
+                >
+                  {step === "sending"
+                    ? "인증번호 보내는 중…"
+                    : sentAt === null
+                      ? "인증번호 받기"
+                      : cooling
+                        ? `인증번호 다시 받기 (${waitSeconds}초)`
+                        : "인증번호 다시 받기"}
+                </button>
+              )}
+              <p id={id("email-help")} className={styles.help}>
+                삼육대학교 이메일(@{SCHOOL_EMAIL_DOMAIN})로 학교 계정 인증
               </p>
-            )}
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor={id("displayName")} className={styles.label}>
-              닉네임
-            </label>
-            <input
-              ref={displayNameInput}
-              id={id("displayName")}
-              className={styles.input}
-              name="nickname"
-              autoComplete="nickname"
-              placeholder="닉네임 입력"
-              value={displayName}
-              aria-invalid={errors.displayName ? true : undefined}
-              aria-describedby={describe("displayName", id("displayName-help"))}
-              onChange={(event) => {
-                setDisplayName(event.target.value);
-                clearError("displayName");
-              }}
-            />
-            {fieldError("displayName")}
-            <p id={id("displayName-help")} className={styles.help}>
-              커뮤니티에서 사용할 이름 · {DISPLAY_NAME_MIN}~{DISPLAY_NAME_MAX}자
-            </p>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor={id("password")} className={styles.label}>
-              비밀번호
-            </label>
-            <input
-              ref={passwordInput}
-              id={id("password")}
-              className={styles.input}
-              type="password"
-              name="new-password"
-              autoComplete="new-password"
-              value={password}
-              aria-invalid={errors.password ? true : undefined}
-              aria-describedby={describe("password", id("password-help"))}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                clearError("password");
-              }}
-            />
-            {fieldError("password")}
-            <p id={id("password-help")} className={styles.help}>
-              {PASSWORD_MIN}~{PASSWORD_MAX}자 · 다른 사이트와 같은 비밀번호는
-              피해 주세요.
-            </p>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor={id("confirm")} className={styles.label}>
-              비밀번호 확인
-            </label>
-            <input
-              ref={confirmInput}
-              id={id("confirm")}
-              className={styles.input}
-              type="password"
-              name="confirm-password"
-              autoComplete="new-password"
-              value={confirm}
-              aria-invalid={errors.confirm ? true : undefined}
-              aria-describedby={describe("confirm")}
-              onChange={(event) => {
-                setConfirm(event.target.value);
-                clearError("confirm");
-              }}
-            />
-            {fieldError("confirm")}
-          </div>
-
-          <div className={styles.divider} aria-hidden="true" />
-
-          <fieldset className={styles.field}>
-            <legend className={`${styles.label} mb-2`}>약관 동의</legend>
-            {consents.map(({ key, label }) => (
-              <div key={key}>
-                <div className={styles.checkRow}>
-                  <label className={styles.check}>
-                    <input
-                      type="checkbox"
-                      checked={agreed[key]}
-                      onChange={(event) =>
-                        setAgreed((value) => ({
-                          ...value,
-                          [key]: event.target.checked,
-                        }))
-                      }
-                    />
-                    [필수] {label}
+              {sentAt !== null && !verified && (
+                <dl className={styles.timing}>
+                  <div>
+                    <dt>인증번호 유효 시간</dt>
+                    <dd>받은 때부터 10분</dd>
+                  </div>
+                  <div>
+                    <dt>다시 받기</dt>
+                    <dd aria-live="off">
+                      {cooling ? `${waitSeconds}초 후 가능` : "지금 가능"}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+              {(step === "sent" || step === "verifying") && (
+                <div className={styles.field}>
+                  <label htmlFor={id("code")} className={styles.label}>
+                    인증번호
                   </label>
-                  <button
-                    type="button"
-                    className={styles.textButton}
-                    aria-expanded={openTerms === key}
-                    aria-controls={id(`${key}-terms`)}
-                    aria-label={`${label} 내용 보기`}
-                    onClick={() =>
-                      setOpenTerms((value) => (value === key ? null : key))
-                    }
-                  >
-                    보기
-                  </button>
+                  <div className={styles.inline}>
+                    <input
+                      ref={codeInput}
+                      id={id("code")}
+                      className={styles.input}
+                      name="code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="6자리 숫자"
+                      value={code}
+                      readOnly={step === "verifying"}
+                      aria-invalid={errors.code ? true : undefined}
+                      aria-describedby={describe("code")}
+                      onChange={(event) => {
+                        setCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6),
+                        );
+                        clearError("code");
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void verify();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      disabled={step === "verifying"}
+                      onClick={() => void verify()}
+                    >
+                      {step === "verifying" ? "확인 중…" : "확인"}
+                    </button>
+                  </div>
+                  {fieldError("code")}
                 </div>
-                {openTerms === key && (
-                  <p id={id(`${key}-terms`)} className={styles.terms}>
-                    {label.replace(" 동의", "")} 전문은 확정 후 제공돼요.
-                  </p>
+              )}
+              {emailMessage && (
+                <p
+                  role={emailMessage.tone === "error" ? "alert" : "status"}
+                  className={
+                    emailMessage.tone === "error"
+                      ? styles.error
+                      : styles.success
+                  }
+                >
+                  {emailMessage.text}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section
+            className={styles.formSection}
+            aria-labelledby={id("step-account")}
+          >
+            <h2 id={id("step-account")} className={styles.stepTitle}>
+              <span className={styles.stepNo} aria-hidden="true">
+                2
+              </span>
+              계정 정보
+            </h2>
+            <div className={styles.field}>
+              <label htmlFor={id("displayName")} className={styles.label}>
+                닉네임
+              </label>
+              <input
+                ref={displayNameInput}
+                id={id("displayName")}
+                className={styles.input}
+                name="nickname"
+                autoComplete="nickname"
+                placeholder="닉네임 입력"
+                value={displayName}
+                aria-invalid={errors.displayName ? true : undefined}
+                aria-describedby={describe(
+                  "displayName",
+                  id("displayName-help"),
                 )}
-              </div>
-            ))}
-          </fieldset>
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                  clearError("displayName");
+                }}
+              />
+              {fieldError("displayName")}
+              <p id={id("displayName-help")} className={styles.help}>
+                커뮤니티에서 사용할 이름 · {DISPLAY_NAME_MIN}~{DISPLAY_NAME_MAX}
+                자
+              </p>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor={id("password")} className={styles.label}>
+                비밀번호
+              </label>
+              <input
+                ref={passwordInput}
+                id={id("password")}
+                className={styles.input}
+                type="password"
+                name="new-password"
+                autoComplete="new-password"
+                value={password}
+                aria-invalid={errors.password ? true : undefined}
+                aria-describedby={describe("password", id("password-help"))}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  clearError("password");
+                }}
+              />
+              {fieldError("password")}
+              <p id={id("password-help")} className={styles.help}>
+                {PASSWORD_MIN}~{PASSWORD_MAX}자 · 다른 사이트와 같은 비밀번호는
+                피해 주세요.
+              </p>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor={id("confirm")} className={styles.label}>
+                비밀번호 확인
+              </label>
+              <input
+                ref={confirmInput}
+                id={id("confirm")}
+                className={styles.input}
+                type="password"
+                name="confirm-password"
+                autoComplete="new-password"
+                value={confirm}
+                aria-invalid={errors.confirm ? true : undefined}
+                aria-describedby={describe("confirm")}
+                onChange={(event) => {
+                  setConfirm(event.target.value);
+                  clearError("confirm");
+                }}
+              />
+              {fieldError("confirm")}
+            </div>
+          </section>
+
+          <section
+            className={styles.formSection}
+            aria-labelledby={id("step-terms")}
+          >
+            <h2 id={id("step-terms")} className={styles.stepTitle}>
+              <span className={styles.stepNo} aria-hidden="true">
+                3
+              </span>
+              필수 약관
+            </h2>
+            <fieldset className={styles.field}>
+              <legend className={styles.srOnly}>약관 동의</legend>
+              {consents.map(({ key, label }) => (
+                <div key={key}>
+                  <div className={styles.checkRow}>
+                    <label className={styles.check}>
+                      <input
+                        type="checkbox"
+                        checked={agreed[key]}
+                        onChange={(event) =>
+                          setAgreed((value) => ({
+                            ...value,
+                            [key]: event.target.checked,
+                          }))
+                        }
+                      />
+                      [필수] {label}
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.textButton}
+                      aria-expanded={openTerms === key}
+                      aria-controls={id(`${key}-terms`)}
+                      aria-label={`${label} 내용 보기`}
+                      onClick={() =>
+                        setOpenTerms((value) => (value === key ? null : key))
+                      }
+                    >
+                      보기
+                    </button>
+                  </div>
+                  {openTerms === key && (
+                    <p id={id(`${key}-terms`)} className={styles.terms}>
+                      {label.replace(" 동의", "")} 전문은 확정 후 제공돼요.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </fieldset>
+          </section>
 
           <button
             type="submit"
@@ -535,8 +596,12 @@ export function SignupScreen({
           >
             {submitting ? "가입 중…" : "회원가입"}
           </button>
-          <p id={id("requirements")} className={styles.help}>
-            학교 이메일 인증·필수 동의 후 가입
+          <p
+            id={id("requirements")}
+            className={blocker ? styles.blocker : styles.help}
+            aria-live="polite"
+          >
+            {blocker ?? "모든 조건을 확인했어요. 가입할 수 있어요."}
           </p>
           {submitting && (
             <p role="status" className={styles.muted}>
