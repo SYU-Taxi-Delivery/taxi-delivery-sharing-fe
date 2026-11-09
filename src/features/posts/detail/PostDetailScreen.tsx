@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
@@ -35,6 +34,7 @@ import { postDetailOperations } from "./postDetailApi";
 import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { BagArt, ClockIcon, SeatSlots, TaxiArt } from "@/features/ui/art";
 
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -304,42 +304,63 @@ function DetailView({
   return (
     <article className={styles.detail} aria-labelledby="post-title">
       <header className={styles.top}>
-        <h1 id="post-title" className={styles.title}>
-          {taxi ? (
-            <>
-              <span className="block">{detail.departure}</span>
-              <span className={styles.titleRow}>
-                <Image
-                  src="/posts/arrow.svg"
-                  width={20}
-                  height={20}
-                  alt="에서"
-                />
-                {detail.destination}
+        <div className={styles.topRow}>
+          <span
+            className={styles.sticker}
+            data-type={taxi ? "taxi" : "delivery"}
+            data-muted={history}
+          >
+            {taxi ? <TaxiArt size="lg" /> : <BagArt size="lg" />}
+          </span>
+          <p className={styles.chips}>
+            <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
+            <span className={styles.status} data-history={history}>
+              {status === "FINISHED" ? "모집 완료" : label}
+            </span>
+            {author && (
+              <span className={styles.chip} data-mine="true">
+                내 모집글
               </span>
-            </>
-          ) : (
-            detail.restaurantName
+            )}
+          </p>
+        </div>
+        <div className={styles.route}>
+          <h1 id="post-title" className={styles.title}>
+            {taxi ? (
+              <>
+                <span className={styles.stop}>
+                  {detail.departure}
+                  <span className={styles.srOnly}>에서</span>
+                </span>
+                <span className={styles.stop} data-end="true">
+                  {detail.destination}
+                </span>
+              </>
+            ) : (
+              <span className={styles.stop}>{detail.restaurantName}</span>
+            )}
+          </h1>
+          {!taxi && (
+            <p className={styles.stop} data-end="true">
+              <span className={styles.stopMeta}>
+                수령 장소 · {detail.pickupLocation}
+              </span>
+            </p>
           )}
-        </h1>
-        <p className={styles.chips}>
-          <span className={styles.status} data-history={history}>
-            {status === "FINISHED" ? "모집 완료" : label}
-          </span>
-          {author && <span className={styles.chip}>내 모집글</span>}
-          <span className={styles.meta}>
-            {taxi ? "택시" : "배달"} ·{" "}
-            {taxi
-              ? `${detail.departure} 출발`
-              : `${detail.pickupLocation} 수령`}
-          </span>
-        </p>
-        <p className={styles.meta}>
-          {detail.authorName}
-          {detail.createdAt &&
-            ` · ${shortDateTime.format(Date.parse(detail.createdAt))} 작성`}
-        </p>
+        </div>
         <p className={styles.postTitle}>{detail.title}</p>
+        <p className={styles.byline}>
+          <span className={styles.avatar} aria-hidden="true">
+            {Array.from(detail.authorName ?? "")
+              .slice(-2)
+              .join("")}
+          </span>
+          <span>
+            <span className={styles.bylineName}>{detail.authorName}</span>
+            {detail.createdAt &&
+              ` · ${shortDateTime.format(Date.parse(detail.createdAt))} 작성`}
+          </span>
+        </p>
       </header>
 
       <div className={styles.decision}>
@@ -382,20 +403,31 @@ function DetailView({
         <dl className={styles.info}>
           {taxi ? (
             <>
-              <Row term="출발지" value={detail.departure} />
-              <Row term="도착지" value={detail.destination} />
-              <Row term="출발 시간" value={dateTime.format(reference)} strong />
+              <Row term="출발지" value={detail.departure} repeated />
+              <Row term="도착지" value={detail.destination} repeated />
+              <Row
+                term="출발 시간"
+                value={dateTime.format(reference)}
+                strong
+                repeated
+              />
             </>
           ) : (
             <>
-              <Row term="음식점" value={detail.restaurantName} />
-              <Row term="수령 장소" value={detail.pickupLocation} />
-              <Row term="주문 마감" value={dateTime.format(reference)} strong />
+              <Row term="음식점" value={detail.restaurantName} repeated />
+              <Row term="수령 장소" value={detail.pickupLocation} repeated />
+              <Row
+                term="주문 마감"
+                value={dateTime.format(reference)}
+                strong
+                repeated
+              />
             </>
           )}
           <Row
             term="정원"
             value={`${detail.currentMemberCount} / ${detail.capacity}명 · 작성자 포함`}
+            repeated
           />
           <Row
             term="참여 취소 기한"
@@ -548,19 +580,25 @@ function DetailView({
   );
 }
 
+/*
+ * One fact. `repeated` rows (route, time, headcount) are already shown at the
+ * top of the page and in the panel, so they stay here for screen readers only.
+ */
 function Row({
   term,
   value,
   strong = false,
   multiline = false,
+  repeated = false,
 }: {
   term: string;
   value: string;
   strong?: boolean;
   multiline?: boolean;
+  repeated?: boolean;
 }) {
   return (
-    <div className={styles.infoRow}>
+    <div className={repeated ? styles.srOnly : styles.infoRow}>
       <dt className={styles.meta}>{term}</dt>
       <dd
         className={strong ? "font-bold" : undefined}
@@ -670,6 +708,11 @@ function AuthorPanel({
       <h2 id="author-panel" className={styles.sectionTitle}>
         내 모집글 관리
       </h2>
+      <SeatSlots
+        className={styles.seats}
+        total={detail.capacity}
+        filled={detail.currentMemberCount}
+      />
       <p className={styles.cardCount}>
         현재 {detail.currentMemberCount} / {detail.capacity}명
         {status === "OPEN" && remaining > 0 && (
@@ -678,6 +721,11 @@ function AuthorPanel({
             · {remaining}자리 남음
           </span>
         )}
+      </p>
+      <p className={styles.when}>
+        <ClockIcon className={styles.whenIcon} />
+        {dateTime.format(Date.parse(detail.referenceTime))}{" "}
+        {taxi ? "출발" : "주문 마감"}
       </p>
       <p className={styles.help}>
         {status === "OPEN"

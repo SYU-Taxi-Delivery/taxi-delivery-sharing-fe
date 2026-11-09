@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   turbopack: { root: process.cwd() },
   outputFileTracingRoot: process.cwd(),
   /**
+   * Dev only: hide Next's floating "N" badge. On phones it sat on the bottom
+   * nav and read like a menu button. Build errors still open the overlay.
+   */
+  devIndicators: false,
+  /**
    * Same-origin proxy to the Spring backend so the session and CSRF cookies
    * stay first-party. BACKEND_ORIGIN is server-only (e.g. http://localhost:8080).
    */

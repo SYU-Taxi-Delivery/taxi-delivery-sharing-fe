@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -40,6 +39,7 @@ import {
 } from "./postDraft";
 import styles from "./form.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 
 type Phase =
   | { kind: "idle" }
@@ -175,9 +175,14 @@ export function PostForm({
     );
 
   function focusField(field: FieldName) {
-    form.current
-      ?.querySelector<HTMLElement>(`[data-field="${field}"]`)
-      ?.focus();
+    const target = form.current?.querySelector<HTMLElement>(
+      `[data-field="${field}"]`,
+    );
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    // iOS Safari leaves a field focused by script off-screen while the
+    // keyboard is open, so bring it to the middle explicitly.
+    target.scrollIntoView?.({ block: "center" });
   }
 
   function failWith(error: unknown) {
@@ -349,14 +354,28 @@ export function PostForm({
         <span aria-hidden="true">‹</span>{" "}
         {mode === "edit" ? "모집 상세" : "모집글 목록"}
       </Link>
-      <h1 className="mt-2 text-2xl font-bold">
-        {mode === "edit"
-          ? "모집글 수정"
-          : `${typeLabels[draft.type]} 모집글 작성`}
-      </h1>
-      <p className="mt-1 text-[var(--posts-muted)]">
-        {taxi ? "출발지·도착지·시간 입력" : "음식점·수령 장소·주문 마감 입력"}
-      </p>
+      <div className={styles.heading}>
+        <span
+          key={draft.type}
+          className={styles.headingArt}
+          data-type={taxi ? "taxi" : "delivery"}
+          aria-hidden="true"
+        >
+          {taxi ? <TaxiArt /> : <BagArt />}
+        </span>
+        <div>
+          <h1 className={styles.headingTitle}>
+            {mode === "edit"
+              ? "모집글 수정"
+              : `${typeLabels[draft.type]} 모집글 작성`}
+          </h1>
+          <p className={styles.headingLead}>
+            {taxi
+              ? "출발지·도착지·시간 입력"
+              : "음식점·수령 장소·주문 마감 입력"}
+          </p>
+        </div>
+      </div>
 
       <form
         ref={form}
@@ -372,7 +391,7 @@ export function PostForm({
         )}
 
         <fieldset className={styles.field}>
-          <legend className={`${styles.label} mb-2`}>카테고리</legend>
+          <legend className={styles.label}>카테고리</legend>
           <div className={styles.categories}>
             {(["TAXI", "DELIVERY"] as const).map((type) => (
               <label key={type} className={styles.category}>
@@ -384,14 +403,9 @@ export function PostForm({
                   disabled={mode === "edit" || busy}
                   onChange={() => edit((d) => ({ ...d, type }), [])}
                 />
-                <Image
-                  src={
-                    type === "TAXI" ? "/posts/taxi.svg" : "/posts/delivery.svg"
-                  }
-                  width={24}
-                  height={24}
-                  alt=""
-                />
+                <span className={styles.categoryArt} data-type={type}>
+                  {type === "TAXI" ? <TaxiArt /> : <BagArt />}
+                </span>
                 {typeLabels[type]}
               </label>
             ))}
@@ -413,7 +427,6 @@ export function PostForm({
           onBlur={() => touch("title")}
         />
 
-        <div className={styles.divider} aria-hidden="true" />
         <h2 className={styles.sectionTitle}>
           {taxi ? "이동 정보" : "배달 정보"}
         </h2>
@@ -478,6 +491,9 @@ export function PostForm({
           </>
         )}
 
+        <h2 className={styles.sectionTitle}>
+          {taxi ? "출발 시간과 정원" : "주문 마감과 정원"}
+        </h2>
         <div className={styles.datetime}>
           <Field
             id={id("date")}
@@ -528,13 +544,13 @@ export function PostForm({
             />
           </Field>
         </div>
-        <p id={id("time-help")} className={`${styles.help} -mt-3`}>
-          서울 시간 기준 · 5분 단위 · 지금부터 10분이 넘게 남은 시각만 정할 수
-          있어요.
+        <p id={id("time-help")} className={`${styles.help} ${styles.pullUp}`}>
+          서울 시간 기준, 5분 단위로 정해요. 지금부터 10분이 넘게 남은 시각만
+          정할 수 있어요.
         </p>
 
         <fieldset className={styles.field}>
-          <legend className={`${styles.label} mb-2`}>정원</legend>
+          <legend className={styles.label}>정원</legend>
           <div className={styles.stepper}>
             <button
               type="button"
@@ -545,9 +561,19 @@ export function PostForm({
             >
               −
             </button>
-            <output aria-live="polite" id={id("capacity")}>
-              {active.capacity}명
-            </output>
+            <span className={styles.stepperValue}>
+              <SeatSlots
+                className={styles.stepperSeats}
+                total={active.capacity}
+                filled={Math.min(
+                  mode === "edit" ? currentMemberCount : 1,
+                  active.capacity,
+                )}
+              />
+              <output aria-live="polite" id={id("capacity")}>
+                {active.capacity}명
+              </output>
+            </span>
             <button
               type="button"
               aria-label="정원 1명 늘리기"
@@ -568,6 +594,7 @@ export function PostForm({
           )}
         </fieldset>
 
+        <h2 className={styles.sectionTitle}>함께할 학생에게</h2>
         {!taxi && (
           <TextField
             id={id("orderGuide")}
@@ -613,8 +640,6 @@ export function PostForm({
           onChange={(value) => setCommon("communicationUrl", value)}
           onBlur={() => touch("communicationUrl")}
         />
-
-        <div className={styles.divider} aria-hidden="true" />
 
         {phase.kind === "similar" && (
           <section className={styles.similar} aria-labelledby={id("similar")}>
@@ -705,7 +730,7 @@ export function PostForm({
             ? "저장하면 모집글 목록과 상세에 바로 반영돼요."
             : "등록 시 모집글 목록에 공개"}
         </p>
-        <div className={styles.actions}>
+        <div className={styles.actions} data-bottom-action="true">
           <button
             type="button"
             className={styles.secondary}
@@ -739,7 +764,7 @@ export function PostForm({
             ? "수정한 내용을 버릴까요?"
             : "작성 중인 내용을 버릴까요?"}
         </h2>
-        <p className={`${styles.help} mt-2 mb-4`}>
+        <p className={`${styles.help} ${styles.dialogText}`}>
           {mode === "edit"
             ? "저장하지 않은 수정 내용이 사라져요."
             : "입력한 내용은 저장되지 않고 사라져요."}

@@ -590,6 +590,13 @@ function Workspace({ operations }: { operations: AdminOperations }) {
               {!listLoading && reports?.length === 0 && (
                 <p>접수된 신고가 없어요.</p>
               )}
+              {reports && reports.length > 0 && (
+                <div className={styles.head} aria-hidden="true">
+                  <span>신고</span>
+                  <span>상태</span>
+                  <span>조치</span>
+                </div>
+              )}
               {reports && (
                 <ul className={styles.list}>
                   {reports.map((report) => (

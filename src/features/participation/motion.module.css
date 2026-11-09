@@ -1,0 +1,566 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/*
+ * The participation panel's scene (ParticipationMotion): always shown in the
+ * corner the panel keeps free, so layout never shifts and nothing is covered.
+ * Plays: enter (once on arrival), idle (a small wiggle now and then), replay
+ * (tap; same as enter), join / leave (only after a confirmed request).
+ * Transforms and opacity only. prefers-reduced-motion (globals.css) collapses
+ * every animation to its end state, and the component skips enter/idle, so
+ * the rest picture shows: taxi parked with its driver, or the basket with
+ * the order's bags (one more when you have joined).
+ */
+
+/* The scene is also the "다시 보기" button: no chrome, a focus ring. */
+.stage {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 8.5rem;
+  height: 4.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.75rem;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stage:focus-visible {
+  outline: 2px solid var(--participation-focus);
+  outline-offset: 2px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Only animated parts measure transforms from their own box; static
+   placement transforms (attributes) stay in the scene's coordinates. */
+.rider,
+.rider [data-leg],
+.door,
+.hop,
+.basket,
+.restBag,
+.driver,
+.hello {
+  transform-box: fill-box;
+}
+
+/* ───────── Taxi ───────── */
+
+/* 두유콩 keeps the same pose keyframes in both layers; only which
+   layer is visible changes, while they stand inside the door opening. */
+.rider {
+  transform-origin: 50% 100%;
+}
+
+[data-scene="taxi-join"] .rider {
+  animation: rider-join 1s cubic-bezier(0.45, 0, 0.3, 1) both;
+}
+
+[data-scene="taxi-join"] .riderOutside {
+  animation:
+    rider-join 1s cubic-bezier(0.45, 0, 0.3, 1) both,
+    layer-hide-at-58 1s steps(1, end) both;
+}
+
+[data-scene="taxi-join"] .riderInside {
+  animation:
+    rider-join 1s cubic-bezier(0.45, 0, 0.3, 1) both,
+    layer-show-at-58 1s steps(1, end) both;
+}
+
+/* walk up beside the taxi → wait for the door → step onto the sill and
+   duck in through the opening */
+@keyframes rider-join {
+  0% {
+    transform: translate(14px, 62px) scale(1);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
+  }
+  32%,
+  40% {
+    transform: translate(64px, 62px) scale(1);
+  }
+  48% {
+    transform: translate(82px, 58px) scale(0.86);
+  }
+  58%,
+  100% {
+    transform: translate(89.4px, 53.2px) scale(0.66);
+  }
+}
+
+@keyframes layer-hide-at-58 {
+  0% {
+    opacity: 1;
+  }
+  58%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes layer-show-at-58 {
+  0% {
+    opacity: 0;
+  }
+  58%,
+  100% {
+    opacity: 1;
+  }
+}
+
+[data-scene="taxi-leave"] .riderInside {
+  animation:
+    rider-leave 1s cubic-bezier(0.45, 0, 0.3, 1) both,
+    layer-hide-at-26 1s steps(1, end) both;
+}
+
+[data-scene="taxi-leave"] .riderOutside {
+  animation:
+    rider-leave 1s cubic-bezier(0.45, 0, 0.3, 1) both,
+    layer-show-at-26 1s steps(1, end) both;
+}
+
+/* Facing left (mirrored) while getting out and walking away */
+@keyframes rider-leave {
+  0%,
+  22% {
+    transform: translate(89.4px, 53.2px) scale(-0.66, 0.66);
+  }
+  34% {
+    transform: translate(82px, 58px) scale(-0.86, 0.86);
+  }
+  44% {
+    transform: translate(64px, 62px) scale(-1, 1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  86%,
+  100% {
+    transform: translate(20px, 62px) scale(-1, 1);
+  }
+}
+
+@keyframes layer-hide-at-26 {
+  0% {
+    opacity: 1;
+  }
+  26%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes layer-show-at-26 {
+  0% {
+    opacity: 0;
+  }
+  26%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Walking: feet swing only while 두유콩 moves on the ground */
+.rider [data-leg] {
+  transform-origin: 50% 0%;
+}
+
+[data-scene="taxi-join"] .rider [data-leg="l"] {
+  animation: leg-a 0.16s linear 0s 2;
+}
+
+[data-scene="taxi-join"] .rider [data-leg="r"] {
+  animation: leg-b 0.16s linear 0s 2;
+}
+
+[data-scene="taxi-leave"] .rider [data-leg="l"] {
+  animation: leg-a 0.2s linear 0.44s 2;
+}
+
+[data-scene="taxi-leave"] .rider [data-leg="r"] {
+  animation: leg-b 0.2s linear 0.44s 2;
+}
+
+@keyframes leg-a {
+  25% {
+    transform: rotate(22deg);
+  }
+  75% {
+    transform: rotate(-22deg);
+  }
+}
+
+@keyframes leg-b {
+  25% {
+    transform: rotate(-22deg);
+  }
+  75% {
+    transform: rotate(22deg);
+  }
+}
+
+/* Rear door hinges on its front edge */
+.door {
+  transform-origin: 100% 50%;
+}
+
+[data-scene="taxi-join"] .door {
+  animation: door-join 1s var(--curve-standard) both;
+}
+
+[data-scene="taxi-leave"] .door {
+  animation: door-leave 1s var(--curve-standard) both;
+}
+
+@keyframes door-join {
+  0%,
+  26% {
+    transform: scaleX(1);
+  }
+  40%,
+  66% {
+    transform: scaleX(0.12);
+  }
+  82%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes door-leave {
+  0% {
+    transform: scaleX(1);
+  }
+  16%,
+  50% {
+    transform: scaleX(0.12);
+  }
+  68%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+[data-scene="taxi-join"] .hop {
+  animation: taxi-hop 1s var(--curve-standard) both;
+}
+
+@keyframes taxi-hop {
+  0%,
+  84% {
+    transform: none;
+  }
+  90% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ───────── Delivery ───────── */
+
+/* The bag flies on a curve: x moves evenly, y rises then falls. */
+[data-scene="delivery-join"] .bagX {
+  animation: bag-join-x 1s linear both;
+}
+
+[data-scene="delivery-join"] .bagY {
+  animation: bag-join-y 1s both;
+}
+
+@keyframes bag-join-x {
+  0% {
+    transform: translateX(22px);
+  }
+  62%,
+  100% {
+    transform: translateX(103px);
+  }
+}
+
+@keyframes bag-join-y {
+  0% {
+    transform: translateY(62px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  30% {
+    transform: translateY(22px);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  62%,
+  100% {
+    transform: translateY(54px);
+  }
+}
+
+[data-scene="delivery-leave"] .bagX {
+  animation: bag-leave-x 1s linear both;
+}
+
+[data-scene="delivery-leave"] .bagY {
+  animation: bag-leave-y 1s both;
+}
+
+@keyframes bag-leave-x {
+  0%,
+  8% {
+    transform: translateX(103px);
+  }
+  72%,
+  100% {
+    transform: translateX(36px);
+  }
+}
+
+@keyframes bag-leave-y {
+  0%,
+  8% {
+    transform: translateY(54px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  38% {
+    transform: translateY(20px);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  72% {
+    transform: translateY(62px);
+  }
+  80% {
+    transform: translateY(60px);
+  }
+  88%,
+  100% {
+    transform: translateY(62px);
+  }
+}
+
+.basket {
+  transform-origin: 50% 100%;
+}
+
+[data-scene="delivery-join"] .basket {
+  animation: basket-catch 1s var(--curve-standard) both;
+}
+
+@keyframes basket-catch {
+  0%,
+  60% {
+    transform: none;
+  }
+  68% {
+    transform: scale(1.03, 0.95);
+  }
+  78% {
+    transform: scale(0.99, 1.02);
+  }
+  88%,
+  100% {
+    transform: none;
+  }
+}
+
+/* ───────── A small hello once the action is done ───────── */
+
+.hello {
+  opacity: 0;
+  transform-origin: 20% 100%;
+  animation: hello-pop 1s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+
+.helloText {
+  fill: var(--text);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+@keyframes hello-pop {
+  0%,
+  70% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  84%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ───────── Result scenes end on the rest picture ───────── */
+
+/* The walker (leave) and the hello bubble fade at the very end, so the
+   switch back to the rest scene is seamless. */
+[data-scene$="-join"] .fadeAtEnd,
+[data-scene$="-leave"] .fadeAtEnd {
+  animation: fade-at-end 1.2s linear both;
+}
+
+[data-scene="delivery-leave"] .bagY {
+  animation:
+    bag-leave-y 1s both,
+    fade-at-end 1.2s linear both;
+}
+
+@keyframes fade-at-end {
+  0%,
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ───────── Enter (and replay): arrive, never board ───────── */
+
+.hop {
+  transform-origin: 50% 100%;
+}
+
+/* Taxi pulls in from the left and stops with a small dip. */
+[data-scene="taxi-enter"] .hop {
+  animation: taxi-enter 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@keyframes taxi-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  18% {
+    opacity: 1;
+  }
+  66% {
+    transform: translateX(1.5px);
+  }
+  80% {
+    transform: translateY(0.8px) scale(1.01, 0.985);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* The basket lands, then the order's bags pop in one by one. */
+[data-scene="delivery-enter"] .basket {
+  animation: basket-enter 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@keyframes basket-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  40% {
+    opacity: 1;
+    transform: none;
+  }
+  54% {
+    transform: scale(1.03, 0.95);
+  }
+  68% {
+    transform: scale(0.99, 1.02);
+  }
+  80%,
+  100% {
+    transform: none;
+  }
+}
+
+.restBag {
+  transform-origin: 50% 100%;
+}
+
+[data-scene="delivery-enter"] .restBag {
+  animation: bag-pop 0.5s cubic-bezier(0.34, 1.5, 0.64, 1) 0.32s both;
+}
+
+[data-scene="delivery-enter"] g:nth-of-type(3) > .restBag {
+  animation-delay: 0.42s;
+}
+
+[data-scene="delivery-enter"] g:nth-of-type(4) > .restBag {
+  animation-delay: 0.52s;
+}
+
+@keyframes bag-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ───────── Idle: small, then still again ───────── */
+
+/* Engine bob twice and the driver nods. */
+[data-scene="taxi-idle"] .hop {
+  animation: taxi-idle 0.9s ease-in-out both;
+}
+
+@keyframes taxi-idle {
+  0%,
+  40%,
+  80%,
+  100% {
+    transform: none;
+  }
+  20%,
+  60% {
+    transform: translateY(-0.8px);
+  }
+}
+
+.driver {
+  transform-origin: 50% 100%;
+}
+
+[data-scene="taxi-idle"] .driver {
+  animation: driver-nod 0.9s ease-in-out both;
+}
+
+@keyframes driver-nod {
+  0%,
+  100% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(0.9px) rotate(-6deg);
+  }
+  65% {
+    transform: translateY(-0.4px) rotate(4deg);
+  }
+}
+
+/* One bag shuffles in the basket. */
+[data-scene="delivery-idle"] g:nth-of-type(2) > .restBag {
+  animation: bag-shuffle 0.9s ease-in-out both;
+}
+
+@keyframes bag-shuffle {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  55% {
+    transform: rotate(5deg) translateY(-1px);
+  }
+  80% {
+    transform: rotate(-2deg);
+  }
+}

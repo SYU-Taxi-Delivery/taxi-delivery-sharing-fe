@@ -18,6 +18,8 @@ export type ParticipationOperations = {
 type Action = "join" | "cancel";
 type Feedback = { tone: "success" | "error"; message: string } | null;
 type Outcome = { action: Action; confirmed: boolean };
+/** Set only after the join/cancel request itself succeeded; id changes per success. */
+export type ParticipationMotion = { action: Action; id: number } | null;
 
 export function useParticipation(
   initialSnapshot: ParticipationSnapshot,
@@ -32,6 +34,7 @@ export function useParticipation(
   // A focus/visibility recheck in flight; a click arriving meanwhile waits for it.
   const refreshing = useRef<Promise<void> | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [motion, setMotion] = useState<ParticipationMotion>(null);
   const snapshotRef = useRef(snapshot);
   const operationsRef = useRef(operations);
   const mounted = useRef(true);
@@ -212,6 +215,7 @@ export function useParticipation(
       const requestId = ++sequence.current;
       setBusy(true);
       setFeedback(null);
+      setMotion(null);
       let confirmed = false;
       try {
         await operationsRef.current[action]();
@@ -220,6 +224,8 @@ export function useParticipation(
         // A lost or malformed response does not prove that the write failed.
       }
       if (!mounted.current || sequence.current !== requestId) return;
+      // The celebration never waits on, or delays, the refresh below.
+      if (confirmed) setMotion({ action, id: requestId });
       if (confirmed && action === "cancel") {
         const cancelled = hideUnavailableDetails({
           ...snapshotRef.current,
@@ -241,6 +247,7 @@ export function useParticipation(
     busy,
     needsRefresh,
     feedback,
+    motion,
     join: () => mutate("join"),
     cancel: () => mutate("cancel"),
     refresh,

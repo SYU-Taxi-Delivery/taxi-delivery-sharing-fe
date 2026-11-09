@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { ApiError } from "@/lib/api";
 import { SignupScreen } from "@/features/auth/SignupScreen";
+import { DevTools } from "@/features/demo/DevTools";
 
 const CODE = "123456";
 const BLOCKED = "compromised-password";
@@ -15,10 +16,14 @@ export function SignupPreview() {
 
   return (
     <>
-      <p className="bg-yellow-100 px-4 py-2 text-xs">
-        회원가입 데모 · 인증번호 {CODE} · 비밀번호 {BLOCKED}는 차단 목록으로
-        거절돼요 · 새로고침하면 초기화돼요.
-      </p>
+      <DevTools>
+        <p className="text-xs">
+          회원가입 데모: 인증번호는 {CODE}, 비밀번호 {BLOCKED}는 차단 목록으로
+          거절돼요.
+          <br />
+          새로고침하면 초기화돼요.
+        </p>
+      </DevTools>
       <SignupScreen
         operations={{
           requestCode: async (email) => {

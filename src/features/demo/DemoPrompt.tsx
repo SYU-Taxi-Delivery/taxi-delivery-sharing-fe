@@ -45,9 +45,6 @@ export function DemoPrompt() {
         표시돼요.
       </p>
       <div className={styles.actions}>
-        <Link href="/posts-preview" className={styles.primary} onClick={close}>
-          보러가기
-        </Link>
         <button
           ref={closeButton}
           type="button"
@@ -56,6 +53,9 @@ export function DemoPrompt() {
         >
           닫기
         </button>
+        <Link href="/posts-preview" className={styles.primary} onClick={close}>
+          보러가기
+        </Link>
       </div>
     </dialog>
   );

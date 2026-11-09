@@ -10,6 +10,7 @@ import type {
 } from "@/features/my/myHistory";
 import { MyHistoryScreen } from "@/features/my/MyHistoryScreen";
 import type { PostStatus } from "@/features/posts/posts";
+import { DevTools } from "@/features/demo/DevTools";
 
 const auth: AuthOperations = {
   me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
@@ -145,28 +146,32 @@ export function MyPreview({ tab }: { tab: MyTab }) {
 
   return (
     <AuthProvider operations={auth}>
-      <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>참여·모집 내역 데모 · 상황 변경·새로고침 시 초기화돼요.</span>
-        <label className="flex items-center gap-1">
-          상황
-          <select
-            value={scenario}
-            onChange={(event) =>
-              setScenario({
-                scenario: event.target.value as Scenario,
-                startedAt: Date.now(),
-              })
-            }
-            className="rounded border px-1"
-          >
-            {Object.entries(scenarios).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <DevTools>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span>
+            참여·모집 내역 데모: 상황을 바꾸거나 새로고침하면 초기화돼요.
+          </span>
+          <label className="flex items-center gap-1">
+            상황
+            <select
+              value={scenario}
+              onChange={(event) =>
+                setScenario({
+                  scenario: event.target.value as Scenario,
+                  startedAt: Date.now(),
+                })
+              }
+              className="rounded border px-1"
+            >
+              {Object.entries(scenarios).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </DevTools>
       <MyHistoryScreen
         key={scenario}
         tab={tab}

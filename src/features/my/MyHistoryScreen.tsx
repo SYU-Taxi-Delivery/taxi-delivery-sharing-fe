@@ -13,6 +13,8 @@ import { ParticipationCancellation } from "./ParticipationCancellation";
 import { useMyHistory } from "./useMyHistory";
 import styles from "./my.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { SpotArt } from "@/features/ui/SpotArt";
+import { InfoIcon } from "@/features/ui/art";
 
 const tabs: { tab: MyTab; label: string }[] = [
   { tab: "participated", label: "참여한 글" },
@@ -30,9 +32,9 @@ export function MyHistoryScreen({
 }) {
   const path = useAppPath();
   return (
-    <AppShell current="my">
+    <AppShell current="my" wide>
       <h1 className={common.title}>내 참여 · 모집</h1>
-      <p className={`${common.muted} mt-1`}>참여한 글·작성한 글 관리</p>
+      <p className={common.lead}>참여한 글·작성한 글 관리</p>
       <RequireAuth loginLabel="로그인하고 내 내역 보기">
         <Link href={path("/posts/new")} className={common.cta}>
           <Image src="/my/plus.svg" width={18} height={18} alt="" /> 모집글 쓰기
@@ -117,6 +119,7 @@ function History({
             {entry.label}
           </Link>
         ))}
+        <span className={styles.tabThumb} aria-hidden="true" />
       </nav>
       {selected && !forbidden && (
         <ParticipationCancellation
@@ -192,6 +195,7 @@ function History({
           </ul>
         ) : (
           <div className={common.state}>
+            <SpotArt />
             <p role="status">
               {tab === "created"
                 ? "아직 작성한 모집이 없어요."
@@ -207,7 +211,9 @@ function History({
         )}
       </section>
       <aside className={styles.help}>
-        <Image src="/my/info.svg" width={20} height={20} alt="" />
+        <span className={styles.helpIcon} aria-hidden="true">
+          <InfoIcon />
+        </span>
         <div>
           <p>참여 취소: 각 카드에 표시된 참여 취소 기한까지 가능해요.</p>
           <p>

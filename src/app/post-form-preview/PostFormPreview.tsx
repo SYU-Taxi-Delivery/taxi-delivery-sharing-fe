@@ -10,6 +10,7 @@ import {
   type PostFormOperations,
 } from "@/features/posts/form/postDraft";
 import { PostFormScreen } from "@/features/posts/form/PostFormScreen";
+import { DevTools } from "@/features/demo/DevTools";
 
 const auth: AuthOperations = {
   me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
@@ -152,30 +153,32 @@ export function PostFormPreview({
 
   return (
     <AuthProvider operations={auth}>
-      <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>작성·수정 데모 · 저장하면 데모 상세로 이동해요.</span>
-        <label className="flex items-center gap-1">
-          상황
-          <select
-            className="rounded border px-1"
-            value={`${mode}:${scenario}`}
-            onChange={(event) => {
-              const [nextMode, nextScenario] = event.target.value.split(":");
-              setMode(nextMode as Mode);
-              setScenario(nextScenario);
-              setVersion((value) => value + 1);
-            }}
-          >
-            {(Object.keys(scenarios) as Mode[]).map((group) =>
-              Object.entries(scenarios[group]).map(([key, label]) => (
-                <option key={`${group}:${key}`} value={`${group}:${key}`}>
-                  {label}
-                </option>
-              )),
-            )}
-          </select>
-        </label>
-      </div>
+      <DevTools>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span>작성·수정 데모: 저장하면 데모 상세로 이동해요.</span>
+          <label className="flex items-center gap-1">
+            상황
+            <select
+              className="rounded border px-1"
+              value={`${mode}:${scenario}`}
+              onChange={(event) => {
+                const [nextMode, nextScenario] = event.target.value.split(":");
+                setMode(nextMode as Mode);
+                setScenario(nextScenario);
+                setVersion((value) => value + 1);
+              }}
+            >
+              {(Object.keys(scenarios) as Mode[]).map((group) =>
+                Object.entries(scenarios[group]).map(([key, label]) => (
+                  <option key={`${group}:${key}`} value={`${group}:${key}`}>
+                    {label}
+                  </option>
+                )),
+              )}
+            </select>
+          </label>
+        </div>
+      </DevTools>
       <PostFormScreen
         key={version}
         mode={mode}

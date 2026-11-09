@@ -1,58 +1,150 @@
-.dialog {
-  width: min(26rem, calc(100vw - 2rem));
-  margin: auto;
-  padding: 1.5rem;
-  border: 1px solid #eaebee;
-  border-radius: 0.75rem;
-  background: white;
-  color: #212124;
-}
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/* "데모를 보러 오셨나요?" prompt on the home page (native dialog). */
 
-.dialog::backdrop {
-  background: rgb(0 0 0 / 40%);
+.dialog {
+  width: calc(100% - 2rem);
+  max-width: 26rem;
+  margin: auto;
+  padding: var(--space-6);
+  border: 0;
+  border-radius: var(--round-sheet);
+  background: var(--canvas);
+  color: var(--text);
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: var(--type-heading);
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-heading);
   word-break: keep-all;
 }
 
 .description {
-  margin-top: 0.75rem;
-  color: #62666e;
-  font-size: 0.875rem;
+  margin-top: var(--space-3);
+  color: var(--muted);
+  font-size: var(--type-label);
   line-height: 1.6;
 }
 
+/* Secondary (닫기) left, primary (보러가기) right */
 .actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.primary,
-.secondary {
-  display: grid;
-  min-height: 3rem;
-  padding: 0.5rem;
-  place-items: center;
-  border-radius: 0.5rem;
-  font-weight: 700;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .primary {
-  background: #76b900;
+  composes: base primary from "../ui/button.module.css";
 }
 
 .secondary {
-  border: 1px solid #dcdee3;
+  composes: base secondary from "../ui/button.module.css";
 }
 
-.primary:focus-visible,
-.secondary:focus-visible {
-  outline: 2px solid #477000;
+/*
+ * Demo dock (preview pages only): a small folded badge above the service,
+ * opening into the demo links and each page's state controls. Kept off the
+ * bottom of the screen so it is never mistaken for the app's nav.
+ */
+.devDock {
+  border-bottom: 1px dashed var(--input-border);
+  background: var(--canvas);
+  color: var(--text);
+  font-size: var(--type-micro);
+}
+
+.devPanel {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
+}
+
+.devBadge {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.devBadge::-webkit-details-marker {
+  display: none;
+}
+
+.devTag {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  background: var(--text);
+  color: var(--canvas);
+  font-size: var(--type-micro);
+  font-weight: 700;
+}
+
+.devToggle {
+  margin-left: auto;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.devToggle::after {
+  content: " ▾";
+}
+
+.devPanel[open] .devToggle::after {
+  content: " ▴";
+}
+
+.devBadge:focus-visible {
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
+}
+
+.devBody {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-3);
+  color: var(--text);
+  font-size: var(--type-label);
+}
+
+.devLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-weight: 700;
+}
+
+.devLinks a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A page's own controls, inside the panel */
+.devControls {
+  padding: var(--space-3);
+  border-radius: var(--round-control);
+  background: var(--soft);
+  font-size: var(--type-micro);
+}
+
+/* Same controls without the panel (a preview rendered on its own) */
+.devInline {
+  padding: var(--space-2) var(--page-gutter);
+  border-bottom: 1px dashed var(--input-border);
+  background: var(--soft);
+  font-size: var(--type-micro);
+}
+
+.devControls select,
+.devInline select {
+  min-height: 2rem;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--input-border);
+  border-radius: 0.375rem;
+  background: var(--canvas);
 }

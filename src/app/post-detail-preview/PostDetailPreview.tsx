@@ -10,6 +10,7 @@ import {
 } from "@/features/posts/detail/postDetail";
 import { PostDetailScreen } from "@/features/posts/detail/PostDetailScreen";
 import { createPreview as createCommentsPreview } from "../comments-preview/CommentsPreview";
+import { DevTools } from "@/features/demo/DevTools";
 
 const auth: AuthOperations = {
   me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
@@ -175,26 +176,28 @@ export function PostDetailPreview({
 
   return (
     <AuthProvider operations={auth}>
-      <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>모집 상세 데모 · 새로고침하면 초기화돼요.</span>
-        <label className="flex items-center gap-1">
-          상황
-          <select
-            className="rounded border px-1"
-            value={scenario}
-            onChange={(event) => {
-              setScenario(event.target.value as Scenario);
-              setVersion((value) => value + 1);
-            }}
-          >
-            {Object.entries(scenarios).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <DevTools>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span>모집 상세 데모 · 새로고침하면 초기화돼요.</span>
+          <label className="flex items-center gap-1">
+            상황
+            <select
+              className="rounded border px-1"
+              value={scenario}
+              onChange={(event) => {
+                setScenario(event.target.value as Scenario);
+                setVersion((value) => value + 1);
+              }}
+            >
+              {Object.entries(scenarios).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </DevTools>
       <PostDetailScreen
         key={version}
         postId={postId}

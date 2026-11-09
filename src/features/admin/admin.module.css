@@ -1,21 +1,31 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/* Column heads show only where the list is a table (48rem and up). */
+.head {
+  display: none;
+}
+
+/* Admin reports: same white cards, pills and facts tiles as the detail. */
+
 .stack,
 .list,
 .card,
 .facts {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
   min-width: 0;
 }
 
 .list {
+  gap: var(--space-3);
   padding: 0;
   list-style: none;
 }
 
 .card {
-  padding: 1rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.75rem;
+  padding: var(--space-4) var(--space-5);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
 }
 
 .row {
@@ -23,31 +33,47 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  background: var(--posts-soft);
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.625rem;
+  padding: 0 var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--soft);
   color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .badge[data-pending="true"] {
-  background: #eef7dc;
+  background: var(--primary-soft);
   color: var(--posts-primary-text);
-  font-weight: 700;
+}
+
+.facts {
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2);
 }
 
 .facts > div {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.125rem;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  background: var(--soft);
 }
 
 .facts dt {
   color: var(--posts-muted);
-  font-size: 0.75rem;
+  font-size: var(--type-micro);
+}
+
+.facts dd {
+  font-weight: 600;
 }
 
 .content {
@@ -58,9 +84,71 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .actions > button {
   flex: 1 1 8rem;
+}
+
+/*
+ * Wider screens: the report queue is a table, not a stack of cards. One row
+ * per report (title over reason and time, then status, then the action),
+ * hairlines between rows, the action a compact button in its own column.
+ * Same list markup, so the rows stay list items for assistive tech.
+ */
+@media (min-width: 48rem) {
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6rem 7.5rem;
+    column-gap: var(--space-6);
+    padding: 0 var(--space-2) var(--space-2);
+    color: var(--posts-muted);
+    font-size: var(--type-label);
+    font-weight: 600;
+  }
+
+  .list {
+    gap: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .list > .card {
+    grid-template-columns: minmax(0, 1fr) 6rem 7.5rem;
+    grid-template-areas:
+      "title status action"
+      "meta status action";
+    align-items: center;
+    column-gap: var(--space-6);
+    row-gap: var(--space-1);
+    padding: var(--space-3) var(--space-2);
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .list > .card > .row {
+    display: contents;
+  }
+
+  .list > .card > .row > strong {
+    grid-area: title;
+    min-width: 0;
+  }
+
+  .list > .card > .row > .badge {
+    grid-area: status;
+    justify-self: start;
+  }
+
+  .list > .card > p {
+    grid-area: meta;
+  }
+
+  .list > .card > button {
+    grid-area: action;
+    min-height: 2.5rem;
+  }
 }

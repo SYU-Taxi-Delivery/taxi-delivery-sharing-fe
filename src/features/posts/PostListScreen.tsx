@@ -17,6 +17,8 @@ import { postListOperations } from "./postsApi";
 import { usePostList } from "./usePostList";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { SpotArt } from "@/features/ui/SpotArt";
+import { CampusScene } from "@/features/ui/art";
 
 const tabs: { type: PostFilter; label: string; description: string }[] = [
   { type: "ALL", label: "전체", description: "교내 택시·배달 모집" },
@@ -41,9 +43,10 @@ export function PostListScreen({
   return (
     <AppShell current="posts" postsPath={basePath} wide>
       <div className={styles.listHeading}>
-        <div>
+        <div className={styles.headingText}>
+          <CampusScene className={styles.headingArt} />
           <h1 className={styles.title}>함께할 학생 모집</h1>
-          <p className={`${styles.muted} mt-1`}>{active.description}</p>
+          <p className={styles.lead}>{active.description}</p>
         </div>
         <Link
           href={path(
@@ -102,6 +105,7 @@ function PostList({
             {tab.label}
           </Link>
         ))}
+        <span className={styles.tabThumb} aria-hidden="true" />
       </nav>
       <label className={styles.check} htmlFor={checkId}>
         <input
@@ -117,7 +121,11 @@ function PostList({
         참여 가능한 글만 보기
       </label>
 
-      <section aria-labelledby={`${checkId}-heading`} aria-busy={loading}>
+      <section
+        className={styles.results}
+        aria-labelledby={`${checkId}-heading`}
+        aria-busy={loading}
+      >
         <h2 id={`${checkId}-heading`} className={styles.srOnly}>
           {active.label} 모집글 목록
         </h2>
@@ -131,11 +139,26 @@ function PostList({
         )}
 
         {loading ? (
-          <p role="status" className={`${styles.state} ${styles.muted}`}>
-            모집글을 불러오고 있어요.
-          </p>
+          <div className={styles.loading}>
+            <p role="status" className={styles.loadingText}>
+              모집글을 불러오고 있어요.
+            </p>
+            <ul className={styles.skeletonList} aria-hidden="true">
+              {[0, 1, 2].map((index) => (
+                <li key={index} className={styles.skeleton}>
+                  <span className={styles.skeletonSticker} />
+                  <span className={styles.skeletonLines}>
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : error ? (
           <div className={styles.state}>
+            <SpotArt kind="error" />
             <p role="alert">{error}</p>
             <button type="button" className={styles.secondary} onClick={retry}>
               다시 불러오기
@@ -151,6 +174,7 @@ function PostList({
           </ul>
         ) : page && page.totalPages > 0 && page.number >= page.totalPages ? (
           <div className={styles.state}>
+            <SpotArt />
             <p role="status">이 페이지에는 모집글이 없어요.</p>
             <Link
               href={href({ page: page.totalPages - 1 })}
@@ -161,6 +185,7 @@ function PostList({
           </div>
         ) : filtered ? (
           <div className={styles.state}>
+            <SpotArt />
             <p role="status">조건에 맞는 모집글이 없어요.</p>
             <Link href={path(basePath)} className={styles.secondary}>
               전체 모집글 보기
@@ -168,6 +193,7 @@ function PostList({
           </div>
         ) : (
           <div className={styles.state}>
+            <SpotArt />
             <p role="status">아직 모집글이 없어요. 첫 모집글을 써 보세요.</p>
             <Link href={path(NEW_POST_PATH)} className={styles.secondary}>
               모집글 쓰기

@@ -236,7 +236,9 @@ export function DatePicker({
               disabled={prevDisabled}
               onClick={() => goTo(addMonths(focused, -1))}
             >
-              ‹
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M14.5 6.5 9 12l5.5 5.5" />
+              </svg>
             </button>
             <p id={titleId} className={styles.calendarTitle} aria-live="polite">
               {focused.y}년 {focused.m}월
@@ -247,7 +249,9 @@ export function DatePicker({
               aria-label="다음 달"
               onClick={() => goTo(addMonths(focused, 1))}
             >
-              ›
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9.5 6.5 15 12l-5.5 5.5" />
+              </svg>
             </button>
           </div>
           <div

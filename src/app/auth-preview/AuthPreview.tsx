@@ -8,6 +8,7 @@ import type { AuthOperations, CurrentUser } from "@/features/auth/auth";
 import { AuthProvider, useAuth } from "@/features/auth/AuthProvider";
 import { LoginScreen } from "@/features/auth/LoginScreen";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { DevTools } from "@/features/demo/DevTools";
 
 const PASSWORD = "preview-password";
 const accounts: Record<string, CurrentUser | "unverified"> = {
@@ -97,10 +98,14 @@ export function AuthPreview() {
 
   return (
     <AuthProvider operations={operations}>
-      <p className="bg-yellow-100 px-4 py-2 text-xs">
-        로그인 데모 · student@syuin.ac.kr / admin@syuin.ac.kr /
-        unverified@syuin.ac.kr, 비밀번호 {PASSWORD} · 새로고침하면 초기화돼요.
-      </p>
+      <DevTools>
+        <p className="text-xs">
+          로그인 데모 계정: student@syuin.ac.kr, admin@syuin.ac.kr,
+          unverified@syuin.ac.kr (비밀번호 {PASSWORD}).
+          <br />
+          새로고침하면 초기화돼요.
+        </p>
+      </DevTools>
       <PreviewBody failLogout={failLogout} setFailLogout={setFailLogout} />
     </AuthProvider>
   );

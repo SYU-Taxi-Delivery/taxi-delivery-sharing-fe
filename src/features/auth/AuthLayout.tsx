@@ -1,13 +1,6 @@
 import Image from "next/image";
-import { Noto_Sans_KR } from "next/font/google";
 import type { ReactNode } from "react";
 import styles from "./auth.module.css";
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  display: "swap",
-});
 
 /** Header, centered card column and footer shared by the login and sign-up designs. */
 export function AuthLayout({
@@ -18,7 +11,7 @@ export function AuthLayout({
   intro?: ReactNode;
 }) {
   return (
-    <div className={`${styles.screen} ${notoSansKr.className}`}>
+    <div className={styles.screen}>
       <header className={styles.header}>
         <p className={styles.brand}>
           <Image src="/auth/logo.svg" width={32} height={32} alt="" />
