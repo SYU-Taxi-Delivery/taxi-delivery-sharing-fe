@@ -40,6 +40,11 @@
   --action-h: 4.5rem;
 }
 
+/* A hint line above the button: the strip grows by its height + gap */
+.screen:has([data-bottom-action="true"] [data-bottom-hint]) {
+  --action-h: 6.5rem;
+}
+
 /* While typing (AppShell sets data-typing), the bottom area steps aside for
    the keyboard: the nav hides and the page's action returns to its place in
    the content. */

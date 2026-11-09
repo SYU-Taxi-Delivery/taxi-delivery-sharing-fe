@@ -88,7 +88,9 @@ export function PostCard({ post }: { post: PostSummary }) {
               {remaining}자리 남음
             </span>
           ) : (
-            reason && <span className={styles.meta}>{reason}</span>
+            // The status chip above already says it; repeat only extra detail.
+            reason &&
+            reason !== label && <span className={styles.meta}>{reason}</span>
           )}
         </span>
         {post.authorName && (

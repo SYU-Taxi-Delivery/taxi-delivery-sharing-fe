@@ -70,16 +70,25 @@ export function MyHistoryCard({
             {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
             {item.type === "TAXI" ? "택시" : "배달"}
           </span>
-          <span className={styles.relation}>
-            {author
-              ? "작성한 글"
-              : item.relation === "JOINED"
-                ? active
-                  ? "참여 중"
-                  : "참여 이력"
-                : "참여 취소됨"}
+          {/* Two different states, each named: mine, and the post's */}
+          <span className={styles.statePair}>
+            <span className={styles.stateKey}>
+              {author ? "내 글" : "내 참여"}
+            </span>
+            <span className={styles.relation}>
+              {author
+                ? "작성한 글"
+                : item.relation === "JOINED"
+                  ? active
+                    ? "참여 중"
+                    : "참여 이력"
+                  : "참여 취소됨"}
+            </span>
           </span>
-          <span className={styles.status}>{label}</span>
+          <span className={styles.statePair}>
+            <span className={styles.stateKey}>모집</span>
+            <span className={styles.status}>{label}</span>
+          </span>
         </div>
         {item.authorName && (
           <span className={styles.meta}>작성자 {item.authorName}</span>
