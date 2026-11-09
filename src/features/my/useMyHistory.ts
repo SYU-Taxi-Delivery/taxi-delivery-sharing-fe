@@ -21,11 +21,16 @@ type Result = {
   history: MyHistory | null;
   error: string | null;
   forbidden: boolean;
+  /** The tab has no server API yet, so retrying cannot help. */
+  notConnected?: boolean;
 };
 
+const notConnected = (error: unknown) =>
+  error instanceof Error && error.name === "MyHistoryNotConnectedError";
+
 function errorMessage(error: unknown) {
-  if (error instanceof Error && error.name === "MyHistoryNotConnectedError") {
-    return "내 이력 연동을 준비하고 있어요. 잠시 후 다시 이용해 주세요.";
+  if (notConnected(error)) {
+    return "작성한 글 목록은 아직 준비 중이에요. 내가 쓴 모집글은 모집글 목록에서 확인할 수 있어요.";
   }
   if (error instanceof Error && error.name === "InvalidMyHistoryData") {
     return "내 이력 정보를 확인할 수 없어요. 다시 불러와 주세요.";
@@ -81,6 +86,7 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
               history: null,
               error: errorMessage(error),
               forbidden: false,
+              notConnected: notConnected(error),
             });
           }
         }
@@ -149,6 +155,7 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
     loading: current === null,
     error: current?.error ?? null,
     forbidden: current?.forbidden ?? false,
+    notConnected: current?.notConnected ?? false,
     nowMs,
     serverNow,
     retry: () => setAttempt((value) => value + 1),

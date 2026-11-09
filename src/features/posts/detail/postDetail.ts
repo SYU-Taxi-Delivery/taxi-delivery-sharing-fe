@@ -70,15 +70,17 @@ export class PostDetailError extends Error {
 }
 
 // UI callbacks; URIs, DTOs and error codes belong to the API adapter (#18).
+// An omitted optional callback means the server does not offer it yet, and the
+// screen shows that action as unavailable instead of letting it fail.
 export type PostDetailOperations = {
   load: (id: string) => Promise<unknown>;
   /** OPEN/FULL → CLOSED by the author. */
-  close: (id: string) => Promise<void>;
+  close?: (id: string) => Promise<void>;
   /** OPEN/FULL/CLOSED → CANCELLED by the author; JOINED members are cancelled too. */
-  cancel: (id: string) => Promise<void>;
+  cancel?: (id: string) => Promise<void>;
   join: (id: string) => Promise<void>;
   leave: (id: string) => Promise<void>;
-  report: (id: string, request: ReportRequest) => Promise<void>;
+  report?: (id: string, request: ReportRequest) => Promise<void>;
 };
 
 const STATUSES: readonly PostStatus[] = [

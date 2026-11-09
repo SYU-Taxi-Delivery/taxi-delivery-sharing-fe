@@ -8,10 +8,7 @@ import {
   taxiDetail,
 } from "@/test/fakeBackend";
 import { PostDetailError, toPostDetail, toSnapshot } from "./postDetail";
-import {
-  PostDetailNotConnectedError,
-  postDetailOperations,
-} from "./postDetailApi";
+import { postDetailOperations } from "./postDetailApi";
 
 beforeEach(() => vi.useFakeTimers());
 
@@ -221,15 +218,10 @@ describe("참여 신청·취소 연동", () => {
     },
   );
 
-  it("작성자 마감·모집 취소·신고는 백엔드 API가 없어 미연결로 알린다", async () => {
-    await expect(postDetailOperations.close("1")).rejects.toBeInstanceOf(
-      PostDetailNotConnectedError,
-    );
-    await expect(postDetailOperations.cancel("1")).rejects.toBeInstanceOf(
-      PostDetailNotConnectedError,
-    );
-    await expect(
-      postDetailOperations.report("1", { reason: "OTHER", detail: null }),
-    ).rejects.toBeInstanceOf(PostDetailNotConnectedError);
+  it("작성자 마감·모집 취소·신고는 백엔드 API가 없어 제공하지 않는다", () => {
+    // Omitted callbacks make the screen show these actions as not ready.
+    expect(postDetailOperations.close).toBeUndefined();
+    expect(postDetailOperations.cancel).toBeUndefined();
+    expect(postDetailOperations.report).toBeUndefined();
   });
 });
