@@ -1,29 +1,41 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/*
+ * Post detail ("waiting spot" for a pod), author panel, report and confirm dialogs.
+ * Also used by comments and admin (section, notice, alert, buttons, field).
+ */
+
 .back {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--posts-muted);
+  composes: base secondary sm from "../../ui/button.module.css";
+  margin-bottom: var(--space-2);
 }
 
+/* Opacity only: a transform here would re-anchor the phone's fixed
+   participation bar to the article while the entrance runs. */
 .detail {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-4);
+  animation: detail-in var(--motion-standard) var(--curve-enter);
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .body,
 .decision {
   display: grid;
   align-content: start;
-  gap: 1.5rem;
+  gap: var(--space-4);
   min-width: 0;
 }
 
 @media (min-width: 64rem) {
   .detail {
-    grid-template-columns: minmax(0, 1fr) 18rem;
+    grid-template-columns: minmax(0, 1fr) 21rem;
     align-items: start;
-    column-gap: 2rem;
+    column-gap: var(--space-6);
   }
 
   .top,
@@ -32,149 +44,351 @@
   }
 
   .decision {
+    position: sticky;
+    top: 5rem;
     grid-column: 2;
     grid-row: 1 / span 2;
   }
 }
 
+/* ───────── Top: sticker, route as two stops, title, author ───────── */
+
 .top {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-2);
 }
 
-.title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.titleRow {
+.topRow {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
+}
+
+/* The pod's art tile: the post type, never a member */
+.sticker {
+  display: grid;
+  flex-shrink: 0;
+  width: 5rem;
+  height: 4.25rem;
+  place-items: center;
+  border-radius: 1.125rem;
+  background: var(--primary-soft);
+}
+
+.sticker[data-type="delivery"] {
+  background: var(--delivery-tint);
+}
+
+.sticker svg {
+  flex: none;
+  width: 4.25rem;
+  height: auto;
+}
+
+.sticker svg[data-art="bag"] {
+  width: 4rem;
+}
+
+.sticker[data-muted="true"] svg {
+  filter: grayscale(0.85);
+  opacity: 0.75;
+}
+
+.route {
+  display: grid;
   gap: 0.375rem;
 }
 
-.postTitle {
+.title {
+  display: grid;
+  gap: 0.375rem;
+  font-size: var(--type-title);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-heading);
+}
+
+/* Each stop: a dot, and a line down to the next one */
+.stop {
+  position: relative;
+  display: block;
+  padding-left: 1.5rem;
+}
+
+.stop::before {
+  content: "";
+  position: absolute;
+  top: 0.55em;
+  left: 0.125rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2.5px solid var(--posts-primary-text);
+  border-radius: 50%;
+  background: var(--canvas);
+  box-sizing: border-box;
+}
+
+.stop:not([data-end="true"])::after {
+  content: "";
+  position: absolute;
+  top: calc(0.55em + 0.875rem);
+  bottom: -0.375rem;
+  left: 0.4375rem;
+  border-left: 2px dotted var(--posts-primary-text);
+}
+
+.stop[data-end="true"]::before {
+  border: 0;
+  background: var(--posts-primary);
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 0 3.5px var(--posts-primary-text);
+}
+
+/* Delivery: the pickup stop is a smaller line under the restaurant */
+p.stop {
+  font-size: var(--type-body);
+  font-weight: 600;
+}
+
+p.stop::before {
+  top: 0.45em;
+}
+
+.stopMeta {
   color: var(--posts-text);
-  font-size: 1rem;
+}
+
+/* The author's own title, like a note pinned under the route */
+.postTitle {
+  justify-self: start;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
+  color: var(--posts-text);
+  font-weight: 600;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+}
+
+.bylineName {
+  color: var(--posts-text);
+  font-weight: 700;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.375rem;
+  gap: var(--space-2);
 }
 
-.chip,
-.status {
-  padding: 0 0.375rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
+/* Small labels, not pills: type in green text, status as a tag */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.625rem;
+  padding: 0 var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--primary-tint);
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
   font-weight: 700;
 }
 
-.chip {
-  background: var(--posts-soft);
+.chip[data-mine="true"] {
+  background: var(--soft);
+  color: var(--posts-text);
 }
 
 .status {
-  background: #eef7dc;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-height: 1.625rem;
+  padding: 0 var(--space-2) 0 0.4375rem;
+  border: 1.5px solid var(--posts-primary-text);
+  border-radius: 0.5rem;
+  background: var(--canvas);
   color: var(--posts-primary-text);
+  font-size: var(--type-micro);
+  font-weight: 700;
 }
 
 .status[data-history="true"] {
-  background: #e3e5e9;
+  border-color: var(--input-border);
   color: var(--posts-muted);
 }
 
 .meta,
 .help {
+  position: relative;
   color: var(--posts-muted);
-  font-size: 0.75rem;
+  font-size: var(--type-label);
 }
+
+/* ───────── Remaining facts (route/time/headcount are at the top) ───────── */
 
 .info {
   display: grid;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  background: var(--posts-soft);
+  gap: var(--space-2);
 }
 
 .infoRow {
-  display: grid;
-  gap: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--posts-border);
 }
 
 .infoRow dd {
-  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
+
+.infoRow:has(dd[style]) {
+  display: grid;
+}
+
+/* ───────── Sections: heading + space, no boxes ───────── */
 
 .section {
   display: grid;
-  gap: 0.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--posts-border);
+  gap: var(--space-3);
+  padding-top: var(--space-2);
 }
 
 .sectionTitle {
-  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-subhead);
   font-weight: 700;
+  letter-spacing: var(--tracking-heading);
 }
 
 .label {
+  font-size: var(--type-label);
   font-weight: 700;
 }
 
 .description {
-  font-size: 1rem;
   white-space: pre-wrap;
+  line-height: 1.7;
 }
 
+/* Members: real names only (decorative art never stands in for a person);
+   open seats are dashed slots with the same count as the panel. */
 .members {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-2);
 }
 
 .member,
 .seat {
   display: grid;
-  gap: 0.25rem;
-  padding: 1rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2);
+  align-items: center;
+  min-height: 3.25rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--canvas);
+  font-size: var(--type-label);
+  animation: doo-pop var(--motion-standard) var(--curve-enter) both;
+}
+
+.member .avatar {
+  grid-row: 1 / span 2;
+}
+
+.member .meta {
+  font-size: var(--type-micro);
 }
 
 .seat {
-  border-color: transparent;
-  background: var(--posts-soft);
+  grid-template-columns: 1fr;
+  justify-items: start;
+  padding-left: var(--space-4);
+  border-style: dashed;
+  border-color: var(--input-border);
+  background: transparent;
   color: var(--posts-muted);
 }
 
 .avatar {
   display: grid;
+  flex-shrink: 0;
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border-radius: 9999px;
-  background: var(--posts-soft);
-  font-size: 0.6875rem;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
   font-weight: 700;
 }
+
+.byline .avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* ───────── Author panel ───────── */
 
 .card {
   display: grid;
-  gap: 0.75rem;
-  padding: calc(1.25rem - 1px);
-  border: 1px solid var(--posts-border);
-  border-radius: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
+}
+
+.seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+}
+
+.seats svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.when {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
+  font-weight: 700;
+}
+
+.whenIcon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--primary-text);
 }
 
 .cardCount {
-  font-size: 1.125rem;
+  font-size: var(--type-heading);
   font-weight: 700;
+  letter-spacing: var(--tracking-heading);
 }
 
 .remaining {
@@ -187,202 +401,243 @@
 
 .action {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-.primary,
-.secondary,
-.danger,
-.dangerOutline {
-  display: inline-flex;
-  min-height: 3rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0 1rem;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 700;
-}
+/* ───────── Buttons (roles from ui/button.module.css) ───────── */
 
 .primary {
-  background: var(--posts-primary);
-  color: var(--posts-text);
+  composes: base primary from "../../ui/button.module.css";
 }
 
 .secondary {
-  border: 1px solid #dcdee3;
-  background: white;
-  color: var(--posts-text);
+  composes: base secondary from "../../ui/button.module.css";
 }
 
 .danger {
-  background: #c62828;
-  color: white;
+  composes: base danger from "../../ui/button.module.css";
 }
 
 .dangerOutline {
-  border: 1px solid #f0b4b4;
-  background: white;
-  color: var(--posts-danger);
+  composes: base danger from "../../ui/button.module.css";
 }
 
-.primary:disabled,
-.secondary:disabled,
-.danger:disabled,
-.dangerOutline:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+/* ───────── Notices ───────── */
+
+.notice,
+.alert,
+.success {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  font-size: var(--type-label);
+  font-weight: 600;
 }
 
 .notice {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--posts-soft);
+  background: var(--soft);
+  color: var(--posts-muted);
 }
 
 .alert {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #f3c2c2;
-  border-radius: 0.5rem;
-  background: #fff6f6;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-soft);
   color: var(--posts-danger);
+  animation: nudge 360ms var(--curve-standard);
 }
 
 .success {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background: #f6fbec;
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  animation: doo-pop var(--motion-standard) cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+
+@keyframes nudge {
+  20% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  80% {
+    transform: translateX(-1px);
+  }
+}
+
+.textButton {
+  composes: base ghost sm from "../../ui/button.module.css";
+  justify-self: start;
   color: var(--posts-primary-text);
 }
 
-.textButton,
-.reportButton {
-  justify-self: start;
-  min-height: 2.75rem;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.textButton[data-tone="danger"]:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--posts-danger);
 }
 
 .reportButton {
+  composes: base ghost sm from "../../ui/button.module.css";
   color: var(--posts-muted);
-  font-size: 0.875rem;
 }
 
 .report {
   display: grid;
-  gap: 0.5rem;
-  justify-items: start;
+  justify-items: center;
+  gap: var(--space-2);
 }
 
+/* Participation rules: a heading and a checklist, no box */
 .guide {
   display: grid;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  background: var(--posts-soft);
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+.guide > h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-subhead);
+  letter-spacing: var(--tracking-heading);
+  text-wrap: balance;
 }
 
 .guide ul {
   display: grid;
-  gap: 0.5rem;
-  padding-left: 1rem;
-  list-style: disc;
-  color: var(--posts-muted);
+  gap: var(--space-2);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+}
+
+.guide li {
+  position: relative;
+  padding-left: var(--space-6);
+}
+
+.guide li::before {
+  content: "";
+  position: absolute;
+  top: 0.2rem;
+  left: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--primary-soft)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.5l2.2 2.2L11.5 6' fill='none' stroke='%23477000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 0.8rem no-repeat;
 }
 
 .state {
   display: grid;
   justify-items: center;
-  gap: 0.75rem;
-  padding: 3rem 1rem;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-5);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
   text-align: center;
+  animation: doo-pop var(--motion-standard) var(--curve-enter);
 }
 
 .stateTitle {
-  font-size: 1.25rem;
+  font-size: var(--type-heading);
   font-weight: 700;
+  letter-spacing: var(--tracking-heading);
 }
+
+/* ───────── Dialogs (sheet on phones via globals.css) ───────── */
 
 .dialog {
-  width: min(24rem, calc(100vw - 2rem));
+  width: calc(100% - 2rem);
+  max-width: 26rem;
   margin: auto;
-  padding: 1.25rem;
+  padding: var(--space-6);
   border: 0;
-  border-radius: 0.75rem;
+  border-radius: var(--round-sheet);
   color: var(--posts-text);
-}
-
-.dialog::backdrop {
-  background: rgb(0 0 0 / 40%);
 }
 
 .dialogHeading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  font-size: 1.125rem;
+  gap: var(--space-3);
+  font-size: var(--type-heading);
   font-weight: 700;
+  letter-spacing: var(--tracking-heading);
 }
 
 .close {
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  place-items: center;
-  border-radius: 9999px;
-  font-size: 1.5rem;
+  composes: base icon from "../../ui/button.module.css";
+  font-size: 1.375rem;
 }
 
 .dialogBody {
-  margin: 0.5rem 0 1rem;
+  margin-top: var(--space-2);
   color: var(--posts-muted);
 }
 
+/* Footer actions: secondary + primary side by side (Aceternity modal footer) */
 .actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .reasons {
   display: grid;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
-  border: 0;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .reason {
   display: flex;
-  min-height: 2.75rem;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--border);
+  border-radius: var(--round-control);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard);
+}
+
+.reason:hover {
+  border-color: var(--input-border);
+}
+
+.reason:has(input:checked) {
+  border-color: var(--posts-primary-text);
+  background: var(--primary-tint);
 }
 
 .reason input {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   accent-color: var(--posts-primary-text);
 }
 
 .field {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .labelRow {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .counter {
   color: var(--posts-muted);
-  font-size: 0.75rem;
+  font-size: var(--type-micro);
+  font-variant-numeric: tabular-nums;
 }
 
 .counter[data-over="true"] {
@@ -390,23 +645,47 @@
   font-weight: 700;
 }
 
+/* White box with a clear border (same as the post form); ring on focus */
 .textarea {
   width: 100%;
-  min-height: 6rem;
-  padding: 0.75rem;
-  border: 1px solid #dcdee3;
-  border-radius: 0.5rem;
-  font-size: 1rem;
+  min-height: 7rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--input-border);
+  border-radius: 0.875rem;
+  background: var(--canvas);
+  scroll-margin: 5rem 0 6rem;
   resize: vertical;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
+    box-shadow var(--motion-fast) var(--curve-standard);
+}
+
+.textarea:hover:not(:read-only) {
+  border-color: var(--posts-primary-text);
+}
+
+.textarea:focus {
+  border-color: var(--posts-primary-text);
+  background: var(--canvas);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.textarea:read-only {
+  border-style: dashed;
+  background: var(--soft);
+  color: var(--posts-muted);
 }
 
 .textarea[aria-invalid="true"] {
   border-color: var(--posts-danger);
+  background: var(--danger-soft);
 }
 
 .error {
   color: var(--posts-danger);
-  font-size: 0.75rem;
+  font-size: var(--type-micro);
+  font-weight: 600;
 }
 
 .srOnly {
@@ -418,16 +697,15 @@
   white-space: nowrap;
 }
 
-.back:focus-visible,
-.primary:focus-visible,
-.secondary:focus-visible,
-.danger:focus-visible,
-.dangerOutline:focus-visible,
-.textButton:focus-visible,
-.reportButton:focus-visible,
-.close:focus-visible,
 .reason input:focus-visible,
 .textarea:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
+}
+
+@keyframes doo-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }

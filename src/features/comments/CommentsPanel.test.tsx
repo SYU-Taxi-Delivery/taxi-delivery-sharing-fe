@@ -146,10 +146,18 @@ const click = (name: string | RegExp) =>
   });
 const submit = () => click("댓글 등록");
 const mineRow = () => screen.getByText(mine.content).closest("li")!;
-const openDelete = () =>
-  act(async () => {
-    fireEvent.click(within(mineRow()).getByRole("button", { name: /삭제/ }));
+const moreButton = () =>
+  within(mineRow()).getByRole("button", { name: "내 댓글 더보기" });
+const openDelete = async () => {
+  await act(async () => {
+    fireEvent.click(moreButton());
   });
+  await act(async () => {
+    fireEvent.click(
+      within(mineRow()).getByRole("menuitem", { name: "댓글 삭제" }),
+    );
+  });
+};
 const confirmDelete = () =>
   act(async () => {
     fireEvent.click(
@@ -398,7 +406,7 @@ describe("댓글 삭제와 접근 변경", () => {
       const pending = deferred<void>();
       const remove = vi.fn(() => pending.promise);
       await setup(operations({ remove }));
-      const trigger = within(mineRow()).getByRole("button", { name: /삭제/ });
+      const trigger = moreButton();
       trigger.focus();
       await openDelete();
       await confirmDelete();

@@ -4,9 +4,11 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent,
 } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -37,14 +39,54 @@ export type CommentsPanelProps = {
   onUnavailable: () => void;
 };
 
-const dateTime = new Intl.DateTimeFormat("ko-KR", {
+const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
-  month: "numeric",
-  day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
 });
+const dayFormat = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  month: "long",
+  day: "numeric",
+  weekday: "short",
+});
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" });
+
+type Row =
+  | { kind: "day"; key: string; label: string }
+  | { kind: "message"; item: CommentItem; follow: boolean };
+
+/*
+ * Chat rows in server order: a small date divider wherever the (KST) day
+ * changes, then each message. `follow` marks a message right after one from
+ * the same side (mine after mine, or the same author name) so the gap can be
+ * tighter. Other people's name and avatar are still shown on every message:
+ * the list only has display names, and two students can share one.
+ */
+function toRows(items: CommentItem[]): Row[] {
+  const rows: Row[] = [];
+  let lastDay = "";
+  let previous: CommentItem | null = null;
+  for (const item of items) {
+    const date = new Date(item.createdAt);
+    const key = dayKey.format(date);
+    if (key !== lastDay) {
+      rows.push({ kind: "day", key, label: dayFormat.format(date) });
+      lastDay = key;
+      previous = null;
+    }
+    const follow =
+      previous !== null &&
+      previous.isMine === item.isMine &&
+      (item.isMine || previous.authorName === item.authorName);
+    rows.push({ kind: "message", item, follow });
+    previous = item;
+  }
+  return rows;
+}
+
+const initials = (name: string) => Array.from(name).slice(-2).join("");
 
 export function CommentsPanel(props: CommentsPanelProps) {
   const { user } = useAuth();
@@ -87,6 +129,9 @@ function Comments({
   const [draft, setDraft] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [target, setTarget] = useState<CommentItem | null>(null);
+  // ids that appeared after the first load: only these play the entry motion
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
+  const known = useRef<Set<string> | null>(null);
   const generation = useRef(0);
   const locked = useRef(false);
   const unavailable = useRef(onUnavailable);
@@ -105,6 +150,17 @@ function Comments({
       try {
         const next = toComments(await operations.list(postId));
         if (generation.current !== version) return false;
+        const before = known.current;
+        known.current = new Set(next.map((item) => item.id));
+        setFresh(
+          new Set(
+            before
+              ? next
+                  .filter((item) => !before.has(item.id))
+                  .map((item) => item.id)
+              : [],
+          ),
+        );
         setItems(next);
         setForbidden(false);
         setNotConnected(false);
@@ -159,6 +215,14 @@ function Comments({
   useEffect(() => {
     if (notice) result.current?.focus();
   }, [notice]);
+
+  // The composer grows with its text; CSS caps the height and then scrolls.
+  useLayoutEffect(() => {
+    const field = input.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  }, [draft, items]);
 
   const writable =
     !writeBlocked && canWriteComment(status, referenceTime, serverNow());
@@ -316,105 +380,105 @@ function Comments({
               {needsReview ? "최신 댓글 확인" : "다시 불러오기"}
             </button>
           )}
-          {!forbidden &&
-            items &&
-            (items.length === 0 ? (
-              <p className={common.help}>
-                아직 댓글이 없어요. 첫 댓글을 남겨 보세요.
-              </p>
-            ) : (
-              <ul className={styles.list}>
-                {items.map((item) => (
-                  <li key={item.id} className={styles.comment}>
-                    <div className={styles.header}>
-                      <strong>
-                        {item.authorName}
-                        {item.isMine ? " · 나" : ""}
-                      </strong>
-                      <time dateTime={item.createdAt} className={common.help}>
-                        {dateTime.format(new Date(item.createdAt))}
-                      </time>
-                    </div>
-                    <p className={styles.content}>{item.content}</p>
-                    {item.isMine && (
-                      <button
-                        type="button"
-                        className={common.textButton}
-                        disabled={pending || needsReview}
-                        onClick={(event) => {
-                          opener.current = event.currentTarget;
-                          setTarget(item);
+          {!forbidden && items && (
+            <div className={styles.thread}>
+              {items.length === 0 ? (
+                <p className={styles.empty}>
+                  아직 댓글이 없어요. 첫 댓글을 남겨 보세요.
+                </p>
+              ) : (
+                <ul className={styles.list}>
+                  {toRows(items).map((row) =>
+                    row.kind === "day" ? (
+                      <li key={`day-${row.key}`} className={styles.day}>
+                        <span>{row.label}</span>
+                      </li>
+                    ) : (
+                      <Message
+                        key={row.item.id}
+                        item={row.item}
+                        follow={row.follow}
+                        fresh={fresh.has(row.item.id)}
+                        deleteDisabled={pending || needsReview}
+                        onDelete={(trigger) => {
+                          opener.current = trigger;
+                          setTarget(row.item);
                         }}
-                      >
-                        내 댓글 삭제
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ))}
-          {!forbidden &&
-            items &&
-            (writable || draft !== "" ? (
-              <form
-                className={styles.form}
-                noValidate
-                aria-busy={busy === "create"}
-                onSubmit={submit}
-              >
-                <div className={common.field}>
-                  <div className={common.labelRow}>
-                    <label htmlFor={`${id}-content`} className={common.label}>
-                      댓글 내용
-                    </label>
+                      />
+                    ),
+                  )}
+                </ul>
+              )}
+              {writable || draft !== "" ? (
+                <form
+                  className={styles.composer}
+                  noValidate
+                  aria-busy={busy === "create"}
+                  onSubmit={submit}
+                >
+                  <label htmlFor={`${id}-content`} className={styles.srOnly}>
+                    댓글 내용
+                  </label>
+                  <div
+                    className={styles.inputRow}
+                    data-invalid={fieldError ? true : undefined}
+                  >
+                    <textarea
+                      ref={input}
+                      id={`${id}-content`}
+                      name="comment"
+                      rows={1}
+                      className={styles.input}
+                      placeholder="댓글을 입력해 주세요"
+                      value={draft}
+                      readOnly={pending || needsReview || !writable}
+                      aria-invalid={fieldError ? true : undefined}
+                      aria-describedby={`${id}-help ${id}-count${fieldError ? ` ${id}-error` : ""}`}
+                      onChange={(event) => {
+                        setDraft(event.target.value);
+                        setFieldError(null);
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className={styles.send}
+                      aria-label={
+                        busy === "create" ? "댓글 등록 중" : "댓글 등록"
+                      }
+                      disabled={pending || needsReview || !writable}
+                    >
+                      {busy === "create" ? "등록 중…" : "등록"}
+                    </button>
+                  </div>
+                  <div className={styles.composerMeta}>
+                    <p id={`${id}-help`} className={styles.hint}>
+                      {writable
+                        ? "참여하지 않아도 댓글을 남길 수 있어요. 개인정보는 적지 말아 주세요."
+                        : "끝난 모집에는 새 댓글을 등록할 수 없어요. 작성 중이던 내용은 복사할 수 있어요."}
+                    </p>
                     <span
                       id={`${id}-count`}
-                      className={common.counter}
+                      className={styles.count}
                       data-over={count > COMMENT_MAX}
                       aria-live="polite"
                     >
                       {count} / {COMMENT_MAX}자
                     </span>
                   </div>
-                  <textarea
-                    ref={input}
-                    id={`${id}-content`}
-                    name="comment"
-                    className={common.textarea}
-                    value={draft}
-                    readOnly={pending || needsReview || !writable}
-                    aria-invalid={fieldError ? true : undefined}
-                    aria-describedby={`${id}-help ${id}-count${fieldError ? ` ${id}-error` : ""}`}
-                    onChange={(event) => {
-                      setDraft(event.target.value);
-                      setFieldError(null);
-                    }}
-                  />
-                  <p id={`${id}-help`} className={common.help}>
-                    {writable
-                      ? "참여하지 않아도 댓글을 남길 수 있어요. 개인정보는 적지 말아 주세요."
-                      : "끝난 모집에는 새 댓글을 등록할 수 없어요. 작성 중이던 내용은 복사할 수 있어요."}
-                  </p>
                   {fieldError && (
                     <p id={`${id}-error`} className={common.error}>
                       {fieldError}
                     </p>
                   )}
-                </div>
-                <button
-                  type="submit"
-                  className={common.primary}
-                  disabled={pending || needsReview || !writable}
-                >
-                  {busy === "create" ? "등록 중…" : "댓글 등록"}
-                </button>
-              </form>
-            ) : (
-              <p className={common.help}>
-                끝난 모집에는 새 댓글을 등록할 수 없어요. 기존 댓글 조회와 본인
-                댓글 삭제는 가능해요.
-              </p>
-            ))}
+                </form>
+              ) : (
+                <p className={styles.closedNote}>
+                  끝난 모집에는 새 댓글을 등록할 수 없어요. 기존 댓글 조회와
+                  본인 댓글 삭제는 가능해요.
+                </p>
+              )}
+            </div>
+          )}
           {busy === "remove" && (
             <p role="status" className={common.help}>
               댓글을 삭제하고 있어요.
@@ -439,5 +503,154 @@ function Comments({
         </>
       )}
     </section>
+  );
+}
+
+/*
+ * One chat row. Others: avatar + name above a white outlined bubble, time
+ * to the right. Mine: right side, light green bubble, time and a small "more"
+ * button to its left. The author name stays in the row for screen readers.
+ */
+function Message({
+  item,
+  follow,
+  fresh,
+  deleteDisabled,
+  onDelete,
+}: {
+  item: CommentItem;
+  follow: boolean;
+  fresh: boolean;
+  deleteDisabled: boolean;
+  onDelete: (trigger: HTMLButtonElement) => void;
+}) {
+  const bubbleId = useId();
+  return (
+    <li
+      className={styles.row}
+      data-mine={item.isMine || undefined}
+      data-follow={follow || undefined}
+      data-new={fresh || undefined}
+    >
+      {item.isMine ? (
+        <span className={styles.srOnly}>{item.authorName} · 나</span>
+      ) : (
+        <div className={styles.author}>
+          <span className={styles.avatar} aria-hidden="true">
+            {initials(item.authorName)}
+          </span>
+          <strong className={styles.name}>{item.authorName}</strong>
+        </div>
+      )}
+      <div className={styles.line}>
+        <p id={bubbleId} className={styles.bubble}>
+          {item.content}
+        </p>
+        <div className={styles.side}>
+          {item.isMine && (
+            <MineMenu
+              describedBy={bubbleId}
+              disabled={deleteDisabled}
+              onDelete={onDelete}
+            />
+          )}
+          <time dateTime={item.createdAt} className={styles.time}>
+            {timeFormat.format(new Date(item.createdAt))}
+          </time>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/*
+ * Small always-visible "more" button next to my message with one action,
+ * "댓글 삭제". Works by touch, mouse and keyboard: Enter/Space opens it and
+ * focuses the item, Escape or leaving closes it and returns focus. The item
+ * opens the existing delete confirmation; nothing is deleted here.
+ */
+function MineMenu({
+  describedBy,
+  disabled,
+  onDelete,
+}: {
+  describedBy: string;
+  disabled: boolean;
+  onDelete: (trigger: HTMLButtonElement) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const item = useRef<HTMLButtonElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const shown = open && !disabled;
+
+  useEffect(() => {
+    if (!shown) return;
+    item.current?.focus();
+    const away = (event: PointerEvent) => {
+      if (!wrap.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [shown]);
+
+  function close(returnFocus: boolean) {
+    setOpen(false);
+    if (returnFocus) trigger.current?.focus();
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape" && shown) {
+      event.stopPropagation();
+      close(true);
+    }
+  }
+
+  return (
+    <div
+      ref={wrap}
+      className={styles.more}
+      onKeyDown={onKeyDown}
+      onBlur={(event) => {
+        if (!wrap.current?.contains(event.relatedTarget as Node | null))
+          setOpen(false);
+      }}
+    >
+      <button
+        ref={trigger}
+        type="button"
+        className={styles.moreButton}
+        aria-label="내 댓글 더보기"
+        aria-describedby={describedBy}
+        aria-haspopup="menu"
+        aria-expanded={shown}
+        aria-controls={shown ? menuId : undefined}
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="6" cy="12" r="1.7" />
+          <circle cx="12" cy="12" r="1.7" />
+          <circle cx="18" cy="12" r="1.7" />
+        </svg>
+      </button>
+      {shown && (
+        <div id={menuId} role="menu" className={styles.menu}>
+          <button
+            ref={item}
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => {
+              setOpen(false);
+              if (trigger.current) onDelete(trigger.current);
+            }}
+          >
+            댓글 삭제
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

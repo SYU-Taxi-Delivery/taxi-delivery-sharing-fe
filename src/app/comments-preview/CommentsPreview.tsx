@@ -15,9 +15,11 @@ import {
 import { AppShell } from "@/features/posts/AppShell";
 import type { PostStatus } from "@/features/posts/posts";
 import common from "@/features/posts/posts.module.css";
+import { DevTools } from "@/features/demo/DevTools";
 
 const scenarios = {
   normal: "모집 중 · 비참여 사용자",
+  conversation: "긴 대화 · 날짜·연속 작성·긴 글",
   full: "정원 마감 · 댓글 작성 가능",
   closed: "직접 마감 · 댓글 작성 가능",
   empty: "빈 댓글",
@@ -43,27 +45,84 @@ export function createPreview(scenario: Scenario) {
   let authenticated = true;
   let failedLoad = false;
   let failedDelete = false;
-  let nextId = 3;
+  let nextId = 100;
+  const at = (ms: number) => new Date(now - ms).toISOString();
+  const day = 86_400_000;
   let comments: CommentItem[] =
     scenario === "empty"
       ? []
-      : [
-          {
-            id: "1",
-            authorName: "박지민",
-            content: "정문 택시 승차 장소에서 만나면 될까요?",
-            createdAt: new Date(now - 120_000).toISOString(),
-            isMine: false,
-          },
-          {
-            id: "2",
-            authorName: "김하늘",
-            content:
-              "네, 출발 5분 전에 도착할게요.\n도착하면 댓글 남겨 주세요.",
-            createdAt: new Date(now - 60_000).toISOString(),
-            isMine: true,
-          },
-        ];
+      : scenario === "conversation"
+        ? [
+            {
+              id: "11",
+              authorName: "박지민",
+              content: "내일 출발 맞죠?",
+              createdAt: at(day + 3_600_000),
+              isMine: false,
+            },
+            {
+              id: "12",
+              authorName: "김하늘",
+              content: "네!",
+              createdAt: at(day + 3_500_000),
+              isMine: true,
+            },
+            {
+              id: "13",
+              authorName: "김하늘",
+              content:
+                "정문 택시 승차장 앞 편의점 쪽에서 기다릴게요. 짐이 조금 많아서 트렁크 자리가 남는지 미리 알려 주시면 좋겠어요.",
+              createdAt: at(day + 3_450_000),
+              isMine: true,
+            },
+            {
+              id: "14",
+              authorName: "이서준",
+              content:
+                "저도 같이 가요. 승차 위치 지도 링크 남겨요 https://map.example.com/place/syu-main-gate-taxi-stand?ref=doyupod&lang=ko",
+              createdAt: at(day + 3_000_000),
+              isMine: false,
+            },
+            {
+              id: "15",
+              authorName: "박지민",
+              content: "좋아요 👍",
+              createdAt: at(1_800_000),
+              isMine: false,
+            },
+            {
+              id: "16",
+              authorName: "박지민",
+              content:
+                "아주긴한글문장도띄어쓰기없이계속이어지면말풍선안에서자연스럽게줄이바뀌어야해요확인용문장입니다",
+              createdAt: at(1_740_000),
+              isMine: false,
+            },
+            {
+              id: "17",
+              authorName: "김하늘",
+              content: "곧 도착해요",
+              createdAt: at(60_000),
+              isMine: true,
+            },
+          ]
+        : [
+            {
+              id: "1",
+              authorName: "박지민",
+              content: "정문 택시 승차 장소에서 만나면 될까요?",
+              createdAt: new Date(now - 120_000).toISOString(),
+              isMine: false,
+            },
+            {
+              id: "2",
+              authorName: "김하늘",
+              content:
+                "네, 출발 5분 전에 도착할게요.\n도착하면 댓글 남겨 주세요.",
+              createdAt: new Date(now - 60_000).toISOString(),
+              isMine: true,
+            },
+          ];
   const pause = () =>
     new Promise<void>((resolve) => window.setTimeout(resolve, 400));
   const auth: AuthOperations = {
@@ -175,22 +234,24 @@ export function CommentsPreview() {
   const [scenario, setScenario] = useState<Scenario>("normal");
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-sm">
-        <p>댓글 데모 · 예시 데이터로 동작해요.</p>
-        <label>
-          상황{" "}
-          <select
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value as Scenario)}
-          >
-            {Object.entries(scenarios).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <DevTools>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <p>댓글 데모 · 예시 데이터로 동작해요.</p>
+          <label>
+            상황{" "}
+            <select
+              value={scenario}
+              onChange={(event) => setScenario(event.target.value as Scenario)}
+            >
+              {Object.entries(scenarios).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </DevTools>
       <PreviewCase key={scenario} scenario={scenario} />
     </>
   );

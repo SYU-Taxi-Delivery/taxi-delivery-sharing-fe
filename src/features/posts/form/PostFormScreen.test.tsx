@@ -511,6 +511,24 @@ describe("수정 폼", () => {
     expect(screen.getByLabelText("배달")).toBeDisabled();
   });
 
+  it("수정 도중 로고를 누르면 초안 폐기를 확인한 뒤 목록으로 이동한다", async () => {
+    await edit(ops({ load: vi.fn(async () => post()) }));
+    type("제목", "수정 중");
+    const logo = screen.getByRole("link", { name: "두유팟" });
+    fireEvent.click(logo);
+    const dialog = screen.getByRole("dialog", {
+      name: "수정한 내용을 버릴까요?",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
+    expect(logo).toHaveFocus();
+    expect(screen.getByLabelText("제목")).toHaveValue("수정 중");
+    expect(router.push).not.toHaveBeenCalled();
+
+    fireEvent.click(logo);
+    fireEvent.click(within(dialog).getByRole("button", { name: "입력 폐기" }));
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts");
+  });
+
   it("다른 모집 수정으로 이동하면 이전 초안을 지우고 새 모집의 값으로만 저장한다", async () => {
     let resolveNext!: (value: EditablePost) => void;
     const next = post({ id: "p2" });

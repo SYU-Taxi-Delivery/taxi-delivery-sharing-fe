@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useId } from "react";
 import {
@@ -12,6 +11,7 @@ import { postStatusLabel } from "@/features/posts/posts";
 import { toMySnapshot, type MyHistoryItem } from "./myHistory";
 import styles from "./my.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -67,6 +67,7 @@ export function MyHistoryCard({
       <div className={styles.cardHeader}>
         <div className={styles.badges}>
           <span className={styles.type}>
+            {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
             {item.type === "TAXI" ? "택시" : "배달"}
           </span>
           <span className={styles.relation}>
@@ -88,16 +89,14 @@ export function MyHistoryCard({
         <h2 id={titleId} className={styles.cardTitle}>
           {item.type === "TAXI" ? (
             <>
-              {item.departure}
-              <span className={styles.srOnly}>에서</span>
-              <Image
-                src={muted ? "/my/arrow-muted.svg" : "/my/arrow.svg"}
-                width={16}
-                height={16}
-                alt=""
-              />
-              {item.destination}
-              <span className={styles.srOnly}>까지</span>
+              <span className={styles.stop}>
+                {item.departure}
+                <span className={styles.srOnly}>에서</span>
+              </span>
+              <span className={styles.stop} data-end="true">
+                {item.destination}
+                <span className={styles.srOnly}>까지</span>
+              </span>
             </>
           ) : (
             item.restaurantName
@@ -106,16 +105,19 @@ export function MyHistoryCard({
         {item.type === "DELIVERY" && (
           <p className={styles.muted}>수령 장소 · {item.pickupLocation}</p>
         )}
+        <SeatSlots
+          className={styles.seatSlots}
+          total={item.capacity}
+          filled={item.currentMemberCount}
+        />
         <p className={styles.meta}>
-          {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
+          <span>
+            {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
+          </span>
           {available && (
-            <>
-              {" "}
-              ·{" "}
-              <span className={styles.seats}>
-                {item.capacity - item.currentMemberCount}자리 남음
-              </span>
-            </>
+            <span className={styles.seats}>
+              {item.capacity - item.currentMemberCount}자리 남음
+            </span>
           )}
         </p>
       </div>
@@ -143,6 +145,7 @@ export function MyHistoryCard({
           <button
             type="button"
             className={styles.button}
+            data-tone="danger"
             disabled={busy}
             onClick={(event) => onCancel(event.currentTarget)}
           >

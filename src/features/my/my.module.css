@@ -1,148 +1,363 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/* 내 참여 · 모집: same pod-board language as the list (labels, seats, stickers). */
+
+/* Same segmented switch as the list: lipped thumb on a light green track */
 .tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1rem 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: var(--space-5) 0 var(--space-4);
+  padding: 0.25rem;
+  border: 1.5px solid var(--input-border);
+  border-radius: 0.875rem;
+  background: var(--primary-tint);
 }
+
 .tab {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 9999px;
+  border-radius: 0.625rem;
   color: var(--posts-muted);
+  font-weight: 600;
+  transition:
+    color var(--motion-fast) var(--curve-standard),
+    transform var(--motion-fast) var(--ease-out);
 }
+
+.tab:hover {
+  color: var(--posts-text);
+}
+
+.tab:active {
+  transform: scale(0.95);
+}
+
 .tab[aria-current="page"] {
-  border-color: var(--posts-primary);
-  background: var(--posts-primary);
   color: var(--posts-text);
   font-weight: 700;
 }
+
+.tabThumb {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc((100% - 0.5rem) / 2);
+  border: 1.5px solid var(--input-border);
+  border-radius: 0.625rem;
+  background: var(--canvas);
+  box-shadow: 0 2px 0 var(--input-border);
+  transition: transform 260ms cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+
+.tabs:has(.tab:nth-child(2)[aria-current="page"]) .tabThumb {
+  transform: translateX(100%);
+}
+
 .list {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
+
+.list > li {
+  animation: card-in 340ms var(--curve-enter) both;
+}
+
+.list > li:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.list > li:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.list > li:nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.list > li:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+  border-radius: var(--round-card);
+}
+
 .card {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
 }
+
 .card[data-muted="true"] {
-  background: var(--posts-soft);
+  background: var(--canvas);
 }
+
+.card[data-muted="true"] .cardTitle,
+.card[data-muted="true"] .schedule {
+  color: var(--posts-muted);
+}
+
 .cardHeader {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
+
 .badges {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-1);
 }
-.type {
-  padding: 0.125rem 0.5rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.25rem;
-  background: var(--posts-soft);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.relation {
-  font-weight: 700;
-}
+
+/* Small labels (not pills): type with its sticker, relation, status tag */
+.type,
+.relation,
 .status {
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  background: #eef7dc;
-  color: var(--posts-primary-text);
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.625rem;
+  padding: 0 var(--space-2);
+  border-radius: 0.5rem;
+  font-size: var(--type-micro);
   font-weight: 700;
 }
-.card[data-muted="true"] .status {
-  background: #e3e5e9;
+
+.type {
+  gap: var(--space-1);
+  padding-left: 0;
+  color: var(--posts-text);
+}
+
+/* Art is never drawn below 40px wide (outlines would swallow it) */
+.type svg {
+  flex: none;
+  width: 2.5rem;
+  height: auto;
+}
+
+/* The bag is square: same 30px height as the 40×30 taxi, its own width */
+.type svg[data-art="bag"] {
+  width: 1.875rem;
+}
+
+.relation {
+  background: var(--primary-tint);
+  color: var(--posts-primary-text);
+}
+
+.status {
+  gap: 0.3125rem;
+  border: 1.5px solid var(--posts-primary-text);
+  background: var(--canvas);
+  color: var(--posts-primary-text);
+}
+
+.card[data-muted="true"] .relation {
+  background: var(--closed);
   color: var(--posts-muted);
 }
-.cardTitle {
+
+.card[data-muted="true"] .status {
+  border-color: var(--input-border);
+  color: var(--posts-muted);
+}
+
+.seatSlots {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 1.125rem;
-  font-weight: 700;
+  gap: 1px;
+  margin: var(--space-2) 0 0.125rem;
 }
+
+.seatSlots svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.cardTitle {
+  display: grid;
+  gap: 0.125rem;
+  font-size: var(--type-subhead);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-heading);
+}
+
+/* Route as two stops joined by a dotted line (same as the board) */
+.stop {
+  position: relative;
+  display: block;
+  padding-left: 1.25rem;
+}
+
+.stop::before {
+  content: "";
+  position: absolute;
+  top: 0.45em;
+  left: 0.125rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--posts-primary-text);
+  border-radius: 50%;
+  background: var(--canvas);
+  box-sizing: border-box;
+}
+
+.stop:not([data-end="true"])::after {
+  content: "";
+  position: absolute;
+  top: calc(0.45em + 0.75rem);
+  bottom: -0.25rem;
+  left: 0.375rem;
+  border-left: 2px dotted var(--posts-primary-text);
+}
+
+.stop[data-end="true"]::before {
+  border: 0;
+  background: var(--posts-primary);
+}
+
+.card[data-muted="true"] .stop::before,
+.card[data-muted="true"] .stop::after {
+  border-color: var(--disabled);
+}
+
+.card[data-muted="true"] .stop[data-end="true"]::before {
+  background: var(--disabled);
+}
+
+/* Schedule reads like the pass time strip */
+/* The time is a line of the card, not a box inside it. */
 .schedule {
-  font-size: 1.125rem;
+  color: var(--posts-primary-text);
+  font-size: var(--type-subhead);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.meta {
-  color: var(--posts-muted);
-  font-size: 0.8125rem;
-}
+
+.meta,
 .muted {
   color: var(--posts-muted);
+  font-size: var(--type-label);
 }
+
+/* The headcount and what is left sit side by side, no joining dot. */
+p.meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-3);
+}
+
 .seats {
   color: var(--posts-danger);
+  font-weight: 700;
 }
+
+/* Card actions: always left-aligned, 12px apart (button system: sm) */
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
 }
+
 .button {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid #dcdee3;
-  border-radius: 0.625rem;
-  background: white;
-  color: var(--posts-text);
-  font-weight: 700;
+  composes: base secondary sm from "../ui/button.module.css";
 }
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+.button[data-tone="danger"]:not(:disabled) {
+  --lip: var(--danger-border);
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
+
 .notice,
 .tombstone,
 .help {
-  padding: 1rem;
-  border-radius: 0.625rem;
-  background: var(--posts-soft);
+  padding: var(--space-4);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
   color: var(--posts-muted);
 }
+
 .notice {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
+  font-weight: 600;
 }
+
 .notice .button {
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
+
+.tombstone {
+  border-style: dashed;
+  border-color: var(--input-border);
+  text-align: center;
+}
+
+/*
+ * Icon + text row. Children keep their own height (no stretch); the icon is
+ * a fixed 24px square centred on the first text line and the text takes the
+ * rest of the width and wraps.
+ */
 .help {
   display: flex;
-  align-items: start;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  border-color: transparent;
+  background: var(--primary-tint);
+  font-size: var(--type-label);
 }
-.help img {
-  flex-shrink: 0;
+
+.helpIcon {
+  display: grid;
+  flex: 0 0 1.5rem;
+  width: 1.5rem;
+  aspect-ratio: 1;
+  place-items: center;
+  /* centre on the first line box (may be slightly negative) */
+  margin-top: calc((1lh - 1.5rem) / 2);
 }
+
+.helpIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.help > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .help a {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: var(--touch-target);
   align-items: center;
+  color: var(--posts-primary-text);
+  font-weight: 700;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -151,9 +366,18 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
 .tab:focus-visible,
-.button:focus-visible,
 .help a:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
+}
+
+/* Desktop: the shell is wide, so the history fills two columns instead of
+   one narrow strip; each card keeps its own height. */
+@media (min-width: 64rem) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
 }

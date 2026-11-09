@@ -326,3 +326,206 @@ describe("participation panel", () => {
     expect(screen.getByRole("button", { name: "다시 참여하기" })).toBeEnabled();
   });
 });
+
+describe("participation scene", () => {
+  const scene = () => document.querySelector("[data-scene]");
+  const name = () => scene()?.getAttribute("data-scene");
+  const guest = { ...initial, viewerRelation: "NONE" as const };
+  // On screen → arrival starts: two zero-delay steps, one per render.
+  const settle = async () => {
+    await act(async () => vi.advanceTimersByTime(0));
+    await act(async () => vi.advanceTimersByTime(0));
+  };
+  const wait = (ms: number) => act(async () => vi.advanceTimersByTime(ms));
+
+  it("arrives once when the page opens, then rests; no result scene without a confirmed request", async () => {
+    setup();
+    await settle();
+    expect(name()).toBe("taxi-enter");
+    await wait(1100);
+    expect(name()).toBe("taxi-rest");
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
+    expect(name()).not.toMatch(/-(join|leave)$/);
+  });
+
+  it.each([
+    ["TAXI", "taxi"],
+    ["DELIVERY", "delivery"],
+  ] as const)(
+    "plays %s boarding only after the join request succeeded, then rests",
+    async (type, kind) => {
+      const operations = setup({ ...guest, type });
+      vi.mocked(operations.refresh).mockResolvedValue({
+        ...guest,
+        type,
+        viewerRelation: "JOINED",
+        currentMemberCount: 3,
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+      });
+      expect(operations.join).toHaveBeenCalledTimes(1);
+      expect(name()).toBe(`${kind}-join`);
+      expect(scene()?.querySelector("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+      // The text feedback still carries the result on its own.
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "참여 신청이 완료됐어요.",
+      );
+      await wait(1300);
+      expect(name()).toBe(`${kind}-rest`);
+    },
+  );
+
+  it("plays the step-out scene after a confirmed cancellation", async () => {
+    const operations = setup({ ...initial, type: "DELIVERY" });
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...initial,
+      type: "DELIVERY",
+      viewerRelation: "CANCELLED",
+      currentMemberCount: 1,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    });
+    expect(operations.cancel).toHaveBeenCalledTimes(1);
+    expect(name()).toBe("delivery-leave");
+  });
+
+  it("never plays a result when the request fails", async () => {
+    const operations = setup(guest);
+    vi.mocked(operations.join).mockRejectedValue(new Error("409"));
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...guest,
+      status: "FULL",
+      currentMemberCount: 4,
+      joinable: false,
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    expect(operations.join).toHaveBeenCalledTimes(1);
+    expect(name()).not.toMatch(/-(join|leave)$/);
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("shows the order's bags at rest, with yours only while you have joined", async () => {
+    setup({ ...initial, type: "DELIVERY" });
+    await settle();
+    await wait(1100);
+    expect(scene()?.querySelectorAll('[class*="restBag"]')).toHaveLength(3);
+  });
+
+  it("wiggles now and then after a quiet pause, never while a request is pending", async () => {
+    const operations = setup(guest);
+    await settle();
+    await wait(1100);
+    expect(name()).toBe("taxi-rest");
+    await wait(6000);
+    expect(name()).toBe("taxi-rest");
+    await wait(4000);
+    expect(name()).toBe("taxi-idle");
+    await wait(1100);
+    expect(name()).toBe("taxi-rest");
+
+    let resolve!: () => void;
+    vi.mocked(operations.join).mockReturnValue(
+      new Promise<void>((done) => (resolve = done)),
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    await wait(20000);
+    expect(name()).toBe("taxi-rest");
+    await act(async () => resolve());
+    expect(name()).toBe("taxi-join");
+  });
+
+  it("does not wiggle while the tab is hidden and does not catch up afterwards", async () => {
+    setup(guest);
+    await settle();
+    await wait(1100);
+    const state = vi.spyOn(document, "visibilityState", "get");
+    state.mockReturnValue("hidden");
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await wait(30000);
+    expect(name()).toBe("taxi-rest");
+    state.mockReturnValue("visible");
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(name()).toBe("taxi-rest");
+    await wait(10000);
+    expect(name()).toBe("taxi-idle");
+  });
+
+  it("replays the arrival from the scene itself without sending a request", async () => {
+    const operations = setup(guest);
+    await settle();
+    await wait(1100);
+    fireEvent.click(
+      screen.getByRole("button", { name: "택시 모션 다시 보기" }),
+    );
+    expect(name()).toBe("taxi-enter");
+    expect(operations.join).not.toHaveBeenCalled();
+    expect(operations.cancel).not.toHaveBeenCalled();
+    expect(operations.refresh).not.toHaveBeenCalled();
+  });
+
+  it("ignores replay taps while the request is pending", async () => {
+    const operations = setup(guest);
+    await settle();
+    await wait(1100);
+    let resolve!: () => void;
+    vi.mocked(operations.join).mockReturnValue(
+      new Promise<void>((done) => (resolve = done)),
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "택시 모션 다시 보기" }),
+    );
+    expect(name()).toBe("taxi-rest");
+    await act(async () => resolve());
+    expect(name()).toBe("taxi-join");
+  });
+
+  it("ignores replay taps while a result scene plays", async () => {
+    const operations = setup(guest);
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...guest,
+      viewerRelation: "JOINED",
+      currentMemberCount: 3,
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "택시 모션 다시 보기" }),
+    );
+    expect(name()).toBe("taxi-join");
+  });
+
+  it("skips the automatic arrival and wiggle with reduced motion", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    setup(guest);
+    await settle();
+    expect(name()).toBe("taxi-rest");
+    await wait(30000);
+    expect(name()).toBe("taxi-rest");
+  });
+});

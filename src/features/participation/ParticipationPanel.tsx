@@ -1,17 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { Noto_Sans_KR } from "next/font/google";
 import { useId, useRef } from "react";
 import { cutoffMinutes } from "./participation";
 import type { ParticipationController } from "./useParticipation";
+import { ParticipationMotion } from "./ParticipationMotion";
 import styles from "./participation.module.css";
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-});
+import { ClockIcon, SeatSlots } from "@/features/ui/art";
 
 const dateFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -49,6 +44,13 @@ export function ParticipationPanel({
     0,
     snapshot.capacity - snapshot.currentMemberCount,
   );
+  // The seat that just changed after a confirmed join/cancel gets a small pop.
+  const motion = participation.motion;
+  const popSeat = motion
+    ? motion.action === "join"
+      ? snapshot.currentMemberCount - 1
+      : snapshot.currentMemberCount
+    : undefined;
   const referenceTime = Date.parse(snapshot.referenceTime);
   const hasTime = Number.isFinite(referenceTime);
   const timeFinished =
@@ -90,9 +92,17 @@ export function ParticipationPanel({
 
   return (
     <section
-      className={`${styles.panel} ${notoSansKr.className}`}
+      className={styles.panel}
       aria-labelledby={labelId}
       aria-busy={busy}
+      data-sticky-action={
+        active &&
+        !timeFinished &&
+        !author &&
+        snapshot.viewerRelation !== "GUEST"
+          ? "true"
+          : undefined
+      }
     >
       <div className={styles.summary}>
         {joined &&
@@ -109,6 +119,13 @@ export function ParticipationPanel({
                 ? `${remaining}자리 남았어요`
                 : status}
         </h2>
+        <SeatSlots
+          key={motion?.id ?? "seats"}
+          className={styles.seats}
+          total={snapshot.capacity}
+          filled={snapshot.currentMemberCount}
+          pop={popSeat}
+        />
         <p className={styles.muted}>
           현재 {snapshot.currentMemberCount} / {snapshot.capacity}명 · 작성자
           포함
@@ -116,9 +133,8 @@ export function ParticipationPanel({
           정원이 차면 자동으로 마감돼요.
         </p>
       </div>
-      <div className={styles.divider} aria-hidden="true" />
       <div className={styles.schedule}>
-        <Image src="/participation/clock.svg" width={20} height={20} alt="" />
+        <ClockIcon className={styles.scheduleIcon} />
         <p>
           {today ? "오늘 " : ""}
           {hasTime ? timeFormat.format(referenceTime) : "시각 확인 필요"}{" "}
@@ -136,6 +152,8 @@ export function ParticipationPanel({
             type="button"
             ref={joined ? cancelTrigger : undefined}
             className={styles.primary}
+            data-tone={joined ? "danger" : undefined}
+            data-bottom-action="true"
             disabled={busy || needsRefresh || availability.action === null}
             aria-describedby={availability.reason ? reasonId : undefined}
             onClick={() => {
@@ -179,7 +197,7 @@ export function ParticipationPanel({
       {joined && (
         <dialog
           ref={dialog}
-          className={`${styles.dialog} ${notoSansKr.className}`}
+          className={styles.dialog}
           aria-labelledby={dialogLabelId}
           aria-describedby={dialogDescriptionId}
           onClose={returnFocus}
@@ -246,6 +264,13 @@ export function ParticipationPanel({
           </div>
         </dialog>
       )}
+      {/* Last in reading order; drawn in the corner kept free by .summary */}
+      <ParticipationMotion
+        motion={participation.motion}
+        type={snapshot.type}
+        joined={joined}
+        busy={busy}
+      />
     </section>
   );
 }

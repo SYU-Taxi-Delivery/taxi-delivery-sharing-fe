@@ -1,0 +1,72 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+.art {
+  position: relative;
+  display: grid;
+  width: 8.5rem;
+  height: 6.5rem;
+  place-items: center;
+  margin: 0 auto var(--space-2);
+}
+
+.halo {
+  position: absolute;
+  inset: 0.5rem 1rem;
+  border-radius: 45% 55% 50% 50%;
+  background: var(--primary-soft);
+}
+
+.art[data-kind="error"] .halo {
+  background: var(--danger-soft);
+}
+
+.logo {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.bubble {
+  position: absolute;
+  top: 0.25rem;
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--canvas);
+}
+
+.bubble[data-side="left"] {
+  left: 0;
+}
+
+.bubble[data-side="right"] {
+  right: 0;
+  top: 2.75rem;
+}
+
+.check {
+  position: absolute;
+  right: 1.75rem;
+  bottom: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--primary-text)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 1rem no-repeat;
+  box-shadow: 0 0 0 3px var(--canvas);
+}
+
+/* Art is never drawn below 40px wide (outlines would swallow it) */
+.bubble svg {
+  flex: none;
+  width: 2.5rem;
+  height: auto;
+}
+
+/* Square bag: same 30px height as the 40×30 taxi */
+.bubble svg[data-art="bag"] {
+  width: 1.875rem;
+}

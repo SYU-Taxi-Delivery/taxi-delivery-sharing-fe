@@ -11,6 +11,7 @@ import {
   createAdminPreview,
   type AdminPreviewScenario,
 } from "./previewModel";
+import { DevTools } from "@/features/demo/DevTools";
 
 const views = {
   admin: "관리자 신고 화면",
@@ -70,48 +71,50 @@ export function AdminPreview() {
   const [postId, setPostId] = useState("p1");
   return (
     <>
-      <aside className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-sm">
-        <p>관리자 데모 · 예시 신고·모집·참여 데이터로 동작해요.</p>
-        <label>
-          상황{" "}
-          <select
-            value={scenario}
-            onChange={(event) => {
-              setScenario(event.target.value as AdminPreviewScenario);
-              setView("admin");
-            }}
-          >
-            {Object.entries(ADMIN_PREVIEW_SCENARIOS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          확인 화면{" "}
-          <select
-            value={view}
-            onChange={(event) => setView(event.target.value as View)}
-          >
-            {Object.entries(views).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          상세 대상{" "}
-          <select
-            value={postId}
-            onChange={(event) => setPostId(event.target.value)}
-          >
-            <option value="p1">진행 중 모집</option>
-            <option value="p2">완료된 모집</option>
-          </select>
-        </label>
-      </aside>
+      <DevTools>
+        <aside className="flex flex-wrap items-center gap-3 text-sm">
+          <p>관리자 데모: 예시 신고·모집·참여 데이터로 동작해요.</p>
+          <label>
+            상황{" "}
+            <select
+              value={scenario}
+              onChange={(event) => {
+                setScenario(event.target.value as AdminPreviewScenario);
+                setView("admin");
+              }}
+            >
+              {Object.entries(ADMIN_PREVIEW_SCENARIOS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            확인 화면{" "}
+            <select
+              value={view}
+              onChange={(event) => setView(event.target.value as View)}
+            >
+              {Object.entries(views).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            상세 대상{" "}
+            <select
+              value={postId}
+              onChange={(event) => setPostId(event.target.value)}
+            >
+              <option value="p1">진행 중 모집</option>
+              <option value="p2">완료된 모집</option>
+            </select>
+          </label>
+        </aside>
+      </DevTools>
       <PreviewCase
         key={scenario}
         scenario={scenario}

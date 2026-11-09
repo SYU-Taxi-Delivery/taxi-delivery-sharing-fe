@@ -1,34 +1,384 @@
-.list {
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
+/*
+ * Comments as a chat thread. One plain panel covers the page's dot pattern;
+ * messages are rows (not cards): others on the left with a white outlined
+ * bubble, mine on the right in light green. Bubbles fit their text up to
+ * ~78% of the row. The composer is one rounded input + send button.
+ */
+
+.thread {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  border-radius: var(--round-card);
+  background: var(--soft);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 0;
   list-style: none;
 }
 
-.comment {
-  display: grid;
-  gap: 0.5rem;
-  min-width: 0;
-  padding: 1rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.5rem;
-  overflow-wrap: anywhere;
-}
+/* ───────── Date divider ───────── */
 
-.header {
+.day {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
 }
 
-.content {
+.day:first-child {
+  margin-top: 0;
+}
+
+.day::before,
+.day::after {
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--input-border);
+  content: "";
+}
+
+/* ───────── Message row ───────── */
+
+.row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  margin-top: var(--space-3);
+}
+
+.day + .row {
+  margin-top: 0;
+}
+
+.row[data-follow="true"] {
+  margin-top: var(--space-1);
+}
+
+.row[data-mine="true"] {
+  align-items: flex-end;
+}
+
+.row[data-new="true"] {
+  animation: bubble-in 240ms var(--curve-enter) both;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 1.75rem;
+  width: 1.75rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bubble + its side column (time, and "more" on mine), one line */
+.line {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.375rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.row:not([data-mine]) .line {
+  padding-left: calc(1.75rem + var(--space-2));
+}
+
+.row[data-mine="true"] .line {
+  flex-direction: row-reverse;
+}
+
+.bubble {
+  max-width: 78%;
+  min-width: 0;
+  padding: 0.6875rem 0.9375rem;
+  border: 1px solid var(--input-border);
+  border-radius: 0.25rem 1.125rem 1.125rem;
+  background: var(--canvas);
+  color: var(--posts-text);
+  font-size: var(--type-body);
+  line-height: 1.55;
   white-space: pre-wrap;
+  word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
-.form {
+.row[data-mine="true"] .bubble {
+  border-color: transparent;
+  border-radius: 1.125rem 0.25rem 1.125rem 1.125rem;
+  background: var(--primary-soft);
+}
+
+/* Follow-up messages of mine continue the group without a new corner */
+.row[data-mine="true"][data-follow="true"] .bubble {
+  border-radius: 1.125rem;
+}
+
+.side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+}
+
+.row[data-mine="true"] .side {
+  align-items: flex-end;
+}
+
+.time {
+  color: var(--posts-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ───────── "More" menu on my messages ───────── */
+
+.more {
+  position: relative;
+}
+
+.moreButton {
   display: grid;
-  gap: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--posts-muted);
+  transition: background-color var(--motion-fast) var(--curve-standard);
+}
+
+.moreButton svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: currentColor;
+}
+
+.moreButton:hover:not(:disabled),
+.moreButton[aria-expanded="true"] {
+  background: var(--closed);
+  color: var(--posts-text);
+}
+
+.moreButton:disabled {
+  background: transparent;
+  color: var(--disabled);
+  cursor: not-allowed;
+}
+
+.moreButton:focus-visible,
+.menuItem:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  bottom: calc(100% + 0.25rem);
+  min-width: 7rem;
+  padding: 0.25rem;
+  border: 1px solid var(--input-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  box-shadow: var(--elevation-overlay);
+}
+
+.menuItem {
+  display: flex;
+  width: 100%;
+  min-height: var(--touch-target);
+  align-items: center;
+  padding: 0 var(--space-3);
+  border-radius: 0.625rem;
+  color: var(--posts-danger);
+  font-size: var(--type-label);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.menuItem:hover {
+  background: var(--danger-soft);
+}
+
+/* ───────── Composer ───────── */
+
+.composer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: 0.3125rem 0.3125rem 0.3125rem var(--space-4);
+  border: 1.5px solid var(--input-border);
+  border-radius: 1.5rem;
+  background: var(--canvas);
+  transition:
+    border-color var(--motion-fast) var(--curve-standard),
+    box-shadow var(--motion-fast) var(--curve-standard);
+}
+
+.inputRow:focus-within {
+  border-color: var(--posts-primary-text);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.inputRow[data-invalid="true"] {
+  border-color: var(--posts-danger);
+  background: var(--danger-soft);
+}
+
+.inputRow:has(.input:read-only) {
+  border-style: dashed;
+  background: var(--soft);
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 8.5rem;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+  border: 0;
+  background: transparent;
+  font-size: max(1rem, 16px); /* 16px+ so iOS does not zoom on focus */
+  line-height: 1.5;
+  resize: none;
+  scroll-margin: 5rem 0 6rem;
+}
+
+.input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input:read-only {
+  color: var(--posts-muted);
+}
+
+.send {
+  flex: none;
+  min-width: 3.75rem;
+  height: 2.5rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--round-pill);
+  background: var(--primary);
+  color: var(--text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    transform var(--motion-fast) var(--curve-standard);
+}
+
+.send:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.send:disabled {
+  background: var(--closed);
+  color: var(--posts-muted);
+}
+
+.send:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.composerMeta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+}
+
+.hint {
+  min-width: 0;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+}
+
+.count {
+  flex: none;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.count[data-over="true"] {
+  color: var(--posts-danger);
+  font-weight: 700;
+}
+
+.empty,
+.closedNote {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  text-align: center;
+}
+
+.empty {
+  padding: var(--space-4) 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

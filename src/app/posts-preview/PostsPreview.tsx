@@ -10,6 +10,7 @@ import {
   type PostSummary,
 } from "@/features/posts/posts";
 import { PostListScreen } from "@/features/posts/PostListScreen";
+import { DevTools } from "@/features/demo/DevTools";
 
 type Scenario = "normal" | "empty" | "error" | "invalid";
 
@@ -103,22 +104,24 @@ export function PostsPreview({ query }: { query: PostQuery }) {
 
   return (
     <AuthProvider operations={auth}>
-      <div className="flex flex-wrap items-center gap-3 bg-yellow-100 px-4 py-2 text-xs">
-        <span>모집 목록 데모 · 새로고침하면 시각 기준이 바뀌어요.</span>
-        <label className="flex items-center gap-1">
-          상황
-          <select
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value as Scenario)}
-            className="rounded border px-1"
-          >
-            <option value="normal">정상</option>
-            <option value="empty">빈 목록</option>
-            <option value="error">조회 실패</option>
-            <option value="invalid">잘못된 데이터</option>
-          </select>
-        </label>
-      </div>
+      <DevTools>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span>모집 목록 데모 · 새로고침하면 시각 기준이 바뀌어요.</span>
+          <label className="flex items-center gap-1">
+            상황
+            <select
+              value={scenario}
+              onChange={(event) => setScenario(event.target.value as Scenario)}
+              className="rounded border px-1"
+            >
+              <option value="normal">정상</option>
+              <option value="empty">빈 목록</option>
+              <option value="error">조회 실패</option>
+              <option value="invalid">잘못된 데이터</option>
+            </select>
+          </label>
+        </div>
+      </DevTools>
       <PostListScreen
         query={query}
         basePath="/posts-preview"

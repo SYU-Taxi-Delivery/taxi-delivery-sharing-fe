@@ -1,22 +1,85 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: full · the system and stamp live in src/app/globals.css */
 .back {
-  display: inline-flex;
-  min-height: 2.75rem;
+  composes: base secondary sm from "../../ui/button.module.css";
+}
+
+/*
+ * "Getting a pod ready": no big white sheet. Groups are split by small
+ * headings and space, fields are white boxes on the page's dot grid, and the
+ * sticker next to the title follows the chosen category.
+ */
+.heading {
+  display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.headingArt {
+  display: grid;
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--primary-soft);
+  animation: art-swap 320ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.headingArt[data-type="delivery"] {
+  background: var(--delivery-tint);
+}
+
+.headingArt svg {
+  flex: none;
+  width: 3rem;
+  height: auto;
+}
+
+.headingArt svg[data-art="bag"] {
+  width: 2.5rem;
+}
+
+@keyframes art-swap {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.headingTitle {
+  font-size: var(--type-title);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-heading);
+}
+
+.headingLead {
+  margin-top: 0.125rem;
   color: var(--posts-muted);
+  font-size: var(--type-label);
 }
 
 .form {
   display: grid;
-  gap: 1.25rem;
-  margin-top: 1rem;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  animation: form-in var(--motion-standard) var(--curve-enter);
+}
+
+/* Opacity only: a transform would re-anchor the phone's fixed submit row
+   to the form while the entrance runs. */
+@keyframes form-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .field {
   display: grid;
   /* Keep label and box at the top even when a sibling column shows an error. */
   align-content: start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   min-width: 0;
   border: 0;
 }
@@ -26,20 +89,39 @@
   font-weight: 700;
 }
 
+.label {
+  font-size: var(--type-label);
+}
+
+legend.label {
+  margin-bottom: var(--space-2);
+}
+
+/* Group heading: a small green tab, then space instead of divider lines */
 .sectionTitle {
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  font-size: var(--type-subhead);
+  letter-spacing: var(--tracking-heading);
 }
 
 .labelRow {
   display: flex;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
+/* Counter top-right of its field, help and errors right under the box */
 .counter,
 .help {
   color: var(--posts-muted);
-  font-size: 0.75rem;
+  font-size: var(--type-micro);
+}
+
+.counter {
+  font-variant-numeric: tabular-nums;
 }
 
 .counter[data-over="true"] {
@@ -47,15 +129,29 @@
   font-weight: 700;
 }
 
+/* Help that belongs to the group right above it (date + time) */
+.pullUp {
+  margin-top: calc(var(--space-2) - var(--space-4));
+}
+
+.dialogText {
+  margin-top: var(--space-2);
+}
+
+/* White boxes with a clear border; green ring on focus */
 .input,
 .textarea {
   width: 100%;
   min-width: 0;
-  padding: 0 0.875rem;
-  border: 1px solid #dcdee3;
-  border-radius: 0.5rem;
-  background: white;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--input-border);
+  border-radius: 0.875rem;
+  background: var(--canvas);
   font-size: 1rem;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
+    box-shadow var(--motion-fast) var(--curve-standard);
 }
 
 .input {
@@ -64,56 +160,177 @@
 
 .textarea {
   min-height: 7.5rem;
-  padding: 0.75rem 0.875rem;
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.6;
   resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--muted);
+}
+
+.input:hover:not(:read-only),
+.textarea:hover:not(:read-only) {
+  border-color: var(--posts-primary-text);
+}
+
+/* Focus is an outline; the border keeps its width and colour. */
+.input:focus,
+.textarea:focus {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 1px;
+  background: var(--canvas);
+}
+
+/* Fields scroll into view clear of the sticky app bar */
+.input,
+.textarea,
+.dateTrigger {
+  scroll-margin: 5rem 0 6rem;
 }
 
 .input[aria-invalid="true"],
 .textarea[aria-invalid="true"] {
   border-color: var(--posts-danger);
+  background: var(--danger-soft);
 }
 
 input.input:read-only,
 .textarea:read-only {
-  background: var(--posts-soft);
+  border-style: dashed;
+  border-color: var(--input-border);
+  background: var(--soft);
   color: var(--posts-muted);
 }
 
 .error {
   color: var(--posts-danger);
-  font-size: 0.75rem;
+  font-size: var(--type-micro);
+  font-weight: 600;
 }
 
+/*
+ * Category: pick a sticker. The chosen one stands on a lip with a green
+ * edge and its character smiles; the other waits, a little faded.
+ */
 .categories {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .category {
-  display: flex;
-  min-height: 4rem;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0 1rem;
-  border: 1px solid #dcdee3;
-  border-radius: 0.75rem;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border: 1.5px solid var(--input-border);
+  border-radius: 1.125rem;
+  background: var(--canvas);
+  box-shadow: 0 3px 0 var(--input-border);
   font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
+    box-shadow 120ms var(--curve-standard),
+    transform 120ms var(--curve-standard);
+}
+
+.categoryArt {
+  display: grid;
+  width: 4.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--soft);
+  transition: background-color var(--motion-fast) var(--curve-standard);
+}
+
+.categoryArt svg {
+  flex: none;
+  width: 3.5rem;
+  height: auto;
+  opacity: 0.6;
+  filter: grayscale(0.6);
+  transition:
+    filter var(--motion-fast) var(--curve-standard),
+    opacity var(--motion-fast) var(--curve-standard),
+    transform 260ms cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.categoryArt[data-type="DELIVERY"] svg {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.category:hover:not(:has(input:disabled)) {
+  border-color: var(--posts-primary-text);
+}
+
+.category:active:not(:has(input:disabled)) {
+  box-shadow: 0 0 0 var(--input-border);
+  transform: translateY(3px);
 }
 
 .category:has(input:checked) {
-  border-color: var(--posts-primary);
-  background: #f6fbec;
-  font-weight: 700;
+  border-color: var(--text);
+  background: var(--primary-tint);
+  box-shadow: 0 3px 0 var(--text);
+}
+
+.category:has(input:checked) .categoryArt {
+  background: var(--primary-soft);
+}
+
+.category:has(input:checked) .categoryArt[data-type="DELIVERY"] {
+  background: var(--delivery-tint);
+}
+
+.category:has(input:checked) .categoryArt svg {
+  opacity: 1;
+  filter: none;
+  animation: sticker-pick 420ms var(--ease-out);
+}
+
+@keyframes sticker-pick {
+  40% {
+    transform: translateY(-4px);
+  }
+}
+
+.category:has(input:checked)::after {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--posts-primary-text)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 0.8rem no-repeat;
+  animation: badge-pop var(--motion-standard) var(--ease-out);
+}
+
+@keyframes badge-pop {
+  from {
+    transform: scale(0);
+  }
 }
 
 .category:has(input:disabled) {
   cursor: not-allowed;
 }
 
+/* Disabled: muted fill and ink plus the not-allowed cursor (native disabled on the input). */
 .category:has(input:disabled:not(:checked)) {
-  opacity: 0.5;
+  border-color: var(--input-border);
+  background: var(--soft);
+  color: var(--disabled);
 }
 
 .category:has(input:focus-visible) {
@@ -127,127 +344,172 @@ input.input:read-only,
   pointer-events: none;
 }
 
-.divider {
-  height: 1px;
-  background: var(--posts-border);
-}
-
 /* Date and time stack full width as in the Figma form. */
 .datetime {
   display: grid;
   align-items: start;
-  gap: 1.25rem;
+  gap: var(--space-4);
 }
 
+/* Capacity: − / + with the seat slots between them, filled to who is in */
 .stepper {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
   align-items: center;
-  min-height: 3rem;
-  border: 1px solid #dcdee3;
-  border-radius: 0.5rem;
+  min-height: 3.5rem;
+  padding: 0.375rem;
+  border: 1.5px solid var(--input-border);
+  border-radius: 1.125rem;
+  background: var(--canvas);
+}
+
+.stepperValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+}
+
+.stepperSeats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px;
+}
+
+.stepperSeats svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .stepper button {
-  min-height: 3rem;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1.5px solid var(--input-border);
+  border-radius: 0.75rem;
+  background: var(--canvas);
+  box-shadow: 0 3px 0 var(--input-border);
   font-size: 1.25rem;
+  font-weight: 700;
+  transition:
+    box-shadow 120ms var(--curve-standard),
+    transform 120ms var(--curve-standard);
+}
+
+.stepper button:active:not(:disabled) {
+  box-shadow: 0 0 0 var(--input-border);
+  transform: translateY(3px);
 }
 
 .stepper button:disabled {
-  opacity: 0.3;
+  border-color: transparent;
+  background: var(--closed);
+  color: var(--muted);
+  box-shadow: none;
 }
 
 .stepper output {
+  font-size: var(--type-subhead);
   font-weight: 700;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .notice {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--posts-soft);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
   color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 600;
 }
 
 .alert {
   display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #f3c2c2;
-  border-radius: 0.5rem;
-  background: #fff6f6;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--round-control);
+  background: var(--danger-soft);
   color: var(--posts-danger);
 }
 
 .similar {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--posts-primary);
-  border-radius: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1.5px solid var(--posts-primary-text);
+  border-radius: var(--round-card);
+  background: var(--primary-tint);
 }
 
+/* Action rows: secondary left, primary right; 12px apart */
 .actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-3);
 }
 
-.primary,
-.secondary,
-.linkButton {
-  display: inline-flex;
-  min-height: 3rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 700;
+.form > .actions {
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 40rem) {
+  .form > .actions {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .form > .actions > * {
+    min-width: 8.5rem;
+  }
 }
 
 .primary {
-  background: var(--posts-primary);
-  color: var(--posts-text);
+  composes: base primary from "../../ui/button.module.css";
 }
 
 .secondary {
-  border: 1px solid #dcdee3;
-  background: white;
+  composes: base secondary from "../../ui/button.module.css";
 }
 
 .linkButton {
-  min-height: 2.75rem;
-  padding: 0;
+  composes: base ghost sm from "../../ui/button.module.css";
+  justify-self: start;
+  color: var(--posts-primary-text);
   text-decoration: underline;
 }
 
-.primary:disabled,
-.secondary:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+/* Discard confirmation: "입력 폐기" throws input away, so it is danger. */
+.dialog .actions .primary:not(:disabled) {
+  --lip: var(--danger-border);
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dialog .actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-6);
 }
 
 .dialog {
-  width: min(22rem, calc(100vw - 2rem));
+  width: calc(100% - 2rem);
+  max-width: 26rem;
   margin: auto;
-  padding: 1.25rem;
+  padding: var(--space-6);
   border: 0;
-  border-radius: 0.75rem;
+  border-radius: var(--round-sheet);
   color: var(--posts-text);
 }
 
-.dialog::backdrop {
-  background: rgb(0 0 0 / 40%);
-}
-
-.back:focus-visible,
 .input:focus-visible,
 .textarea:focus-visible,
-.stepper button:focus-visible,
-.primary:focus-visible,
-.secondary:focus-visible,
-.linkButton:focus-visible {
+.stepper button:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
 }
@@ -271,17 +533,22 @@ input.input:read-only,
 }
 
 .dateTrigger[data-readonly="true"] {
-  background: var(--posts-soft);
+  border-style: dashed;
+  border-color: var(--input-border);
+  background: var(--soft);
   color: var(--posts-muted);
   cursor: not-allowed;
 }
 
 .dateTrigger[data-invalid="true"] {
   border-color: var(--posts-danger);
+  background: var(--danger-soft);
 }
 
 .dateTrigger[aria-expanded="true"] {
-  border-color: var(--posts-primary);
+  border-color: var(--posts-primary-text);
+  background: var(--canvas);
+  box-shadow: 0 0 0 4px var(--primary-soft);
 }
 
 .placeholder {
@@ -302,11 +569,26 @@ input.input:read-only,
   display: grid;
   gap: 0.75rem;
   width: min(22rem, 100%);
-  padding: 1rem;
-  border: 1px solid var(--posts-border);
-  border-radius: 0.75rem;
-  background: white;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--round-card);
+  background: var(--canvas);
+  box-shadow: var(--elevation-overlay);
+}
+
+@media (max-width: 47.99rem) {
+  .calendar {
+    position: fixed;
+    inset: var(--page-gutter);
+    z-index: var(--z-dropdown);
+    width: auto;
+    max-width: 22rem;
+    height: fit-content;
+    max-height: calc(100dvh - 2 * var(--page-gutter));
+    margin: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .calendarHeader {
@@ -326,9 +608,18 @@ input.input:read-only,
   width: 2.75rem;
   height: 2.75rem;
   place-items: center;
-  border-radius: 9999px;
+  border-radius: var(--round-pill);
   color: var(--posts-text);
-  font-size: 1.5rem;
+}
+
+.calendarNav svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .calendarNav:hover:not(:disabled) {
@@ -336,7 +627,9 @@ input.input:read-only,
 }
 
 .calendarNav:disabled {
-  opacity: 0.3;
+  color: var(--disabled);
+  background: transparent;
+  cursor: not-allowed;
 }
 
 .calendarGrid {
@@ -365,7 +658,7 @@ input.input:read-only,
 
 .weekday[data-sunday="true"],
 .day[data-sunday="true"]:not(:disabled) {
-  color: #d64545;
+  color: var(--danger);
 }
 
 .day {
@@ -373,13 +666,13 @@ input.input:read-only,
   width: min(2.5rem, 100%);
   height: 2.5rem;
   place-items: center;
-  border-radius: 9999px;
+  border-radius: var(--round-pill);
   color: var(--posts-text);
   font-size: 0.875rem;
 }
 
 .day:hover:not(:disabled) {
-  background: #f6fbec;
+  background: var(--primary-tint);
 }
 
 .day[data-today="true"] {
@@ -394,7 +687,7 @@ input.input:read-only,
 }
 
 .day:disabled {
-  color: #c4c7cd;
+  color: var(--disabled);
   cursor: not-allowed;
 }
 
@@ -446,7 +739,7 @@ input.input:read-only,
   max-height: 13.5rem;
   overflow-y: auto;
   padding: 0.25rem;
-  border-radius: 0.5rem;
+  border-radius: var(--round-control);
   background: var(--posts-soft);
   overscroll-behavior: contain;
 }
@@ -460,14 +753,14 @@ input.input:read-only,
   display: grid;
   min-height: 2.75rem;
   place-items: center;
-  border-radius: 0.5rem;
+  border-radius: var(--round-control);
   color: var(--posts-text);
   font-size: 0.9375rem;
   cursor: pointer;
 }
 
 .timeOption:hover:not([aria-disabled="true"]) {
-  background: #f6fbec;
+  background: var(--primary-tint);
 }
 
 .timeOption[data-active="true"] {
@@ -480,7 +773,7 @@ input.input:read-only,
 }
 
 .timeOption[aria-disabled="true"] {
-  color: #c4c7cd;
+  color: var(--disabled);
   cursor: not-allowed;
 }
 
@@ -488,4 +781,30 @@ input.input:read-only,
   color: var(--posts-muted);
   font-size: 0.75rem;
   text-align: center;
+}
+
+.dateTrigger {
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
+    box-shadow var(--motion-fast) var(--curve-standard);
+}
+
+.dateTrigger:not([data-readonly="true"]):hover {
+  border-color: var(--input-border);
+}
+
+.calendar {
+  animation: doo-enter var(--motion-fast) var(--curve-enter);
+}
+
+@keyframes doo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
