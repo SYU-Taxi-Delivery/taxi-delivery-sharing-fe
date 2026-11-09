@@ -15,6 +15,7 @@
 }
 
 .panel {
+  --participation-scene-width: 8.5rem;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -35,7 +36,7 @@
    it: everything up to the headcount row. The notes below run full width. */
 .summary > :has(~ .seats),
 .summary > .seats {
-  padding-right: 8.75rem;
+  padding-right: calc(var(--participation-scene-width) + var(--space-1));
 }
 
 .heading {
@@ -77,6 +78,22 @@
 .seats svg {
   width: 1.625rem;
   height: 1.625rem;
+}
+
+@media (max-width: 25rem) {
+  .panel {
+    --participation-scene-width: 4.5rem;
+  }
+
+  .summary > .seats {
+    padding-right: 0;
+    column-gap: 1px;
+  }
+
+  .seats svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
 }
 
 .seats [data-pop="true"] {

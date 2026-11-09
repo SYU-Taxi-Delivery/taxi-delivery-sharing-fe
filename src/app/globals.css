@@ -9,14 +9,12 @@
 @import "./base.css" layer(base);
 
 /*
- * Pretendard (SIL OFL 1.1, github.com/orioncactus/pretendard), three weights:
- * Medium for running text, SemiBold for labels and buttons, Bold for headings
- * and numbers. Medium also answers weight 400 so nothing falls back to a
- * synthetic regular.
+ * Pretendard v1.3.9 (SIL OFL 1.1, github.com/orioncactus/pretendard).
+ * Medium also covers weight 400 to keep the body text weight consistent.
  */
 @font-face {
   font-family: "Pretendard";
-  src: url("/fonts/pretendard/Pretendard-Medium.ttf") format("truetype");
+  src: url("/fonts/pretendard/Pretendard-Medium.woff2") format("woff2");
   font-weight: 400 500;
   font-style: normal;
   font-display: swap;
@@ -24,7 +22,7 @@
 
 @font-face {
   font-family: "Pretendard";
-  src: url("/fonts/pretendard/Pretendard-SemiBold.ttf") format("truetype");
+  src: url("/fonts/pretendard/Pretendard-SemiBold.woff2") format("woff2");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -32,7 +30,7 @@
 
 @font-face {
   font-family: "Pretendard";
-  src: url("/fonts/pretendard/Pretendard-Bold.ttf") format("truetype");
+  src: url("/fonts/pretendard/Pretendard-Bold.woff2") format("woff2");
   font-weight: 700 900;
   font-style: normal;
   font-display: swap;
@@ -59,7 +57,6 @@
   /* Text */
   --text: #212124;
   --muted: #62666e;
-  --placeholder: #9ea2aa;
   --disabled: #c4c7cd;
 
   /* Surface & line: gray canvas, white surfaces on top */

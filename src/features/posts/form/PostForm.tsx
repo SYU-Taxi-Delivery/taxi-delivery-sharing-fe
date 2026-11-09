@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  useCallback,
+  useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +16,7 @@ import {
 } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { AppShellLeaveGuard } from "../AppShell";
 import { PostCard } from "../PostCard";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
@@ -99,7 +103,10 @@ export function PostForm({
   const locked = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const dialogReturn = useRef<HTMLElement | null>(null);
+  const pendingLeave = useRef<{ trigger: HTMLElement; href: string } | null>(
+    null,
+  );
+  const setLeaveGuard = useContext(AppShellLeaveGuard);
   const phaseHeading = useRef<HTMLHeadingElement>(null);
   const baseId = useId();
   const id = (name: string) => `${baseId}-${name}`;
@@ -122,6 +129,27 @@ export function PostForm({
   );
   const dirty = JSON.stringify(draft) !== initial;
   const busy = phase.kind === "checking" || phase.kind === "submitting";
+  const blockLeave = useCallback(
+    (trigger: HTMLElement, href: string) => {
+      if (busy) return true;
+      if (!dirty) return false;
+      pendingLeave.current = { trigger, href };
+      dialog.current?.showModal();
+      dialog.current
+        ?.querySelector<HTMLButtonElement>("[data-autofocus]")
+        ?.focus();
+      return true;
+    },
+    [busy, dirty],
+  );
+
+  useLayoutEffect(() => {
+    if (!setLeaveGuard) return;
+    setLeaveGuard(blockLeave);
+    return () => {
+      setLeaveGuard(null);
+    };
+  }, [blockLeave, setLeaveGuard]);
   const taxi = draft.type === "TAXI";
   const active = taxi ? draft.taxi : draft.delivery;
   const { min, max } = CAPACITY[draft.type];
@@ -320,26 +348,14 @@ export function PostForm({
     void save();
   }
 
-  function leave(trigger: HTMLElement) {
-    const target =
-      mode === "edit" && postId
-        ? `/posts/${encodeURIComponent(postId)}`
-        : listPath;
-    if (!dirty || busy) {
-      if (!busy) router.push(path(target));
-      return;
-    }
-    dialogReturn.current = trigger;
-    dialog.current?.showModal();
-    dialog.current
-      ?.querySelector<HTMLButtonElement>("[data-autofocus]")
-      ?.focus();
-  }
-
   const leaveTarget =
     mode === "edit" && postId
       ? `/posts/${encodeURIComponent(postId)}`
       : listPath;
+
+  function leave(trigger: HTMLElement) {
+    if (!blockLeave(trigger, leaveTarget)) router.push(path(leaveTarget));
+  }
 
   return (
     <>
@@ -757,7 +773,11 @@ export function PostForm({
         ref={dialog}
         className={styles.dialog}
         aria-labelledby={id("discard")}
-        onClose={() => dialogReturn.current?.focus()}
+        onClose={() => {
+          const trigger = pendingLeave.current?.trigger;
+          pendingLeave.current = null;
+          trigger?.focus();
+        }}
       >
         <h2 id={id("discard")} className={styles.label}>
           {mode === "edit"
@@ -782,9 +802,10 @@ export function PostForm({
             type="button"
             className={styles.primary}
             onClick={() => {
-              dialogReturn.current = null;
+              const href = pendingLeave.current?.href;
+              pendingLeave.current = null;
               dialog.current?.close();
-              router.push(path(leaveTarget));
+              if (href) router.push(path(href));
             }}
           >
             입력 폐기

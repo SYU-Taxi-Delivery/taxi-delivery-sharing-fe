@@ -576,6 +576,21 @@ input.input:read-only,
   box-shadow: var(--elevation-overlay);
 }
 
+@media (max-width: 47.99rem) {
+  .calendar {
+    position: fixed;
+    inset: var(--page-gutter);
+    z-index: var(--z-dropdown);
+    width: auto;
+    max-width: 22rem;
+    height: fit-content;
+    max-height: calc(100dvh - 2 * var(--page-gutter));
+    margin: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .calendarHeader {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;

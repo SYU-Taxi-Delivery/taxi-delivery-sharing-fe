@@ -15,8 +15,9 @@
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
-  width: 8.5rem;
-  height: 4.25rem;
+  width: var(--participation-scene-width);
+  height: calc(var(--participation-scene-width) / 2);
+  min-height: var(--touch-target);
   padding: 0;
   border: 0;
   border-radius: 0.75rem;

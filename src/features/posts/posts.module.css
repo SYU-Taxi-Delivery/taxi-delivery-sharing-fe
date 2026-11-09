@@ -486,19 +486,18 @@
   }
 }
 
-/*
- * Wide screens: the board reads as a ledger. One pod per row, its parts in
- * fixed columns (drawing, route, time, headcount, author) so the eye can run
- * down any one of them. The row stays one link; only the layout changes.
- */
-@media (min-width: 64rem) {
+/* Tablet: keep route and author together, with time and headcount alongside. */
+@media (min-width: 48rem) {
+  .mainWide:has(> .listHeading) {
+    max-width: 64rem;
+  }
+
   .mainWide .card {
-    /* fixed tracks, so the time, headcount and author columns line up from
-       row to row; the route takes what is left */
-    grid-template-columns: 3.5rem minmax(0, 1fr) 12.5rem 15rem 6.5rem;
+    grid-template-columns: 3.5rem minmax(0, 1fr) 15rem;
     grid-template-areas:
-      "art chips chips chips chips"
-      "art title when figures author";
+      "art chips when"
+      "art title figures"
+      "art author figures";
     align-items: center;
     column-gap: var(--space-5);
     row-gap: var(--space-1);
@@ -532,6 +531,20 @@
 
   .mainWide .author {
     grid-area: author;
+    justify-self: start;
+  }
+}
+
+/* Desktop: fixed metadata tracks align each column across rows. */
+@media (min-width: 64rem) {
+  .mainWide .card {
+    grid-template-columns: 3.5rem minmax(0, 1fr) 12.5rem 15rem 6.5rem;
+    grid-template-areas:
+      "art chips chips chips chips"
+      "art title when figures author";
+  }
+
+  .mainWide .author {
     justify-self: end;
   }
 }

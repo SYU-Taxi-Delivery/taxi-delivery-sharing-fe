@@ -2,12 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { createContext, useCallback, useRef, type ReactNode } from "react";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BoardIcon, PersonIcon } from "@/features/ui/art";
 import { useTypingFlag } from "./useTypingFlag";
+
+type LeaveGuard = (trigger: HTMLElement, href: string) => boolean;
+export const AppShellLeaveGuard = createContext<
+  ((guard: LeaveGuard | null) => void) | null
+>(null);
 
 /*
  * Signed-in service frame: logo, account menu, main navigation and footer.
@@ -32,11 +37,35 @@ export function AppShell({
 }) {
   const path = useAppPath();
   const typing = useTypingFlag();
+  const leaveGuard = useRef<LeaveGuard>(null);
+  const setLeaveGuard = useCallback((guard: LeaveGuard | null) => {
+    leaveGuard.current = guard;
+  }, []);
   return (
     <div className={styles.screen} data-typing={typing || undefined}>
       <header className={styles.frameHeader}>
         <div className={styles.header}>
-          <Link href={path(postsPath)} className={styles.brand}>
+          <Link
+            href={path(postsPath)}
+            className={styles.brand}
+            onClick={(event) => {
+              const sameTab =
+                event.button === 0 &&
+                !event.defaultPrevented &&
+                !(
+                  event.altKey ||
+                  event.ctrlKey ||
+                  event.metaKey ||
+                  event.shiftKey
+                );
+              if (
+                sameTab &&
+                leaveGuard.current?.(event.currentTarget, postsPath)
+              ) {
+                event.preventDefault();
+              }
+            }}
+          >
             <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟
           </Link>
@@ -61,7 +90,9 @@ export function AppShell({
         </div>
       </header>
       <main className={`${styles.main} ${wide ? styles.mainWide : ""}`}>
-        {children}
+        <AppShellLeaveGuard value={setLeaveGuard}>
+          {children}
+        </AppShellLeaveGuard>
       </main>
       <footer className={styles.footer}>
         <p>두유팟 · 학생끼리 함께하는 이동과 배달</p>

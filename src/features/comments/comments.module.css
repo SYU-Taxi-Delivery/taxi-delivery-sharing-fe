@@ -295,7 +295,8 @@
 }
 
 .input::placeholder {
-  color: var(--placeholder);
+  color: var(--muted);
+  opacity: 1;
 }
 
 .input:focus {
