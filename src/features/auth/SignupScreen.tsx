@@ -601,7 +601,8 @@ export function SignupScreen({
             className={blocker ? styles.blocker : styles.help}
             aria-live="polite"
           >
-            {blocker ?? "모든 조건을 확인했어요. 가입할 수 있어요."}
+            {blocker ??
+              "이메일 인증과 필수 약관 동의를 완료했어요. 계정 정보를 확인하고 가입해 주세요."}
           </p>
           {submitting && (
             <p role="status" className={styles.muted}>

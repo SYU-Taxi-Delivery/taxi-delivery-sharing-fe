@@ -262,6 +262,27 @@ describe("SignupScreen", () => {
     expect(screen.getByRole("button", { name: "회원가입" })).toBeEnabled();
   });
 
+  it("인증과 동의를 마쳐도 빈 계정 정보까지 확인했다고 안내하지 않는다", async () => {
+    const operations = await setup();
+    await verifyEmail();
+    fireEvent.click(screen.getByLabelText("[필수] 이용약관 동의"));
+    fireEvent.click(screen.getByLabelText("[필수] 개인정보 수집·이용 동의"));
+    expect(screen.getByLabelText("닉네임")).toHaveValue("");
+    expect(screen.getByLabelText("비밀번호")).toHaveValue("");
+    expect(
+      screen.getByRole("button", { name: "회원가입" }),
+    ).toHaveAccessibleDescription(
+      "이메일 인증과 필수 약관 동의를 완료했어요. 계정 정보를 확인하고 가입해 주세요.",
+    );
+    await click("회원가입");
+    expect(operations.register).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("닉네임")).toHaveFocus();
+    expect(screen.getByLabelText("닉네임")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
   it("AC-AUTH-001-21: 짧은 비밀번호는 요청 없이 해당 칸에서 안내하고 수정하면 지운다", async () => {
     const operations = await setup();
     await fillAll();
