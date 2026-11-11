@@ -349,6 +349,8 @@ p.stop::before {
 /* ───────── Author panel ───────── */
 
 .card {
+  /* Buttons in this box share its rounded-rectangle shape */
+  --button-round: var(--round-control);
   display: grid;
   gap: var(--space-3);
   padding: var(--space-5);
@@ -399,11 +401,6 @@ p.stop::before {
   color: var(--posts-danger);
 }
 
-.action {
-  display: grid;
-  gap: var(--space-2);
-}
-
 /* ───────── Buttons (roles from ui/button.module.css) ───────── */
 
 .primary {
@@ -420,6 +417,66 @@ p.stop::before {
 
 .dangerOutline {
   composes: base danger from "../../ui/button.module.css";
+}
+
+/* My-post management: small buttons sized to their label, not the card */
+.manageSecondary {
+  composes: base secondary sm from "../../ui/button.module.css";
+}
+
+.managePrimary {
+  composes: base primary sm from "../../ui/button.module.css";
+}
+
+.manageDanger {
+  composes: base danger sm from "../../ui/button.module.css";
+}
+
+/* Title on the left, the edit button on the right of the same line */
+.manageHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.manageHead .manageSecondary {
+  flex: none;
+}
+
+/* Close and cancel side by side, each half the card */
+.manageRow {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--space-2);
+}
+
+.manageRow > * {
+  padding-inline: var(--space-2);
+}
+
+/* What each button does, in one short list under the row */
+.manageNotes {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+}
+
+/* Label in its own column so a wrapped line stays under the text */
+.manageNotes li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+}
+
+.manageNotes strong {
+  color: var(--posts-text);
+  font-weight: 700;
 }
 
 /* ───────── Notices ───────── */
