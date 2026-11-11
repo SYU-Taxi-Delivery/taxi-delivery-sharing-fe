@@ -384,7 +384,7 @@
 }
 
 .menuButton:active {
-  transform: scale(0.96);
+  background: var(--closed);
 }
 
 .avatar {

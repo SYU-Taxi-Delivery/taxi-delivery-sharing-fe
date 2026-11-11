@@ -4,13 +4,16 @@
  * `composes`, so their existing class names (styles.primary, …) keep working
  * while role, size and state come from one place.
  *
- * Roles: primary (one per action area), secondary (back/close/plain cancel),
- *        ghost (light extras), danger (changes data or participation),
- *        icon (square, needs an accessible name in markup).
+ * Roles: primary (one per action area, brand green fill),
+ *        secondary (back/close/plain cancel: light face, thin border),
+ *        ghost (light extras), danger (changes data or participation:
+ *        light pink face, deep red text), icon (square, needs an accessible
+ *        name in markup).
  * Sizes: base 48px · sm 40px (44px hit area) · lg 52px (phone bottom bar).
  * States: hover, pressed, focus-visible, disabled, loading (aria-busy area).
- * Feel: a "game" button — a solid lip under the face (--lip) that the button
- * presses into, so it looks pushable without getting bigger.
+ * Feel: soft and round like the 두유팟 bean — pill corners and the palette
+ * colours, flat (no shadow or thick bottom edge). Pressing only deepens the
+ * background, so nothing moves or changes size.
  */
 
 .base {
@@ -21,23 +24,22 @@
   justify-content: center;
   gap: var(--space-2);
   padding: 0 var(--space-5);
-  border: 1.5px solid transparent;
-  border-radius: 0.875rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.3;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  --lip: transparent;
-  box-shadow: 0 var(--space-1) 0 var(--lip);
-  margin-bottom: var(--space-1);
+  --face: transparent;
+  --face-hover: var(--face);
+  --face-pressed: var(--face-hover);
+  background: var(--face);
   transition:
     background-color 160ms var(--curve-standard),
     border-color 160ms var(--curve-standard),
-    box-shadow 120ms var(--curve-standard),
-    color 160ms var(--curve-standard),
-    transform 120ms var(--curve-standard);
+    color 160ms var(--curve-standard);
 }
 
 .base img,
@@ -47,13 +49,17 @@
   flex-shrink: 0;
 }
 
-.base:active:not(:disabled):not([aria-disabled="true"]) {
-  box-shadow: 0 0 0 var(--lip);
-  transform: translateY(var(--space-1));
+.base:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--face-hover);
 }
 
+.base:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--face-pressed);
+}
+
+/* A two-tone ring (white gap + dark green) reads on every face colour. */
 .base:focus-visible {
-  outline: 2px solid var(--primary-text);
+  outline: 3px solid var(--primary-text);
   outline-offset: 2px;
 }
 
@@ -63,12 +69,15 @@
   border-color: transparent;
   background: var(--closed);
   color: var(--muted);
-  box-shadow: none;
   cursor: not-allowed;
 }
 
 /* Loading: inside an aria-busy area the disabled button shows a spinner
    next to its (unchanged-width) busy label. */
+[aria-busy="true"] .base:disabled {
+  cursor: progress;
+}
+
 [aria-busy="true"] .base:disabled::before {
   content: "";
   width: 1rem;
@@ -86,48 +95,36 @@
   }
 }
 
-/* Dark text on the brand green: 6.66:1 (WCAG AA). */
+/* Dark text on the brand green: 6.66:1, hover 5.7:1, pressed 4.8:1 (WCAG AA). */
 .primary {
-  --lip: var(--primary-text);
-  background: var(--primary);
+  --face: var(--primary);
+  --face-hover: color-mix(in srgb, var(--primary) 92%, black);
+  --face-pressed: color-mix(in srgb, var(--primary) 84%, black);
   color: var(--text);
-}
-
-.primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 88%, white);
 }
 
 .secondary {
-  --lip: var(--input-border);
+  --face: var(--canvas);
+  --face-hover: var(--primary-tint);
+  --face-pressed: var(--primary-soft);
   border-color: var(--input-border);
-  background: var(--canvas);
   color: var(--text);
-}
-
-.secondary:hover:not(:disabled) {
-  background: var(--primary-tint);
 }
 
 .ghost {
-  margin-bottom: 0;
-  background: transparent;
+  --face: transparent;
+  --face-hover: var(--soft);
+  --face-pressed: var(--closed);
   color: var(--text);
 }
 
-.ghost:hover:not(:disabled) {
-  background: var(--soft);
-}
-
-/* --danger on --danger-soft: 5.29:1 */
+/* Light pink face, deep red text: 4.96:1, pressed 4.6:1 */
 .danger {
-  --lip: var(--danger-border);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   border-color: var(--danger-border);
-  background: var(--danger-soft);
   color: var(--danger);
-}
-
-.danger:hover:not(:disabled) {
-  border-color: var(--danger);
 }
 
 .sm {
@@ -152,17 +149,14 @@
 }
 
 .icon {
-  --lip: var(--input-border);
+  --face: var(--canvas);
+  --face-hover: var(--primary-tint);
+  --face-pressed: var(--primary-soft);
   width: 2.75rem;
   min-height: 2.75rem;
   padding: 0;
   border-color: var(--input-border);
-  background: var(--canvas);
   color: var(--text);
-}
-
-.icon:hover:not(:disabled) {
-  background: var(--primary-tint);
 }
 
 /* Shared action row: 12px between buttons, 24px above */
