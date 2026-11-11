@@ -147,14 +147,11 @@
 
 /* "참여 취소" changes participation: danger role */
 .primary[data-tone="danger"]:not(:disabled) {
-  --lip: var(--danger-border);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   border-color: var(--danger-border);
-  background: var(--danger-soft);
   color: var(--danger);
-}
-
-.primary[data-tone="danger"]:hover:not(:disabled) {
-  border-color: var(--danger);
 }
 
 .error,
@@ -241,14 +238,11 @@
 }
 
 .dialogActions .primary:not(:disabled) {
-  --lip: var(--danger-border);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   border-color: var(--danger-border);
-  background: var(--danger-soft);
   color: var(--danger);
-}
-
-.dialogActions .primary:hover:not(:disabled) {
-  border-color: var(--danger);
 }
 
 /* The main action and, on phones, a one-line hint naming its two times */

@@ -472,7 +472,9 @@ p.stop::before {
 }
 
 .textButton[data-tone="danger"]:not(:disabled) {
-  background: var(--danger-soft);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   color: var(--posts-danger);
 }
 

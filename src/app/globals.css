@@ -73,6 +73,22 @@
   --danger: #c62828;
   --danger-soft: #fff6f6;
   --danger-border: #f3c2c2;
+  /* Danger button faces (pale pink → pressed); --danger text stays ≥ 4.5:1 */
+  --danger-face: color-mix(
+    in srgb,
+    var(--danger-soft) 82%,
+    var(--danger-border)
+  );
+  --danger-face-hover: color-mix(
+    in srgb,
+    var(--danger-soft) 72%,
+    var(--danger-border)
+  );
+  --danger-face-pressed: color-mix(
+    in srgb,
+    var(--danger-soft) 62%,
+    var(--danger-border)
+  );
 
   /* Type scale (oh-my-design /hangul: body tracking 0, headings ≥ -0.03em) */
   --type-display: 1.75rem; /* 28 */

@@ -33,7 +33,7 @@
 }
 
 .tab:active {
-  transform: scale(0.95);
+  background: color-mix(in srgb, var(--primary-tint) 60%, var(--primary-soft));
 }
 
 .tab[aria-current="page"] {
@@ -48,9 +48,8 @@
   left: 0.25rem;
   width: calc((100% - 0.5rem) / 2);
   border: 1.5px solid var(--input-border);
-  border-radius: 0.625rem;
+  border-radius: 999px;
   background: var(--canvas);
-  box-shadow: 0 2px 0 var(--input-border);
   transition: transform 260ms cubic-bezier(0.34, 1.36, 0.64, 1);
 }
 
@@ -282,9 +281,10 @@ p.meta {
 }
 
 .button[data-tone="danger"]:not(:disabled) {
-  --lip: var(--danger-border);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   border-color: var(--danger-border);
-  background: var(--danger-soft);
   color: var(--danger);
 }
 

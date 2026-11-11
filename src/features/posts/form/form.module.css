@@ -211,8 +211,8 @@ input.input:read-only,
 }
 
 /*
- * Category: pick a sticker. The chosen one stands on a lip with a green
- * edge and its character smiles; the other waits, a little faded.
+ * Category: pick a sticker. The chosen one gets a dark edge and a green
+ * tint and its character smiles; the other waits, a little faded.
  */
 .categories {
   display: grid;
@@ -229,15 +229,12 @@ input.input:read-only,
   border: 1.5px solid var(--input-border);
   border-radius: 1.125rem;
   background: var(--canvas);
-  box-shadow: 0 3px 0 var(--input-border);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition:
     background-color var(--motion-fast) var(--curve-standard),
-    border-color var(--motion-fast) var(--curve-standard),
-    box-shadow 120ms var(--curve-standard),
-    transform 120ms var(--curve-standard);
+    border-color var(--motion-fast) var(--curve-standard);
 }
 
 .categoryArt {
@@ -272,14 +269,12 @@ input.input:read-only,
 }
 
 .category:active:not(:has(input:disabled)) {
-  box-shadow: 0 0 0 var(--input-border);
-  transform: translateY(3px);
+  background: var(--primary-soft);
 }
 
 .category:has(input:checked) {
   border-color: var(--text);
   background: var(--primary-tint);
-  box-shadow: 0 3px 0 var(--text);
 }
 
 .category:has(input:checked) .categoryArt {
@@ -390,26 +385,26 @@ input.input:read-only,
   height: 2.75rem;
   place-items: center;
   border: 1.5px solid var(--input-border);
-  border-radius: 0.75rem;
+  border-radius: 999px;
   background: var(--canvas);
-  box-shadow: 0 3px 0 var(--input-border);
   font-size: 1.25rem;
   font-weight: 700;
-  transition:
-    box-shadow 120ms var(--curve-standard),
-    transform 120ms var(--curve-standard);
+  transition: background-color 120ms var(--curve-standard);
+}
+
+.stepper button:hover:not(:disabled) {
+  background: var(--primary-tint);
 }
 
 .stepper button:active:not(:disabled) {
-  box-shadow: 0 0 0 var(--input-border);
-  transform: translateY(3px);
+  background: var(--primary-soft);
 }
 
 .stepper button:disabled {
   border-color: transparent;
   background: var(--closed);
   color: var(--muted);
-  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .stepper output {
@@ -486,9 +481,10 @@ input.input:read-only,
 
 /* Discard confirmation: "입력 폐기" throws input away, so it is danger. */
 .dialog .actions .primary:not(:disabled) {
-  --lip: var(--danger-border);
+  --face: var(--danger-face);
+  --face-hover: var(--danger-face-hover);
+  --face-pressed: var(--danger-face-pressed);
   border-color: var(--danger-border);
-  background: var(--danger-soft);
   color: var(--danger);
 }
 

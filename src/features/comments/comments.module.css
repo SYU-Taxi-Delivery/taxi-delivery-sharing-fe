@@ -324,7 +324,7 @@
 }
 
 .send:active:not(:disabled) {
-  transform: scale(0.96);
+  background: color-mix(in srgb, var(--primary) 84%, black);
 }
 
 .send:disabled {
