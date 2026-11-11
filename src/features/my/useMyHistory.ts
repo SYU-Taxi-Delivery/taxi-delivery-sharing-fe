@@ -149,6 +149,7 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
   );
 
   const refresh = useCallback(() => read(false), [read]);
+  const recheck = useCallback(() => void read(true).catch(() => {}), [read]);
 
   return {
     history,
@@ -160,6 +161,7 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
     serverNow,
     retry: () => setAttempt((value) => value + 1),
     refresh,
+    recheck,
     markCancelled,
   };
 }

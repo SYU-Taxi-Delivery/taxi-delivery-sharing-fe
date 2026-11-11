@@ -410,6 +410,56 @@ describe("my history screen", () => {
     expect(operations.list).toHaveBeenCalledTimes(2);
   });
 
+  it("늦게 도착한 화면 복귀 응답이 최신 이력을 다시 불러오게 하지 않는다", async () => {
+    const original = history([post()]);
+    let finish!: (value: unknown) => void;
+    let finishLatest!: (value: unknown) => void;
+    const delayed = new Promise<unknown>((resolve) => {
+      finish = resolve;
+    });
+    const latest = new Promise<unknown>((resolve) => {
+      finishLatest = resolve;
+    });
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(original)
+      .mockReturnValueOnce(delayed)
+      .mockReturnValueOnce(latest)
+      .mockRejectedValue(new Error("unexpected retry"));
+    const session = auth();
+    await setup(list, undefined, "participated", session);
+    session.me.mockRejectedValue(new Error("session recheck unavailable"));
+
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await act(async () =>
+      document.dispatchEvent(new Event("visibilitychange")),
+    );
+    await act(async () => finish(original));
+    await act(async () =>
+      finishLatest(history([post({ relation: "CANCELLED" })])),
+    );
+
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(rows()[0]).toHaveTextContent("참여 취소됨");
+  });
+
+  it("화면 복귀 재조회가 403이면 기존 이력을 지우고 접근 제한을 표시한다", async () => {
+    const original = history([post()]);
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(original)
+      .mockRejectedValueOnce(new ApiError(403, "private"))
+      .mockResolvedValue(original);
+    await setup(list);
+
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(
+      screen.getByRole("heading", { name: "접근 권한이 없어요" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
   it("ADMIN-003: 선택한 모집이 삭제되면 확인창의 기존 제목도 제거한다", async () => {
     const list = vi
       .fn<MyHistoryOperations["list"]>()

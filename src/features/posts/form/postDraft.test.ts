@@ -268,6 +268,10 @@ describe("urlError", () => {
     "javascript:alert(1)",
     "example.com",
     "https://",
+    "https:example.com",
+    "https:///example.com",
+    "https://user@example.com",
+    "https://@example.com",
     `https://example.com/${"a".repeat(481)}`,
   ])("AC-COORD-004-05: %s를 거절한다", (value) => {
     expect(urlError(value)).toBeTruthy();
