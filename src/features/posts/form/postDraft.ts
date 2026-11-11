@@ -205,7 +205,11 @@ export function urlError(value: string): string | undefined {
   }
   try {
     const parsed = new URL(url);
-    if (parsed.protocol === "https:" && parsed.hostname !== "") {
+    // The server validates the original URL and does not allow credentials.
+    if (
+      /^https:\/\/[^/?#@\\\s]+(?:[/?#]|$)/i.test(url) &&
+      parsed.hostname !== ""
+    ) {
       return undefined;
     }
   } catch {

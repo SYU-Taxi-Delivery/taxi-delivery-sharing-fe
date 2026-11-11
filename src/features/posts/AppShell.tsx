@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { createContext, useCallback, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
@@ -41,6 +47,15 @@ export function AppShell({
   const setLeaveGuard = useCallback((guard: LeaveGuard | null) => {
     leaveGuard.current = guard;
   }, []);
+  function guardNavigation(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    const sameTab =
+      event.button === 0 &&
+      !event.defaultPrevented &&
+      !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey);
+    if (sameTab && leaveGuard.current?.(event.currentTarget, href)) {
+      event.preventDefault();
+    }
+  }
   return (
     <div className={styles.screen} data-typing={typing || undefined}>
       <header className={styles.frameHeader}>
@@ -48,23 +63,7 @@ export function AppShell({
           <Link
             href={path(postsPath)}
             className={styles.brand}
-            onClick={(event) => {
-              const sameTab =
-                event.button === 0 &&
-                !event.defaultPrevented &&
-                !(
-                  event.altKey ||
-                  event.ctrlKey ||
-                  event.metaKey ||
-                  event.shiftKey
-                );
-              if (
-                sameTab &&
-                leaveGuard.current?.(event.currentTarget, postsPath)
-              ) {
-                event.preventDefault();
-              }
-            }}
+            onClick={(event) => guardNavigation(event, postsPath)}
           >
             <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟
@@ -74,6 +73,7 @@ export function AppShell({
               href={path(postsPath)}
               className={styles.navLink}
               aria-current={current === "posts" ? "page" : undefined}
+              onClick={(event) => guardNavigation(event, postsPath)}
             >
               <BoardIcon className={styles.navIcon} />
               모집글
@@ -82,6 +82,7 @@ export function AppShell({
               href={path("/my")}
               className={styles.navLink}
               aria-current={current === "my" ? "page" : undefined}
+              onClick={(event) => guardNavigation(event, "/my")}
             >
               <PersonIcon className={styles.navIcon} />내 참여 · 모집
             </Link>

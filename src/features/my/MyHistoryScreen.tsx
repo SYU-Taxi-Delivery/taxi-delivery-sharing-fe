@@ -70,6 +70,7 @@ function History({
     serverNow,
     retry,
     refresh,
+    recheck,
     markCancelled,
   } = useMyHistory(tab, operations);
   const [selection, setSelection] = useState<{
@@ -84,22 +85,17 @@ function History({
   const clearSelection = useCallback(() => setSelection(null), []);
 
   useEffect(() => {
-    if (selected) return;
-    let active = true;
-    const recheck = () => {
-      if (document.visibilityState === "visible")
-        void refresh().catch(() => {
-          if (active) retry();
-        });
+    if (selected || loading || notConnected) return;
+    const recheckWhenVisible = () => {
+      if (document.visibilityState === "visible") recheck();
     };
-    window.addEventListener("focus", recheck);
-    document.addEventListener("visibilitychange", recheck);
+    window.addEventListener("focus", recheckWhenVisible);
+    document.addEventListener("visibilitychange", recheckWhenVisible);
     return () => {
-      active = false;
-      window.removeEventListener("focus", recheck);
-      document.removeEventListener("visibilitychange", recheck);
+      window.removeEventListener("focus", recheckWhenVisible);
+      document.removeEventListener("visibilitychange", recheckWhenVisible);
     };
-  }, [selected, refresh, retry]);
+  }, [selected, loading, notConnected, recheck]);
 
   return (
     <>

@@ -431,6 +431,25 @@ describe("작성 폼", () => {
     expect(router.push).toHaveBeenCalledTimes(1);
   });
 
+  it("등록 응답을 기다리는 동안 주요 메뉴로 이탈하지 않는다", async () => {
+    let finish!: (id: string) => void;
+    const create = vi.fn(
+      () => new Promise<string>((resolve) => (finish = resolve)),
+    );
+    await setup(ops({ create }));
+    fillTaxi();
+    await submit();
+    const navigation = screen.getByRole("navigation", { name: "주요 메뉴" });
+    for (const link of within(navigation).getAllByRole("link")) {
+      expect(fireEvent.click(link)).toBe(false);
+    }
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(1);
+    await act(async () => finish("new-1"));
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/new-1");
+  });
+
   it("AC-UI-FORM-06~08: 입력이 있으면 취소 전에 확인하고 돌아가기는 입력을 유지한다", async () => {
     await setup(ops());
     type("제목", "작성 중");
@@ -511,23 +530,32 @@ describe("수정 폼", () => {
     expect(screen.getByLabelText("배달")).toBeDisabled();
   });
 
-  it("수정 도중 로고를 누르면 초안 폐기를 확인한 뒤 목록으로 이동한다", async () => {
-    await edit(ops({ load: vi.fn(async () => post()) }));
-    type("제목", "수정 중");
-    const logo = screen.getByRole("link", { name: "두유팟" });
-    fireEvent.click(logo);
-    const dialog = screen.getByRole("dialog", {
-      name: "수정한 내용을 버릴까요?",
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
-    expect(logo).toHaveFocus();
-    expect(screen.getByLabelText("제목")).toHaveValue("수정 중");
-    expect(router.push).not.toHaveBeenCalled();
+  it.each([
+    ["두유팟", "/posts"],
+    ["모집글", "/posts"],
+    ["내 참여 · 모집", "/my"],
+  ])(
+    "수정 도중 %s 링크를 누르면 초안 폐기를 확인한 뒤 이동한다",
+    async (label, href) => {
+      await edit(ops({ load: vi.fn(async () => post()) }));
+      type("제목", "수정 중");
+      const link = screen.getByRole("link", { name: label });
+      fireEvent.click(link);
+      const dialog = screen.getByRole("dialog", {
+        name: "수정한 내용을 버릴까요?",
+      });
+      fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
+      expect(link).toHaveFocus();
+      expect(screen.getByLabelText("제목")).toHaveValue("수정 중");
+      expect(router.push).not.toHaveBeenCalled();
 
-    fireEvent.click(logo);
-    fireEvent.click(within(dialog).getByRole("button", { name: "입력 폐기" }));
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts");
-  });
+      fireEvent.click(link);
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "입력 폐기" }),
+      );
+      expect(router.push).toHaveBeenCalledExactlyOnceWith(href);
+    },
+  );
 
   it("다른 모집 수정으로 이동하면 이전 초안을 지우고 새 모집의 값으로만 저장한다", async () => {
     let resolveNext!: (value: EditablePost) => void;
