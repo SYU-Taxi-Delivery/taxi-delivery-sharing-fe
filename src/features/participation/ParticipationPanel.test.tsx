@@ -290,6 +290,67 @@ describe("participation panel", () => {
     ).toHaveAccessibleDescription("모집 정원이 마감되었습니다.");
   });
 
+  it("a join rejected because the last seat was taken shows the reason once", async () => {
+    const operations = setup({
+      ...initial,
+      viewerRelation: "NONE",
+      currentMemberCount: 3,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    vi.mocked(operations.join).mockRejectedValueOnce(new Error("409"));
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...initial,
+      viewerRelation: "NONE",
+      status: "FULL",
+      currentMemberCount: 4,
+      joinable: false,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "참여 신청이 처리되지 않았어요",
+    );
+  });
+
+  it("a join that a focus recheck finds full is not sent and shows the reason once", async () => {
+    const operations = setup({
+      ...initial,
+      viewerRelation: "NONE",
+      currentMemberCount: 3,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    let finish: (value: ParticipationSnapshot) => void = () => {};
+    vi.mocked(operations.refresh).mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    await act(async () => {
+      finish({
+        ...initial,
+        viewerRelation: "NONE",
+        status: "FULL",
+        currentMemberCount: 4,
+        joinable: false,
+        participantNames: undefined,
+        communicationUrl: undefined,
+      });
+    });
+    expect(operations.join).not.toHaveBeenCalled();
+    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "모집 상태가 바뀌어 참여 신청을 보내지 않았어요",
+    );
+  });
+
   it("REMOVED shows no title, schedule, count or protected content", () => {
     setup({ ...initial, status: "REMOVED" });
     expect(screen.getByRole("status")).toHaveTextContent(

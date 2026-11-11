@@ -104,7 +104,11 @@ describe("participation requests", () => {
     expect(result.current.snapshot.status).toBe("FULL");
     expect(result.current.snapshot.viewerRelation).toBe("NONE");
     expect(result.current.feedback?.tone).toBe("error");
-    expect(result.current.feedback?.message).toContain("정원");
+    // The reason is shown by the panel; the feedback reports the request.
+    expect(result.current.availability.reason).toContain("정원");
+    expect(result.current.feedback?.message).toContain(
+      "참여 신청이 처리되지 않았어요",
+    );
     expect(result.current.feedback?.message.includes("raw backend")).toBe(
       false,
     );

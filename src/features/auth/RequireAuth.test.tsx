@@ -103,6 +103,14 @@ describe("RequireAuth", () => {
     act(() => expire());
     expect(screen.queryByText("참가자 명단")).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("로그인이 만료됐어요");
+    // The heading says it once; the text tells what happens next.
+    expect(screen.getAllByText(/로그인이 만료됐어요/)).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "다시 로그인하면 보던 화면으로 돌아와요.",
+    );
+    expect(
+      screen.getByRole("link", { name: "로그인하러 가기" }),
+    ).toHaveAttribute("href", "/login?next=%2Fposts%2F1");
   });
 
   it("확인 실패 시 다시 확인할 수 있다", async () => {
