@@ -258,7 +258,7 @@ describe("작성 폼", () => {
       );
     });
     expect(screen.getByLabelText("출발 날짜")).toHaveTextContent(
-      "2026. 10. 7. (수)",
+      "2026/10/7 (수)",
     );
     await submit();
     expect(operations.create).toHaveBeenCalledWith(

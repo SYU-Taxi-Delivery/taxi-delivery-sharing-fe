@@ -50,7 +50,7 @@ const key = (code: string) =>
 describe("DatePicker", () => {
   it("AC-UI-FORM-02: 날짜를 요일과 함께 보여 주고 레이블로 찾을 수 있다", () => {
     const { field } = setup();
-    expect(field).toHaveTextContent("2026. 10. 18. (일)");
+    expect(field).toHaveTextContent("2026/10/18 (일)");
     expect(field).toHaveAttribute("aria-haspopup", "dialog");
     expect(field).toHaveAttribute("aria-expanded", "false");
   });
@@ -92,7 +92,7 @@ describe("DatePicker", () => {
     expect(onChange).toHaveBeenCalledWith("2026-10-21");
     expect(onBlur).toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(field).toHaveTextContent("2026. 10. 21. (수)");
+    expect(field).toHaveTextContent("2026/10/21 (수)");
     expect(field).toHaveFocus();
   });
 

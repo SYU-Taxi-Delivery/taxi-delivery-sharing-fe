@@ -269,3 +269,8 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Keep available cancellation actions, including their dialog, in colour. */
+.panel[data-closed="true"] > :not(.action, .dialog) {
+  filter: grayscale(1);
+}

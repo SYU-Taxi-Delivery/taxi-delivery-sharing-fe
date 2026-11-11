@@ -5,13 +5,8 @@ import { postStatusLabel, type PostSummary } from "./posts";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, ClockIcon, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { formatDate } from "@/lib/dateFormat";
 
-const dateFormat = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-});
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   hour: "2-digit",
@@ -71,7 +66,7 @@ export function PostCard({ post }: { post: PostSummary }) {
           <ClockIcon className={styles.whenIcon} />
           <span className={styles.time}>{timeFormat.format(reference)}</span>
           <span className={styles.meta}>
-            {dateFormat.format(reference)} · {taxi ? "출발" : "주문 마감"}
+            {formatDate(reference)} · {taxi ? "출발" : "주문 마감"}
           </span>
         </span>
         <span className={styles.figures}>

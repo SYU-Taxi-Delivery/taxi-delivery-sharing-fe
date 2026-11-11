@@ -7,13 +7,8 @@ import type { ParticipationController } from "./useParticipation";
 import { ParticipationMotion } from "./ParticipationMotion";
 import styles from "./participation.module.css";
 import { ClockIcon, SeatSlots } from "@/features/ui/art";
+import { formatDate } from "@/lib/dateFormat";
 
-const dateFormat = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-});
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   hour: "2-digit",
@@ -58,7 +53,7 @@ export function ParticipationPanel({
   const today =
     hasTime &&
     Number.isFinite(nowMs) &&
-    dateFormat.format(referenceTime) === dateFormat.format(nowMs);
+    formatDate(referenceTime) === formatDate(nowMs);
   const actionLabel = joined
     ? "참여 취소"
     : snapshot.viewerRelation === "CANCELLED"
@@ -95,6 +90,7 @@ export function ParticipationPanel({
       className={styles.panel}
       aria-labelledby={labelId}
       aria-busy={busy}
+      data-closed={timeFinished || snapshot.status !== "OPEN" || timeClosed}
       data-sticky-action={
         active &&
         !timeFinished &&
@@ -140,7 +136,7 @@ export function ParticipationPanel({
           {hasTime ? timeFormat.format(referenceTime) : "시각 확인 필요"}{" "}
           {snapshot.type === "TAXI" ? "출발" : "주문 마감"}
           <br />
-          {hasTime ? dateFormat.format(referenceTime) : "다시 조회해 주세요."}
+          {hasTime ? formatDate(referenceTime) : "다시 조회해 주세요."}
         </p>
       </div>
       {availability.reason && <p id={reasonId}>{availability.reason}</p>}
@@ -244,9 +240,7 @@ export function ParticipationPanel({
             <p className={styles.targetMeta}>
               {snapshot.type === "TAXI" ? "택시" : "배달"}
               <br />
-              {hasTime
-                ? dateFormat.format(referenceTime)
-                : "시각 확인 필요"}{" "}
+              {hasTime ? formatDate(referenceTime) : "시각 확인 필요"}{" "}
               {hasTime ? timeFormat.format(referenceTime) : ""} · 현재{" "}
               {snapshot.currentMemberCount} / {snapshot.capacity}명
             </p>

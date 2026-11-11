@@ -86,7 +86,7 @@ describe("PostListScreen", () => {
     expect(first).toHaveTextContent("석계역");
     expect(first).toHaveTextContent("삼육대학교");
     expect(first).toHaveTextContent("18:00");
-    expect(first).toHaveTextContent("10. 5. (월) · 출발");
+    expect(first).toHaveTextContent("10/5 (월) · 출발");
     expect(first).toHaveAttribute("href", "/posts/t1");
     expect(second).toHaveTextContent("테스트음식점");
     expect(screen.getByText("전체 2개 · 정원은 작성자 포함")).toBeVisible();

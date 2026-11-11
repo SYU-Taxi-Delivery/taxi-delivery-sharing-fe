@@ -3,19 +3,13 @@
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import styles from "./form.module.css";
+import { formatDate } from "@/lib/dateFormat";
 
 type Ymd = { y: number; m: number; d: number };
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // Calendar dates are plain days; UTC math avoids the viewer's time zone.
-const fieldFormat = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "UTC",
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-});
 const dayLabelFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "UTC",
   year: "numeric",
@@ -216,7 +210,9 @@ export function DatePicker({
         onClick={() => (open ? close(false) : show())}
       >
         <span className={selected ? undefined : styles.placeholder}>
-          {selected ? fieldFormat.format(toUtc(selected)) : placeholder}
+          {selected
+            ? formatDate(toUtc(selected), { timeZone: "UTC", year: true })
+            : placeholder}
         </span>
         <Image src="/posts/calendar.svg" width={20} height={20} alt="" />
       </button>
