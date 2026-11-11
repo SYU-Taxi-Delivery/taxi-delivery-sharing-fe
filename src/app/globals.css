@@ -216,6 +216,8 @@ body {
  * transitions simply skip the close animation.
  */
 dialog {
+  /* Buttons in this box share its rounded-rectangle shape */
+  --button-round: var(--round-control);
   opacity: 0;
   transform: scale(0.96);
   transition:

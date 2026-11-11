@@ -694,9 +694,19 @@ function AuthorPanel({
       aria-labelledby="author-panel"
       aria-busy={!!busy}
     >
-      <h2 id="author-panel" className={styles.sectionTitle}>
-        내 모집글 관리
-      </h2>
+      <div className={styles.manageHead}>
+        <h2 id="author-panel" className={styles.sectionTitle}>
+          내 모집글 관리
+        </h2>
+        {actions.edit && (
+          <Link
+            href={path(`/posts/${encodeURIComponent(detail.id)}/edit`)}
+            className={styles.manageSecondary}
+          >
+            모집글 수정
+          </Link>
+        )}
+      </div>
       <SeatSlots
         className={styles.seats}
         total={detail.capacity}
@@ -731,47 +741,49 @@ function AuthorPanel({
                 : "모집이 끝났어요."}
       </p>
 
-      {actions.edit && (
-        <Link
-          href={path(`/posts/${encodeURIComponent(detail.id)}/edit`)}
-          className={styles.secondary}
-        >
-          모집글 수정
-        </Link>
-      )}
-      {actions.close && (
-        <div className={styles.action}>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={!!busy || !operations.close}
-            onClick={() => setConfirm("close")}
-          >
-            {busy === "close" ? "마감하는 중…" : "모집 마감하기"}
-          </button>
-          <p className={styles.help}>
-            {operations.close
-              ? `현재 인원으로 ${taxi ? "출발" : "주문"}해요. 마감하면 새로 참여할 수 없어요.`
-              : "모집 마감 기능은 준비 중이에요. 정원이 차면 자동으로 마감돼요."}
-          </p>
+      {(actions.close || actions.cancel) && (
+        <div className={styles.manageRow}>
+          {actions.close && (
+            <button
+              type="button"
+              className={styles.managePrimary}
+              disabled={!!busy || !operations.close}
+              onClick={() => setConfirm("close")}
+            >
+              {busy === "close" ? "마감하는 중…" : "모집 마감하기"}
+            </button>
+          )}
+          {actions.cancel && (
+            <button
+              type="button"
+              className={styles.manageDanger}
+              disabled={!!busy || !operations.cancel}
+              onClick={() => setConfirm("cancel")}
+            >
+              {busy === "cancel" ? "취소하는 중…" : "모집 취소하기"}
+            </button>
+          )}
         </div>
       )}
-      {actions.cancel && (
-        <div className={styles.action}>
-          <button
-            type="button"
-            className={styles.dangerOutline}
-            disabled={!!busy || !operations.cancel}
-            onClick={() => setConfirm("cancel")}
-          >
-            {busy === "cancel" ? "취소하는 중…" : "모집 취소하기"}
-          </button>
-          <p className={styles.help}>
-            {operations.cancel
-              ? "일정이 취소되면 모집을 취소해요. 취소한 글에는 참여할 수 없어요."
-              : "모집 취소 기능은 준비 중이에요."}
-          </p>
-        </div>
+      {(actions.close || actions.cancel) && (
+        <ul className={styles.manageNotes}>
+          {actions.close && (
+            <li>
+              <strong>마감</strong>
+              {operations.close
+                ? `현재 인원으로 ${taxi ? "출발" : "주문"}해요. 마감하면 새로 참여할 수 없어요.`
+                : "모집 마감 기능은 준비 중이에요. 정원이 차면 자동으로 마감돼요."}
+            </li>
+          )}
+          {actions.cancel && (
+            <li>
+              <strong>취소</strong>
+              {operations.cancel
+                ? "일정이 취소되면 모집을 취소해요. 취소한 글에는 참여할 수 없어요."
+                : "모집 취소 기능은 준비 중이에요."}
+            </li>
+          )}
+        </ul>
       )}
       {!actions.close && !actions.cancel && !actions.edit && (
         <p className={styles.help}>

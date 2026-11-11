@@ -1006,6 +1006,8 @@
     z-index: 29;
     min-height: 3.25rem;
     margin: 0;
+    /* Out of its box and on the bottom strip: back to pill buttons */
+    --button-round: 999px;
   }
 
   /* Typing: back into the content flow, above the keyboard */
