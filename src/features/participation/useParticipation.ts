@@ -16,6 +16,9 @@ export type ParticipationOperations = {
 };
 
 type Action = "join" | "cancel";
+
+const requestName = (action: Action) =>
+  action === "join" ? "참여 신청이" : "참여 취소가";
 type Feedback = { tone: "success" | "error"; message: string } | null;
 type Outcome = { action: Action; confirmed: boolean };
 /** Set only after the join/cancel request itself succeeded; id changes per success. */
@@ -132,8 +135,10 @@ export function useParticipation(
                 : visible.viewerRelation === "CANCELLED" &&
                     outcome.action === "cancel"
                   ? "현재 내 참여가 취소된 상태예요. 최신 참여 상태를 확인했어요."
-                  : (reason ??
-                    "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요."),
+                  : reason
+                    ? // The panel already shows the reason next to the button.
+                      `${requestName(outcome.action)} 처리되지 않았어요. 최신 상태를 확인했어요.`
+                    : "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요.",
           });
         } else {
           setFeedback(null);
@@ -207,7 +212,10 @@ export function useParticipation(
         setNowMs(serverNow());
         setFeedback({
           tone: "error",
-          message: availability.reason ?? "현재 요청할 수 없는 참여 상태예요.",
+          // The reason itself is already shown next to the button.
+          message: availability.reason
+            ? `모집 상태가 바뀌어 ${action === "cancel" ? "참여 취소를" : "참여 신청을"} 보내지 않았어요.`
+            : "현재 요청할 수 없는 참여 상태예요.",
         });
         return;
       }
