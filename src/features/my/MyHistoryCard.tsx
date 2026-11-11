@@ -11,7 +11,7 @@ import { postStatusLabel } from "@/features/posts/posts";
 import { toMySnapshot, type MyHistoryItem } from "./myHistory";
 import styles from "./my.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { BagArt, ClockIcon, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { formatDate } from "@/lib/dateFormat";
 
 const time = new Intl.DateTimeFormat("ko-KR", {
@@ -124,9 +124,16 @@ export function MyHistoryCard({
         </p>
       </div>
       <div>
+        {/* Same order as the post list: clock, time, then date · 출발 */}
         <p className={styles.schedule}>
-          {formatDate(Date.parse(item.referenceTime), { time: true })} ·{" "}
-          {item.type === "TAXI" ? "출발" : "주문 마감"}
+          <ClockIcon className={styles.scheduleIcon} />
+          <span className={styles.scheduleTime}>
+            {time.format(Date.parse(item.referenceTime))}
+          </span>
+          <span className={styles.scheduleDate}>
+            {formatDate(Date.parse(item.referenceTime))} ·{" "}
+            {item.type === "TAXI" ? "출발" : "주문 마감"}
+          </span>
         </p>
         {active && (author || item.relation === "JOINED") && (
           <p className={styles.meta}>
