@@ -275,3 +275,9 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Closed: everything but the action turns black and white; the action keeps
+   its colour so a still-possible "참여 취소" stays recognisable. */
+.panel[data-closed="true"] > :not(.action) {
+  filter: grayscale(1);
+}

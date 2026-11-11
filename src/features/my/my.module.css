@@ -105,6 +105,12 @@
   background: var(--canvas);
 }
 
+/* Closed posts read black and white; the buttons keep their colours so a
+   still-possible "참여 취소" stays recognisable. */
+.card[data-closed="true"] > :not(.actions) {
+  filter: grayscale(1);
+}
+
 .card[data-muted="true"] .cardTitle,
 .card[data-muted="true"] .schedule {
   color: var(--posts-muted);

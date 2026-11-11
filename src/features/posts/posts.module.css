@@ -609,8 +609,13 @@
 }
 
 .card[data-available="false"] .sticker svg {
-  filter: grayscale(0.85);
   opacity: 0.75;
+}
+
+/* Closed (full, closed, past deadline, finished, cancelled): the whole card
+   turns black and white so open pods stand out on the board. */
+.card[data-available="false"] {
+  filter: grayscale(1);
 }
 
 .cardBody {

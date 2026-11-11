@@ -35,26 +35,7 @@ import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, ClockIcon, SeatSlots, TaxiArt } from "@/features/ui/art";
-
-const dateTime = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-const shortDateTime = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+import { formatDate } from "@/lib/dateFormat";
 
 export function PostDetailScreen({
   postId,
@@ -293,7 +274,7 @@ function DetailView({
   };
   const status = effectiveStatus(detail, nowMs);
   const shown = { ...detail, status };
-  const label = postStatusLabel(shown).label;
+  const { label, available } = postStatusLabel(shown);
   const visible = visibleDetails(detail, nowMs);
   const author = detail.relation === "AUTHOR";
   const taxi = detail.type === "TAXI";
@@ -302,13 +283,17 @@ function DetailView({
   const remaining = detail.capacity - detail.currentMemberCount;
 
   return (
-    <article className={styles.detail} aria-labelledby="post-title">
+    <article
+      className={styles.detail}
+      aria-labelledby="post-title"
+      data-closed={history || !available}
+    >
       <header className={styles.top}>
         <div className={styles.topRow}>
           <span
             className={styles.sticker}
             data-type={taxi ? "taxi" : "delivery"}
-            data-muted={history}
+            data-muted={history || !available}
           >
             {taxi ? <TaxiArt size="lg" /> : <BagArt size="lg" />}
           </span>
@@ -358,7 +343,7 @@ function DetailView({
           <span>
             <span className={styles.bylineName}>{detail.authorName}</span>
             {detail.createdAt &&
-              ` · ${shortDateTime.format(Date.parse(detail.createdAt))} 작성`}
+              ` · ${formatDate(Date.parse(detail.createdAt), { time: true })} 작성`}
           </span>
         </p>
       </header>
@@ -407,7 +392,7 @@ function DetailView({
               <Row term="도착지" value={detail.destination} repeated />
               <Row
                 term="출발 시간"
-                value={dateTime.format(reference)}
+                value={formatDate(reference, { year: true, time: true })}
                 strong
                 repeated
               />
@@ -418,7 +403,7 @@ function DetailView({
               <Row term="수령 장소" value={detail.pickupLocation} repeated />
               <Row
                 term="주문 마감"
-                value={dateTime.format(reference)}
+                value={formatDate(reference, { year: true, time: true })}
                 strong
                 repeated
               />
@@ -431,7 +416,7 @@ function DetailView({
           />
           <Row
             term="참여 취소 기한"
-            value={`${shortDateTime.format(participationDeadlineMs(detail))}까지`}
+            value={`${formatDate(participationDeadlineMs(detail), { time: true })}까지`}
           />
           {!taxi && detail.orderGuide && (
             <Row term="주문 안내" value={detail.orderGuide} multiline />
@@ -724,7 +709,10 @@ function AuthorPanel({
       </p>
       <p className={styles.when}>
         <ClockIcon className={styles.whenIcon} />
-        {dateTime.format(Date.parse(detail.referenceTime))}{" "}
+        {formatDate(Date.parse(detail.referenceTime), {
+          year: true,
+          time: true,
+        })}{" "}
         {taxi ? "출발" : "주문 마감"}
       </p>
       <p className={styles.help}>

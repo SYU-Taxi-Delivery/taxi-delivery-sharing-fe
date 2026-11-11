@@ -12,16 +12,8 @@ import { toMySnapshot, type MyHistoryItem } from "./myHistory";
 import styles from "./my.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { formatDate } from "@/lib/dateFormat";
 
-const dateTime = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
 const time = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   hour: "2-digit",
@@ -62,6 +54,7 @@ export function MyHistoryCard({
     <article
       className={styles.card}
       data-muted={muted}
+      data-closed={!available}
       aria-labelledby={titleId}
     >
       <div className={styles.cardHeader}>
@@ -132,7 +125,7 @@ export function MyHistoryCard({
       </div>
       <div>
         <p className={styles.schedule}>
-          {dateTime.format(Date.parse(item.referenceTime))} ·{" "}
+          {formatDate(Date.parse(item.referenceTime), { time: true })} ·{" "}
           {item.type === "TAXI" ? "출발" : "주문 마감"}
         </p>
         {active && (author || item.relation === "JOINED") && (

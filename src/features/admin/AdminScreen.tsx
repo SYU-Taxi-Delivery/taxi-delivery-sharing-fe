@@ -23,6 +23,7 @@ import {
   type ReportResolution,
 } from "./admin";
 import styles from "./admin.module.css";
+import { formatDate } from "@/lib/dateFormat";
 
 const statusLabels = {
   PENDING: "처리 대기",
@@ -37,15 +38,6 @@ const postLabels = {
   FINISHED: "모집 완료",
   REMOVED: "관리자에 의해 삭제된 모집",
 };
-const dateTime = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
 const reasonLabel = (reason: AdminReportSummary["reason"]) =>
   REPORT_REASONS.find(({ value }) => value === reason)!.label;
 
@@ -453,7 +445,13 @@ function Workspace({ operations }: { operations: AdminOperations }) {
                 </div>
                 <div>
                   <dt>접수 시각</dt>
-                  <dd>{dateTime.format(new Date(detail.createdAt))}</dd>
+                  <dd>
+                    {formatDate(new Date(detail.createdAt), {
+                      year: true,
+                      weekday: false,
+                      time: true,
+                    })}
+                  </dd>
                 </div>
                 <div>
                   <dt>신고 상세 내용</dt>
@@ -465,7 +463,13 @@ function Workspace({ operations }: { operations: AdminOperations }) {
                   <>
                     <div>
                       <dt>처리 시각</dt>
-                      <dd>{dateTime.format(new Date(detail.processedAt))}</dd>
+                      <dd>
+                        {formatDate(new Date(detail.processedAt), {
+                          year: true,
+                          weekday: false,
+                          time: true,
+                        })}
+                      </dd>
                     </div>
                     <div>
                       <dt>처리자</dt>
@@ -489,7 +493,11 @@ function Workspace({ operations }: { operations: AdminOperations }) {
                     {detail.referenceTime && (
                       <p className={common.help}>
                         기준 시각{" "}
-                        {dateTime.format(new Date(detail.referenceTime))}
+                        {formatDate(new Date(detail.referenceTime), {
+                          year: true,
+                          weekday: false,
+                          time: true,
+                        })}
                       </p>
                     )}
                   </>
@@ -503,8 +511,13 @@ function Workspace({ operations }: { operations: AdminOperations }) {
                       : "완료된 모집의 참여 이력은 유지돼요."}
                   </p>
                   <p className={common.help}>
-                    숨김 처리: {dateTime.format(new Date(removal.removedAt))} ·{" "}
-                    {removal.removedBy}
+                    숨김 처리:{" "}
+                    {formatDate(new Date(removal.removedAt), {
+                      year: true,
+                      weekday: false,
+                      time: true,
+                    })}{" "}
+                    · {removal.removedBy}
                   </p>
                 </div>
               )}
@@ -616,7 +629,11 @@ function Workspace({ operations }: { operations: AdminOperations }) {
                       </div>
                       <p className={common.help}>
                         {reasonLabel(report.reason)} ·{" "}
-                        {dateTime.format(new Date(report.createdAt))}
+                        {formatDate(new Date(report.createdAt), {
+                          year: true,
+                          weekday: false,
+                          time: true,
+                        })}
                       </p>
                       <button
                         type="button"
