@@ -19,7 +19,11 @@ type Action = "join" | "cancel";
 
 const requestName = (action: Action) =>
   action === "join" ? "참여 신청이" : "참여 취소가";
-type Feedback = { tone: "success" | "error"; message: string } | null;
+type Feedback = {
+  tone: "success" | "error";
+  message: string;
+  reason?: string | null;
+} | null;
 type Outcome = { action: Action; confirmed: boolean };
 /** Set only after the join/cancel request itself succeeded; id changes per success. */
 export type ParticipationMotion = { action: Action; id: number } | null;
@@ -123,22 +127,23 @@ export function useParticipation(
                 : "내 참여가 취소됐어요.",
           });
         } else if (outcome) {
-          const reason = getParticipationAvailability(
-            visible,
-            clock.current.serverMs,
-          ).reason;
+          const relationMatches =
+            visible.viewerRelation ===
+            (outcome.action === "join" ? "JOINED" : "CANCELLED");
+          const reason = relationMatches
+            ? null
+            : getParticipationAvailability(visible, clock.current.serverMs)
+                .reason;
           setFeedback({
             tone: "error",
-            message:
-              visible.viewerRelation === "JOINED" && outcome.action === "join"
+            reason,
+            message: relationMatches
+              ? outcome.action === "join"
                 ? "현재 이 모집에 참여 중이에요. 최신 참여 상태를 확인했어요."
-                : visible.viewerRelation === "CANCELLED" &&
-                    outcome.action === "cancel"
-                  ? "현재 내 참여가 취소된 상태예요. 최신 참여 상태를 확인했어요."
-                  : reason
-                    ? // The panel already shows the reason next to the button.
-                      `${requestName(outcome.action)} 처리되지 않았어요. 최신 상태를 확인했어요.`
-                    : "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요.",
+                : "현재 내 참여가 취소된 상태예요. 최신 참여 상태를 확인했어요."
+              : reason
+                ? `${requestName(outcome.action)} 처리되지 않았어요. 최신 상태를 확인했어요.`
+                : "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요.",
           });
         } else {
           setFeedback(null);
@@ -212,7 +217,7 @@ export function useParticipation(
         setNowMs(serverNow());
         setFeedback({
           tone: "error",
-          // The reason itself is already shown next to the button.
+          reason: availability.reason,
           message: availability.reason
             ? `모집 상태가 바뀌어 ${action === "cancel" ? "참여 취소를" : "참여 신청을"} 보내지 않았어요.`
             : "현재 요청할 수 없는 참여 상태예요.",

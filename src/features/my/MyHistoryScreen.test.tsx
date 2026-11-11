@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { PostDetailError } from "@/features/posts/detail/postDetail";
 import { MyHistoryScreen } from "./MyHistoryScreen";
 import type { MyHistoryOperations, MyTab } from "./myHistory";
 
@@ -349,6 +350,53 @@ describe("my history screen", () => {
       "최신 참여 상태를 확인했어요",
     );
     expect(operations.leave).toHaveBeenCalledTimes(1);
+  });
+
+  it("마감 직후 취소가 409로 거절되면 결과와 마감 사유를 알린다", async () => {
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(history([post()]))
+      .mockResolvedValueOnce(history([post()], T - 599_999));
+    const { operations } = await setup(list, async () => {
+      throw new PostDetailError("conflict");
+    });
+
+    await openCancel();
+    await confirmCancel();
+
+    expect(operations.leave).toHaveBeenCalledExactlyOnceWith("p1");
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(rows()[0]).toHaveTextContent("참여 중");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("참여 취소가 처리되지 않았어요.");
+    expect(alert).toHaveTextContent(
+      "출발 10분 전부터 참여 신청과 취소가 마감됩니다.",
+    );
+  });
+
+  it("창 복귀 재조회에서 취소 마감이 확인되면 요청을 보내지 않고 이유를 알린다", async () => {
+    let complete!: (value: unknown) => void;
+    const pending = new Promise<unknown>((resolve) => {
+      complete = resolve;
+    });
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(history([post()]))
+      .mockReturnValueOnce(pending);
+    const { operations } = await setup(list);
+
+    await openCancel();
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await confirmCancel();
+    await act(async () => complete(history([post()], T - 599_999)));
+
+    expect(operations.leave).not.toHaveBeenCalled();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("참여 취소를 보내지 않았어요.");
+    expect(alert).toHaveTextContent(
+      "출발 10분 전부터 참여 신청과 취소가 마감됩니다.",
+    );
   });
 
   it("느린 취소 응답은 사용자가 옮긴 포커스를 빼앗지 않는다", async () => {

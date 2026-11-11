@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PostDetailError } from "@/features/posts/detail/postDetail";
 import { ParticipationPanel } from "./ParticipationPanel";
 import type { ParticipationSnapshot } from "./participation";
 import {
@@ -132,6 +133,31 @@ describe("participation panel", () => {
       screen.getByRole("heading", { name: "3자리 남았어요" }),
     ).toBeVisible();
     expect(operations.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("a cancellation rejected after the deadline reports the result separately", async () => {
+    const operations = setup();
+    vi.mocked(operations.cancel).mockRejectedValueOnce(
+      new PostDetailError("conflict"),
+    );
+    vi.mocked(operations.refresh).mockResolvedValueOnce({
+      ...initial,
+      serverTime: "2026-10-13T17:50:00.001+09:00",
+      joinable: false,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    });
+
+    const reason = "출발 10분 전부터 참여 신청과 취소가 마감됩니다.";
+    expect(
+      screen.getAllByText(reason).filter((text) => !text.closest("dialog")),
+    ).toHaveLength(1);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("참여 취소가 처리되지 않았어요.");
+    expect(alert).not.toHaveTextContent(reason);
   });
 
   it("slow cancellation does not steal focus after the user moves to another control", async () => {

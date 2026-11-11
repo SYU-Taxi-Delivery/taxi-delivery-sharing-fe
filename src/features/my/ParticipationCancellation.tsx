@@ -110,6 +110,8 @@ export function ParticipationCancellation({
             role={participation.feedback.tone === "error" ? "alert" : "status"}
           >
             {participation.feedback.message}
+            {participation.feedback.reason &&
+              ` ${participation.feedback.reason}`}
           </p>
           {participation.needsRefresh && (
             <button
