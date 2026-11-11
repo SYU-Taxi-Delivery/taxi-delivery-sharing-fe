@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PostDetailError } from "@/features/posts/detail/postDetail";
 import { ParticipationPanel } from "./ParticipationPanel";
 import type { ParticipationSnapshot } from "./participation";
 import {
@@ -132,6 +133,31 @@ describe("participation panel", () => {
       screen.getByRole("heading", { name: "3자리 남았어요" }),
     ).toBeVisible();
     expect(operations.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("a cancellation rejected after the deadline reports the result separately", async () => {
+    const operations = setup();
+    vi.mocked(operations.cancel).mockRejectedValueOnce(
+      new PostDetailError("conflict"),
+    );
+    vi.mocked(operations.refresh).mockResolvedValueOnce({
+      ...initial,
+      serverTime: "2026-10-13T17:50:00.001+09:00",
+      joinable: false,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    });
+
+    const reason = "출발 10분 전부터 참여 신청과 취소가 마감됩니다.";
+    expect(
+      screen.getAllByText(reason).filter((text) => !text.closest("dialog")),
+    ).toHaveLength(1);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("참여 취소가 처리되지 않았어요.");
+    expect(alert).not.toHaveTextContent(reason);
   });
 
   it("slow cancellation does not steal focus after the user moves to another control", async () => {
@@ -288,6 +314,67 @@ describe("participation panel", () => {
     expect(
       screen.getByRole("button", { name: "참여하기" }),
     ).toHaveAccessibleDescription("모집 정원이 마감되었습니다.");
+  });
+
+  it("a join rejected because the last seat was taken shows the reason once", async () => {
+    const operations = setup({
+      ...initial,
+      viewerRelation: "NONE",
+      currentMemberCount: 3,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    vi.mocked(operations.join).mockRejectedValueOnce(new Error("409"));
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...initial,
+      viewerRelation: "NONE",
+      status: "FULL",
+      currentMemberCount: 4,
+      joinable: false,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    });
+    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "참여 신청이 처리되지 않았어요",
+    );
+  });
+
+  it("a join that a focus recheck finds full is not sent and shows the reason once", async () => {
+    const operations = setup({
+      ...initial,
+      viewerRelation: "NONE",
+      currentMemberCount: 3,
+      participantNames: undefined,
+      communicationUrl: undefined,
+    });
+    let finish: (value: ParticipationSnapshot) => void = () => {};
+    vi.mocked(operations.refresh).mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+    await act(async () => {
+      finish({
+        ...initial,
+        viewerRelation: "NONE",
+        status: "FULL",
+        currentMemberCount: 4,
+        joinable: false,
+        participantNames: undefined,
+        communicationUrl: undefined,
+      });
+    });
+    expect(operations.join).not.toHaveBeenCalled();
+    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "모집 상태가 바뀌어 참여 신청을 보내지 않았어요",
+    );
   });
 
   it("REMOVED shows no title, schedule, count or protected content", () => {
