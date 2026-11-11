@@ -310,6 +310,7 @@
 
 .textButton {
   composes: base ghost sm from "../ui/button.module.css";
+  flex-shrink: 0;
   color: var(--auth-primary-text);
 }
 
@@ -517,6 +518,7 @@
 }
 
 .check input {
+  flex-shrink: 0;
   width: 1.25rem;
   height: 1.25rem;
   accent-color: var(--auth-primary-text);
