@@ -136,7 +136,8 @@ describe("my history screen", () => {
     expect(rows()).toHaveLength(5);
     expect(rows()[0]).toHaveTextContent("모집 중");
     expect(rows()[0]).toHaveTextContent("참여 중");
-    expect(rows()[0]).toHaveTextContent("18:00 · 출발");
+    // Time first, then "date · 출발", as on the post list
+    expect(rows()[0]).toHaveTextContent(/18:00\d{1,2}\/\d{1,2} \(.\) · 출발/);
     expect(rows()[0]).toHaveTextContent("3 / 4명 · 작성자 포함");
     expect(rows()[0]).toHaveTextContent("17:50 · 출발 10분 전");
     expect(rows()[1]).toHaveTextContent("모집 마감");
