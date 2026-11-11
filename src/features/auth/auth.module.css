@@ -372,7 +372,7 @@
   min-height: var(--touch-target);
   padding: 0 var(--space-2) 0 0.25rem;
   border: 0;
-  border-radius: var(--round-pill);
+  border-radius: var(--round-control);
   background: transparent;
   font-size: var(--type-label);
   font-weight: 600;

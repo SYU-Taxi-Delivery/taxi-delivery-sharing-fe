@@ -48,7 +48,7 @@
   left: 0.25rem;
   width: calc((100% - 0.5rem) / 2);
   border: 1.5px solid var(--input-border);
-  border-radius: 999px;
+  border-radius: 0.625rem;
   background: var(--canvas);
   transition: transform 260ms cubic-bezier(0.34, 1.36, 0.64, 1);
 }
@@ -296,13 +296,18 @@ p.meta {
   font-weight: 700;
 }
 
-/* Card actions: always left-aligned, 12px apart (button system: sm) */
+/* Card actions: fill the card width in equal parts, 12px apart
+   (one button spans the row; button system: sm) */
 .actions {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
+}
+
+.actions > .button {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .button {

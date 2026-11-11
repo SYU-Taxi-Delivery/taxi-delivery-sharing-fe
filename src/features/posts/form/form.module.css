@@ -385,7 +385,7 @@ input.input:read-only,
   height: 2.75rem;
   place-items: center;
   border: 1.5px solid var(--input-border);
-  border-radius: 999px;
+  border-radius: var(--round-control);
   background: var(--canvas);
   font-size: 1.25rem;
   font-weight: 700;
@@ -604,7 +604,7 @@ input.input:read-only,
   width: 2.75rem;
   height: 2.75rem;
   place-items: center;
-  border-radius: var(--round-pill);
+  border-radius: var(--round-control);
   color: var(--posts-text);
 }
 
@@ -662,7 +662,7 @@ input.input:read-only,
   width: min(2.5rem, 100%);
   height: 2.5rem;
   place-items: center;
-  border-radius: var(--round-pill);
+  border-radius: 0.75rem;
   color: var(--posts-text);
   font-size: 0.875rem;
 }
