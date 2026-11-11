@@ -273,7 +273,11 @@ function DetailView({
     relation: participation.snapshot.viewerRelation as PostDetail["relation"],
   };
   const status = effectiveStatus(detail, nowMs);
-  const shown = { ...detail, status };
+  const shown = {
+    ...detail,
+    status,
+    joinable: detail.joinable && nowMs < participation.availability.deadline,
+  };
   const { label, available } = postStatusLabel(shown);
   const visible = visibleDetails(detail, nowMs);
   const author = detail.relation === "AUTHOR";

@@ -219,6 +219,41 @@ describe("상세 조회", () => {
     expect(screen.queryByText("출발지")).not.toBeInTheDocument();
   });
 
+  it.each([false, true])(
+    "참여 마감에 도달하면 재조회 없이 상세 상단도 마감 표시로 바뀐다 (서버 기한: %s)",
+    async (serverDeadline) => {
+      vi.useFakeTimers();
+      const now = Date.now();
+      const operations = ops({
+        load: vi.fn(async () =>
+          post({
+            referenceTime: new Date(
+              now + (serverDeadline ? 3_600_000 : 601_000),
+            ).toISOString(),
+            serverTime: new Date(now).toISOString(),
+            ...(serverDeadline
+              ? { participationDeadline: new Date(now + 1_000).toISOString() }
+              : {}),
+          }),
+        ),
+      });
+      await setup(operations);
+      const article = screen.getByRole("article");
+      const status = article.querySelector("header [data-history]");
+
+      await act(async () => vi.advanceTimersByTime(999));
+      expect(article).toHaveAttribute("data-closed", "false");
+      expect(status).toHaveTextContent("모집 중");
+      expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
+
+      await act(async () => vi.advanceTimersByTime(1));
+      expect(article).toHaveAttribute("data-closed", "true");
+      expect(status).toHaveTextContent("참여 마감");
+      expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
+      expect(operations.load).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("AC-DISC-004-02, AC-COORD-004-01: 참여 중이면 명단과 새 창 링크를 제공한다", async () => {
     await setup(ops({ load: vi.fn(async () => post({ relation: "JOINED" })) }));
     const list = within(members());

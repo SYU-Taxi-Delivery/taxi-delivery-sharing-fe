@@ -276,8 +276,7 @@
   }
 }
 
-/* Closed: everything but the action turns black and white; the action keeps
-   its colour so a still-possible "참여 취소" stays recognisable. */
-.panel[data-closed="true"] > :not(.action) {
+/* Keep available cancellation actions, including their dialog, in colour. */
+.panel[data-closed="true"] > :not(.action, .dialog) {
   filter: grayscale(1);
 }
