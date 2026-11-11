@@ -541,10 +541,10 @@ input.input:read-only,
   background: var(--danger-soft);
 }
 
+/* Open reads by colour only: green edge on a tinted face, no halo */
 .dateTrigger[aria-expanded="true"] {
   border-color: var(--posts-primary-text);
-  background: var(--canvas);
-  box-shadow: 0 0 0 4px var(--primary-soft);
+  background: var(--primary-tint);
 }
 
 .placeholder {
@@ -782,8 +782,7 @@ input.input:read-only,
 .dateTrigger {
   transition:
     background-color var(--motion-fast) var(--curve-standard),
-    border-color var(--motion-fast) var(--curve-standard),
-    box-shadow var(--motion-fast) var(--curve-standard);
+    border-color var(--motion-fast) var(--curve-standard);
 }
 
 .dateTrigger:not([data-readonly="true"]):hover {
