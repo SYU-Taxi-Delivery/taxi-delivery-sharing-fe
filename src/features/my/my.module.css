@@ -92,6 +92,8 @@
 }
 
 .card {
+  /* Buttons in this box share its rounded-rectangle shape */
+  --button-round: var(--round-control);
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);

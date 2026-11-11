@@ -76,6 +76,8 @@
 
 .card,
 .notice {
+  /* Buttons in this box share its rounded-rectangle shape */
+  --button-round: var(--round-control);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
