@@ -53,7 +53,9 @@ function initialState(scenario: Scenario) {
         ? "점심 배달 같이 시켜요"
         : "정문에서 태릉입구역까지 같이 가요",
     description:
-      "수업 끝나고 태릉입구역으로 이동해요.\n출발 5분 전, 정문 바깥 택시 승차 장소에서 만나요.",
+      scenario === "delivery"
+        ? "점심은 정문 김밥에서 같이 시켜요.\n주문 마감 전까지 댓글로 메뉴를 남겨 주시고, 도착하면 학생회관 앞에서 함께 받아요."
+        : "수업 끝나고 태릉입구역으로 이동해요.\n출발 5분 전, 정문 바깥 택시 승차 장소에서 만나요.",
     status:
       scenario === "authorFull"
         ? "FULL"
@@ -119,7 +121,10 @@ export function PostDetailPreview({
           : "viewer";
   const [scenario, setScenario] = useState<Scenario>(initialScenario);
   const [version, setVersion] = useState(0);
-  const [comments] = useState(() => createCommentsPreview("normal"));
+  // Comments follow the post: a pickup chat for delivery, a ride chat for taxi.
+  const [taxiComments] = useState(() => createCommentsPreview("normal"));
+  const [deliveryComments] = useState(() => createCommentsPreview("delivery"));
+  const comments = scenario === "delivery" ? deliveryComments : taxiComments;
 
   const operations = useMemo<PostDetailOperations>(() => {
     const state: Record<string, unknown> = {

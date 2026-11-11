@@ -20,6 +20,7 @@ import { DevTools } from "@/features/demo/DevTools";
 const scenarios = {
   normal: "모집 중 · 비참여 사용자",
   conversation: "긴 대화 · 날짜·연속 작성·긴 글",
+  delivery: "배달 모집 · 주문·수령 대화",
   full: "정원 마감 · 댓글 작성 가능",
   closed: "직접 마감 · 댓글 작성 가능",
   empty: "빈 댓글",
@@ -106,23 +107,41 @@ export function createPreview(scenario: Scenario) {
               isMine: true,
             },
           ]
-        : [
-            {
-              id: "1",
-              authorName: "박지민",
-              content: "정문 택시 승차 장소에서 만나면 될까요?",
-              createdAt: new Date(now - 120_000).toISOString(),
-              isMine: false,
-            },
-            {
-              id: "2",
-              authorName: "김하늘",
-              content:
-                "네, 출발 5분 전에 도착할게요.\n도착하면 댓글 남겨 주세요.",
-              createdAt: new Date(now - 60_000).toISOString(),
-              isMine: true,
-            },
-          ];
+        : scenario === "delivery"
+          ? [
+              {
+                id: "1",
+                authorName: "박지민",
+                content: "참치김밥 한 줄이랑 라면 하나 부탁드려요.",
+                createdAt: new Date(now - 120_000).toISOString(),
+                isMine: false,
+              },
+              {
+                id: "2",
+                authorName: "김하늘",
+                content:
+                  "주문 마감 때 한 번에 주문할게요.\n도착하면 학생회관 앞에서 나눠 드릴게요.",
+                createdAt: new Date(now - 60_000).toISOString(),
+                isMine: true,
+              },
+            ]
+          : [
+              {
+                id: "1",
+                authorName: "박지민",
+                content: "정문 택시 승차 장소에서 만나면 될까요?",
+                createdAt: new Date(now - 120_000).toISOString(),
+                isMine: false,
+              },
+              {
+                id: "2",
+                authorName: "김하늘",
+                content:
+                  "네, 출발 5분 전에 도착할게요.\n도착하면 댓글 남겨 주세요.",
+                createdAt: new Date(now - 60_000).toISOString(),
+                isMine: true,
+              },
+            ];
   const pause = () =>
     new Promise<void>((resolve) => window.setTimeout(resolve, 400));
   const auth: AuthOperations = {

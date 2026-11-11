@@ -119,6 +119,15 @@
   font-weight: 700;
 }
 
+/* The time text fills the box: a shrink-to-fit flex item with
+   text-wrap: pretty can collapse to its narrowest width in some browsers
+   and break after every word. */
+.schedule > p {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-wrap: wrap;
+}
+
 .scheduleIcon {
   flex-shrink: 0;
   width: 1.25rem;
@@ -240,4 +249,29 @@
 
 .dialogActions .primary:hover:not(:disabled) {
   border-color: var(--danger);
+}
+
+/* The main action and, on phones, a one-line hint naming its two times */
+.action {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.actionHint {
+  display: none;
+}
+
+@media (max-width: 47.99rem) {
+  .actionHint {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    color: var(--participation-muted);
+    font-size: var(--type-micro);
+    line-height: 1;
+  }
+
+  .actionHint span {
+    font-variant-numeric: tabular-nums;
+  }
 }
