@@ -15,6 +15,7 @@ import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { DemoPrompt } from "@/features/demo/DemoPrompt";
+import { LoginScene } from "@/features/ui/art";
 
 export function LoginScreen({
   next = "/",
@@ -98,11 +99,19 @@ export function LoginScreen({
               <p className={styles.introDescription}>
                 같은 방향으로 갈 학생, 같은 음식점에서 주문할 학생을 찾아요.
               </p>
-              <div className={styles.example}>
-                <p className={styles.exampleLabel}>이용 예시 · 택시</p>
-                <p className={styles.exampleRoute}>삼육대 정문 → 석계역</p>
-                <p className={styles.muted}>18:30 출발 · 1자리 남음</p>
+              <div className={styles.examples}>
+                <div className={styles.example}>
+                  <p className={styles.exampleLabel}>이용 예시 · 택시</p>
+                  <p className={styles.exampleRoute}>삼육대 정문 → 석계역</p>
+                  <p className={styles.muted}>18:30 출발 · 1자리 남음</p>
+                </div>
+                <div className={styles.example}>
+                  <p className={styles.exampleLabel}>이용 예시 · 배달</p>
+                  <p className={styles.exampleRoute}>떡볶이 같이 주문</p>
+                  <p className={styles.muted}>19:10 주문 마감 · 2자리 남음</p>
+                </div>
               </div>
+              <LoginScene className={styles.scene} />
             </section>
           ) : undefined
         }
