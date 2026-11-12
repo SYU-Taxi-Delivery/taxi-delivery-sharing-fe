@@ -260,24 +260,69 @@ export const BEAN = {
 export const BEAN_PLACE = "translate(-12 -29.4)";
 
 export type BeanLook = "ivory" | "green";
+/** stand (arms down), wave (one arm up), cheer (both up), run, sit. */
+export type BeanPose = "stand" | "wave" | "cheer" | "run" | "sit";
+
+const BEAN_ARM_DOWN = "M21.4 16.2Q24.8 17.4 24 20.4Q23.4 21.6 21.2 20.8";
+const BEAN_ARM_UP = "M20.6 10.6Q23.4 6.8 25 8.2Q26 9.4 22.2 13.6";
+const BEAN_ARMS: Record<BeanPose, string[]> = {
+  stand: [BEAN_ARM_DOWN],
+  wave: [BEAN_ARM_UP],
+  cheer: [BEAN_ARM_UP, "M5 9.8Q2 5.8 0.4 7Q-0.6 8.2 3.2 12.8"],
+  run: [
+    "M21.4 14.6Q25.6 14.2 25.4 17.2Q25 18.6 21.6 18.2",
+    "M3.8 16.8Q0.2 17.8 0.6 20.2Q1.2 21.6 4 20.2",
+  ],
+  sit: [BEAN_ARM_DOWN],
+};
+const BEAN_LEGS: Record<BeanPose, [string, string]> = {
+  stand: [
+    "M6.4 26.6Q6 29.4 8.8 29.4Q11 29.4 10.6 27.2",
+    "M13 27.4Q12.8 29.4 15.4 29.4Q17.8 29.4 17.2 26.6",
+  ],
+  wave: [
+    "M6.4 26.6Q6 29.4 8.8 29.4Q11 29.4 10.6 27.2",
+    "M13 27.4Q12.8 29.4 15.4 29.4Q17.8 29.4 17.2 26.6",
+  ],
+  cheer: [
+    "M5.6 26Q4.4 28.8 6.8 29.4Q9 29.8 9.8 27.4",
+    "M14 27.4Q14.4 29.8 16.8 29.4Q19.2 28.8 18 26",
+  ],
+  run: [
+    "M6.8 25.6Q3.2 26.4 3.2 28.6Q3.6 30.2 6.4 29Q8.4 28 9.6 26.8",
+    "M14 27.4Q14.8 30 17.6 29.6Q20 29.2 19 26.4",
+  ],
+  sit: [
+    "M9 26.6Q9.6 29.8 12.6 29.6Q14 29.4 13.4 27.4",
+    "M14.6 26.8Q16.6 29.6 19.4 28.8Q20.8 28.2 19.6 26.2",
+  ],
+};
 
 /**
  * 두유콩 with its feet at the origin. `detail`: "face" for small scenes,
  * "full" adds arms, feet and a tiny green backpack (motion, large scenes).
+ * `pose` changes only arms and feet; `face` "happy" closes the eyes into
+ * arcs and opens the smile.
  */
 export function Bean({
   look = "ivory",
   detail = "full",
   wave = false,
+  pose,
+  face = "dot",
   bag = true,
 }: {
   look?: BeanLook;
   detail?: "face" | "full";
   wave?: boolean;
+  pose?: BeanPose;
+  face?: "dot" | "happy";
   bag?: boolean;
 }) {
   const fill = look === "green" ? GREEN_SOFT : IVORY;
   const full = detail === "full";
+  const stance = pose ?? (wave ? "wave" : "stand");
+  const [legL, legR] = BEAN_LEGS[stance];
   return (
     <g transform={BEAN_PLACE}>
       {full && bag && (
@@ -289,22 +334,14 @@ export function Bean({
       {full && (
         <>
           {/* arms are short nubs tucked behind the body */}
-          <Line
-            d={
-              wave
-                ? "M20.6 10.6Q23.4 6.8 25 8.2Q26 9.4 22.2 13.6"
-                : "M21.4 16.2Q24.8 17.4 24 20.4Q23.4 21.6 21.2 20.8"
-            }
-            fill={fill}
-          />
+          {BEAN_ARMS[stance].map((arm) => (
+            <Line key={arm} d={arm} fill={fill} />
+          ))}
           <g data-leg="l">
-            <Line d="M6.4 26.6Q6 29.4 8.8 29.4Q11 29.4 10.6 27.2" fill={INK} />
+            <Line d={legL} fill={INK} />
           </g>
           <g data-leg="r">
-            <Line
-              d="M13 27.4Q12.8 29.4 15.4 29.4Q17.8 29.4 17.2 26.6"
-              fill={INK}
-            />
+            <Line d={legR} fill={INK} />
           </g>
         </>
       )}
@@ -318,16 +355,32 @@ export function Bean({
         strokeLinecap="round"
         vectorEffect="non-scaling-stroke"
       />
-      <circle cx={13.6} cy={11.8} r={1.15} fill={INK} />
-      <circle cx={18.4} cy={11.8} r={1.15} fill={INK} />
-      <path
-        d="M14.6 14.8Q16 16.1 17.4 14.8"
-        fill="none"
-        stroke={INK}
-        strokeWidth={1.3}
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      {face === "happy" ? (
+        <>
+          <path
+            d="M12.5 12.4Q13.6 10.8 14.7 12.4M17.3 12.4Q18.4 10.8 19.5 12.4"
+            fill="none"
+            stroke={INK}
+            strokeWidth={1.3}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path d="M14.4 14.2Q16 17.2 17.6 14.2Z" fill={INK} />
+        </>
+      ) : (
+        <>
+          <circle cx={13.6} cy={11.8} r={1.15} fill={INK} />
+          <circle cx={18.4} cy={11.8} r={1.15} fill={INK} />
+          <path
+            d="M14.6 14.8Q16 16.1 17.4 14.8"
+            fill="none"
+            stroke={INK}
+            strokeWidth={1.3}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </>
+      )}
     </g>
   );
 }
@@ -394,6 +447,159 @@ export function CampusScene({ className }: { className?: string }) {
         <Line d={TAXI.frontWindow} fill={WINDOW} />
         <TaxiWheels />
       </g>
+    </svg>
+  );
+}
+
+/* ───────── Landing scene (login intro, wide screens) ───────── */
+
+const CLOUD =
+  "M0 8Q0 3.4 4.6 3.4Q6.6 0 10.8 0.6Q14.8 0 16.2 3.6Q20 3.6 20 7.2Q20 10 16.8 10H2.6Q0 10 0 8Z";
+const SPARK = "M0 -3.2L0.9 -0.9L3.2 0L0.9 0.9L0 3.2L-0.9 0.9L-3.2 0L-0.9 -0.9Z";
+const HEART =
+  "M0 1.3Q0 0 1.3 0Q2.1 0 2.5 0.9Q2.9 0 3.7 0Q5 0 5 1.3Q5 3 2.5 4.6Q0 3 0 1.3Z";
+
+/**
+ * The left panel of the login screen: an opened lunch bag with steam, a
+ * cheering 두유콩, one running for the taxi, the taxi with a friend in the
+ * window calling "같이 가요!", and a stop sign, all on one ground line.
+ * Moving parts sit in [data-motion] wrappers with no transform of their own,
+ * so CSS can animate them without fighting the placement transform.
+ */
+export function LoginScene({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 260 100"
+      data-art="login-scene"
+      preserveAspectRatio="xMidYMax meet"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* sky */}
+      <g transform="translate(18 10) scale(1.1)">
+        <Line d={CLOUD} fill="#fff" />
+      </g>
+      <g transform="translate(112 2) scale(0.8)">
+        <Line d={CLOUD} fill="#fff" />
+      </g>
+      <Line d="M4 92H256" fill="none" opacity={0.3} />
+
+      {/* opened lunch bag: lid and handle swing up on the back hinge */}
+      <g transform="translate(32 92) scale(1.1) translate(-20 -35)">
+        <ellipse cx={20} cy={35.6} rx={15} ry={1.4} fill={INK} opacity={0.1} />
+        <Line d={BAG.body} fill={IVORY} />
+        <g transform="rotate(-24 6 19.6)">
+          <path
+            d={BAG.handle}
+            fill="none"
+            stroke={INK}
+            strokeWidth={4.8}
+            strokeLinecap="round"
+          />
+          <path
+            d={BAG.handle}
+            fill="none"
+            stroke={GREEN}
+            strokeWidth={3.2}
+            strokeLinecap="round"
+          />
+          <Line d={BAG.lid} fill={GREEN} />
+        </g>
+        <g transform="translate(20 27.6) scale(0.42) translate(-12 -14.6)">
+          <path d={BEAN.body} fill={GREEN} />
+        </g>
+        <g data-motion="steam">
+          <Line d="M24 11Q22 8 24 5.4Q26 2.8 24 0" fill="none" />
+          <Line d="M29.6 11.6Q27.8 8.8 29.6 6.4" fill="none" />
+        </g>
+        <g transform="translate(31 -4)">
+          <Line d={HEART} fill={GREEN} />
+        </g>
+      </g>
+
+      {/* cheering 두유콩, hopping */}
+      <ellipse cx={74} cy={92.4} rx={9} ry={1.4} fill={INK} opacity={0.1} />
+      <g data-motion="hop">
+        <g transform="translate(74 92) scale(1.4)">
+          <Bean look="green" pose="cheer" face="happy" bag={false} />
+        </g>
+      </g>
+      <g transform="translate(58 50)">
+        <Line d={SPARK} fill={GREEN} />
+      </g>
+      <g transform="translate(94 56) scale(0.7)">
+        <Line d={SPARK} fill={IVORY} />
+      </g>
+
+      {/* running 두유콩, leaning toward the taxi */}
+      <g opacity={0.45}>
+        <Line d="M96 70H102M93 76H100M96 82H101" fill="none" />
+      </g>
+      <g data-motion="run">
+        <g transform="translate(118 92) rotate(8) scale(1.36)">
+          <Bean look="ivory" pose="run" />
+        </g>
+      </g>
+
+      {/* the taxi, a friend peeking from the rear window */}
+      <g data-motion="idle">
+        <g transform="translate(140 31) scale(1.8)">
+          <ellipse
+            cx={24}
+            cy={34.4}
+            rx={19}
+            ry={1.5}
+            fill={INK}
+            opacity={0.1}
+          />
+          <TaxiSign size="lg" />
+          <Line d={TAXI.body} fill={GREEN} />
+          <Line d={TAXI.doorWindow} fill={WINDOW} />
+          <Line
+            d="M16.4 16.2Q16.4 12.8 19.2 12.8Q22 12.8 22 16.2Z"
+            fill={IVORY}
+          />
+          <circle cx={18.4} cy={14.6} r={0.45} fill={INK} />
+          <circle cx={20.4} cy={14.6} r={0.45} fill={INK} />
+          <Line d={TAXI.frontWindow} fill={WINDOW} />
+          <Line d="M24 16.6V27.6" fill="none" opacity={0.55} />
+          <Line d="M19.4 19.6H21.6" fill="none" />
+          <TaxiLights />
+          <TaxiWheels />
+        </g>
+      </g>
+      <Line
+        d="M154 14H198Q204 14 204 20V24Q204 30 198 30H178L172 36L170 30H154Q148 30 148 24V20Q148 14 154 14Z"
+        fill="#fff"
+      />
+      <text
+        x={176}
+        y={25}
+        textAnchor="middle"
+        fontSize={8}
+        fontWeight={700}
+        fill={INK}
+      >
+        같이 가요!
+      </text>
+
+      {/* stop sign */}
+      <Line d="M244 92V62M239 92H249" fill="none" />
+      <circle
+        cx={244}
+        cy={53}
+        r={9.4}
+        fill="#fff"
+        stroke={INK}
+        strokeWidth={1.5}
+        vectorEffect="non-scaling-stroke"
+      />
+      <Line
+        d="M244 59.4Q239.6 55.2 239.6 52.4Q239.6 48 244 48Q248.4 48 248.4 52.4Q248.4 55.2 244 59.4Z"
+        fill={GREEN}
+      />
+      <circle cx={244} cy={52.4} r={1.4} fill="#fff" />
     </svg>
   );
 }
