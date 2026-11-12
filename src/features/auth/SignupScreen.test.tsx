@@ -56,7 +56,8 @@ async function verifyEmail(email = "a@syuin.ac.kr") {
 
 async function fillAll() {
   await verifyEmail();
-  type("닉네임", " 삼육 학생 ");
+  type("이름", " 삼육 학생 ");
+  type("학번", " 0012345678 ");
   type("비밀번호", " long password 15 ");
   type("비밀번호 확인", " long password 15 ");
   fireEvent.click(screen.getByLabelText("[필수] 이용약관 동의"));
@@ -87,7 +88,7 @@ describe("SignupScreen", () => {
       screen.getByRole("link", { name: "로그인으로 돌아가기" }),
     ).toHaveAttribute("href", "/login");
   });
-  it("AC-NFR-PRV-01-01: 학교 이메일·닉네임·비밀번호와 필수 동의만 받는다", async () => {
+  it("AC-NFR-PRV-01-01: 학번·이름·학교 이메일·비밀번호와 필수 동의를 받는다", async () => {
     await setup();
     expect(
       screen.getByRole("heading", { level: 1, name: "회원가입" }),
@@ -99,11 +100,28 @@ describe("SignupScreen", () => {
       "type",
       "email",
     );
+    expect(screen.getByLabelText("학교 이메일")).toHaveAttribute(
+      "name",
+      "schoolEmail",
+    );
+    expect(screen.getByLabelText("이름")).toHaveAttribute("name", "name");
+    expect(screen.getByLabelText("이름")).toBeRequired();
+    expect(screen.getByLabelText("이름")).toHaveAttribute(
+      "autocomplete",
+      "name",
+    );
+    expect(screen.getByLabelText("학번")).toHaveAttribute("name", "studentNo");
+    expect(screen.getByLabelText("학번")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("학번")).toBeRequired();
+    expect(screen.getByLabelText("비밀번호")).toHaveAttribute(
+      "name",
+      "password",
+    );
     expect(screen.getByLabelText("비밀번호")).toHaveAttribute(
       "autocomplete",
       "new-password",
     );
-    expect(screen.queryByLabelText(/학번|전화/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/닉네임|전화|계좌/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "회원가입" })).toBeDisabled();
     expect(
       screen.getByRole("link", { name: "로그인으로 돌아가기" }),
@@ -224,7 +242,7 @@ describe("SignupScreen", () => {
     );
   });
 
-  it("AC-AUTH-001-10: 인증 완료 후 이메일을 고정하고 닉네임으로 이동한다", async () => {
+  it("AC-AUTH-001-10: 인증 완료 후 이메일을 고정하고 이름으로 이동한다", async () => {
     const operations = await setup();
     await verifyEmail();
     expect(operations.verifyCode).toHaveBeenCalledWith(
@@ -236,7 +254,7 @@ describe("SignupScreen", () => {
     );
     expect(screen.getByLabelText("학교 이메일")).toHaveAttribute("readonly");
     expect(screen.queryByLabelText("인증번호")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("닉네임")).toHaveFocus();
+    expect(screen.getByLabelText("이름")).toHaveFocus();
   });
 
   it("인증 후 이메일을 바꾸면 인증을 다시 시작한다", async () => {
@@ -267,7 +285,8 @@ describe("SignupScreen", () => {
     await verifyEmail();
     fireEvent.click(screen.getByLabelText("[필수] 이용약관 동의"));
     fireEvent.click(screen.getByLabelText("[필수] 개인정보 수집·이용 동의"));
-    expect(screen.getByLabelText("닉네임")).toHaveValue("");
+    expect(screen.getByLabelText("이름")).toHaveValue("");
+    expect(screen.getByLabelText("학번")).toHaveValue("");
     expect(screen.getByLabelText("비밀번호")).toHaveValue("");
     expect(
       screen.getByRole("button", { name: "회원가입" }),
@@ -276,12 +295,37 @@ describe("SignupScreen", () => {
     );
     await click("회원가입");
     expect(operations.register).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("닉네임")).toHaveFocus();
-    expect(screen.getByLabelText("닉네임")).toHaveAttribute(
+    expect(screen.getByLabelText("이름")).toHaveFocus();
+    expect(screen.getByLabelText("이름")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
   });
+
+  it.each([
+    ["이름", "   ", "이름을 입력해 주세요.", "삼육 학생"],
+    ["이름", "가".repeat(51), "이름은 50자 이하로 입력해 주세요.", "가"],
+    ["학번", "   ", "학번을 입력해 주세요.", "0012345678"],
+    ["학번", "0".repeat(21), "학번은 20자 이하로 입력해 주세요.", "0012345678"],
+  ])(
+    "잘못된 %s 입력은 요청 없이 안내하고 수정하면 오류를 지운다",
+    async (label, invalid, message, valid) => {
+      const operations = await setup();
+      await fillAll();
+      type(label, invalid);
+      await click("회원가입");
+      const field = screen.getByLabelText(label);
+      expect(operations.register).not.toHaveBeenCalled();
+      expect(field).toHaveFocus();
+      expect(field).toHaveAttribute("aria-invalid", "true");
+      expect(field).toHaveAccessibleDescription(new RegExp(message));
+      type(label, valid);
+      expect(field).not.toHaveAttribute("aria-invalid");
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      await click("회원가입");
+      expect(operations.register).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("AC-AUTH-001-21: 짧은 비밀번호는 요청 없이 해당 칸에서 안내하고 수정하면 지운다", async () => {
     const operations = await setup();
@@ -308,18 +352,20 @@ describe("SignupScreen", () => {
     expect(screen.getByText("비밀번호가 일치하지 않아요.")).toBeVisible();
   });
 
-  it("AC-AUTH-004-05: 정리한 닉네임과 원래 비밀번호만 보내고 role을 보내지 않는다", async () => {
+  it("AC-AUTH-004-05: 학번 앞자리 0과 원래 비밀번호를 보존하고 확정된 네 필드만 보낸다", async () => {
     const operations = await setup();
     await fillAll();
     await click("회원가입");
     expect(operations.register).toHaveBeenCalledWith({
-      email: "a@syuin.ac.kr",
-      displayName: "삼육 학생",
+      studentNo: "0012345678",
+      name: "삼육 학생",
+      schoolEmail: "a@syuin.ac.kr",
       password: " long password 15 ",
     });
     expect(
-      Object.keys(vi.mocked(operations.register).mock.calls[0][0]),
-    ).not.toContain("role");
+      Object.keys(vi.mocked(operations.register).mock.calls[0][0]).sort(),
+    ).toEqual(["name", "password", "schoolEmail", "studentNo"]);
+    expect(screen.getByRole("status")).toHaveTextContent("삼육 학생님");
     expect(
       screen.getByRole("heading", { name: "가입이 완료됐어요" }),
     ).toBeVisible();

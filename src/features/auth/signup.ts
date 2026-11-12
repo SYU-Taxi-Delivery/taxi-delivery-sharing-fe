@@ -1,12 +1,13 @@
 import { SCHOOL_EMAIL_DOMAIN } from "./auth";
 
 export type SignupRequest = {
-  email: string;
-  displayName: string;
+  studentNo: string;
+  name: string;
+  schoolEmail: string;
   password: string;
 };
 
-// UI callbacks; the URI, DTO and how verification is tied to sign-up belong to #18.
+// UI callbacks; API transport and email verification are connected separately in #18.
 export type SignupOperations = {
   /** Sends a 6-digit code. Same answer whether or not the email is registered. */
   requestCode: (email: string) => Promise<void>;
@@ -18,22 +19,31 @@ export type SignupOperations = {
 
 export const PASSWORD_MIN = 15;
 export const PASSWORD_MAX = 128;
-export const DISPLAY_NAME_MIN = 2;
-export const DISPLAY_NAME_MAX = 20;
+export const NAME_MAX = 50;
+export const STUDENT_NO_MAX = 20;
 export const RESEND_INTERVAL_MS = 60_000;
 
 const codePoints = (value: string) => Array.from(value).length;
 
-/** Nicknames keep inner spaces; only the ends are trimmed after NFC. */
-export function normalizeDisplayName(value: string): string {
+/** Names keep inner spaces; only the ends are trimmed after NFC. */
+export function normalizeName(value: string): string {
   return value.normalize("NFC").trim();
 }
 
-export function displayNameError(value: string): string | null {
-  const length = codePoints(normalizeDisplayName(value));
-  if (length === 0) return "닉네임을 입력해 주세요.";
-  if (length < DISPLAY_NAME_MIN || length > DISPLAY_NAME_MAX) {
-    return `닉네임은 ${DISPLAY_NAME_MIN}~${DISPLAY_NAME_MAX}자로 입력해 주세요.`;
+export function nameError(value: string): string | null {
+  const length = normalizeName(value).length;
+  if (length === 0) return "이름을 입력해 주세요.";
+  if (length > NAME_MAX) {
+    return `이름은 ${NAME_MAX}자 이하로 입력해 주세요.`;
+  }
+  return null;
+}
+
+export function studentNoError(value: string): string | null {
+  const length = value.trim().length;
+  if (length === 0) return "학번을 입력해 주세요.";
+  if (length > STUDENT_NO_MAX) {
+    return `학번은 ${STUDENT_NO_MAX}자 이하로 입력해 주세요.`;
   }
   return null;
 }

@@ -9,10 +9,9 @@ import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "./AuthProvider";
 import {
   codeError,
-  displayNameError,
-  DISPLAY_NAME_MAX,
-  DISPLAY_NAME_MIN,
-  normalizeDisplayName,
+  nameError,
+  NAME_MAX,
+  normalizeName,
   PASSWORD_MAX,
   PASSWORD_MIN,
   passwordConfirmError,
@@ -20,6 +19,8 @@ import {
   registerErrorMessage,
   requestCodeErrorMessage,
   RESEND_INTERVAL_MS,
+  STUDENT_NO_MAX,
+  studentNoError,
   verifyCodeErrorMessage,
   type SignupOperations,
 } from "./signup";
@@ -27,7 +28,7 @@ import styles from "./auth.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 
 type EmailStep = "idle" | "sending" | "sent" | "verifying" | "verified";
-type Field = "email" | "code" | "displayName" | "password" | "confirm";
+type Field = "email" | "code" | "name" | "studentNo" | "password" | "confirm";
 type Message = { tone: "info" | "error"; text: string } | null;
 
 const consents = [
@@ -50,7 +51,8 @@ export function SignupScreen({
   const [sentAt, setSentAt] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const [emailMessage, setEmailMessage] = useState<Message>(null);
-  const [displayName, setDisplayName] = useState("");
+  const [name, setName] = useState("");
+  const [studentNo, setStudentNo] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agreed, setAgreed] = useState<Record<Consent, boolean>>({
@@ -65,11 +67,12 @@ export function SignupScreen({
   const locked = useRef(false);
   const emailInput = useRef<HTMLInputElement>(null);
   const codeInput = useRef<HTMLInputElement>(null);
-  const displayNameInput = useRef<HTMLInputElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const studentNoInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const confirmInput = useRef<HTMLInputElement>(null);
   // Focus moves once the next step's field has rendered.
-  const pendingFocus = useRef<"code" | "displayName" | null>(null);
+  const pendingFocus = useRef<"code" | "name" | null>(null);
   const baseId = useId();
   const id = (name: string) => `${baseId}-${name}`;
 
@@ -81,7 +84,7 @@ export function SignupScreen({
     const target = pendingFocus.current;
     if (!target) return;
     pendingFocus.current = null;
-    (target === "code" ? codeInput : displayNameInput).current?.focus();
+    (target === "code" ? codeInput : nameInput).current?.focus();
   }, [step]);
 
   const cooling = sentAt !== null && now - sentAt < RESEND_INTERVAL_MS;
@@ -111,7 +114,8 @@ export function SignupScreen({
       const target = {
         email: emailInput,
         code: codeInput,
-        displayName: displayNameInput,
+        name: nameInput,
+        studentNo: studentNoInput,
         password: passwordInput,
         confirm: confirmInput,
       }[first];
@@ -189,7 +193,7 @@ export function SignupScreen({
     setEmailMessage(null);
     try {
       await operations.verifyCode(email.trim(), code);
-      pendingFocus.current = "displayName";
+      pendingFocus.current = "name";
       setStep("verified");
       setCode("");
       setEmailMessage({ tone: "info", text: "학교 이메일 인증이 완료됐어요." });
@@ -206,24 +210,26 @@ export function SignupScreen({
     event.preventDefault();
     if (locked.current || !ready) return;
     const next = {
-      displayName: displayNameError(displayName) ?? undefined,
+      name: nameError(name) ?? undefined,
+      studentNo: studentNoError(studentNo) ?? undefined,
       password: passwordError(password) ?? undefined,
       confirm: passwordConfirmError(password, confirm) ?? undefined,
     };
     setSubmitError(null);
-    if (showErrors(next, ["displayName", "password", "confirm"])) return;
+    if (showErrors(next, ["name", "studentNo", "password", "confirm"])) return;
     locked.current = true;
     setSubmitting(true);
-    const name = normalizeDisplayName(displayName);
+    const normalizedName = normalizeName(name);
     try {
       await operations.register({
-        email: email.trim(),
-        displayName: name,
+        studentNo: studentNo.trim(),
+        name: normalizedName,
+        schoolEmail: email.trim(),
         password,
       });
       setPassword("");
       setConfirm("");
-      setDone(name);
+      setDone(normalizedName);
     } catch (failure) {
       const status =
         typeof failure === "object" && failure !== null && "status" in failure
@@ -332,7 +338,7 @@ export function SignupScreen({
                 id={id("email")}
                 className={styles.input}
                 type="email"
-                name="email"
+                name="schoolEmail"
                 inputMode="email"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -460,31 +466,55 @@ export function SignupScreen({
               계정 정보
             </h2>
             <div className={styles.field}>
-              <label htmlFor={id("displayName")} className={styles.label}>
-                닉네임
+              <label htmlFor={id("name")} className={styles.label}>
+                이름
               </label>
               <input
-                ref={displayNameInput}
-                id={id("displayName")}
+                ref={nameInput}
+                id={id("name")}
                 className={styles.input}
-                name="nickname"
-                autoComplete="nickname"
-                placeholder="닉네임 입력"
-                value={displayName}
-                aria-invalid={errors.displayName ? true : undefined}
-                aria-describedby={describe(
-                  "displayName",
-                  id("displayName-help"),
-                )}
+                name="name"
+                autoComplete="name"
+                required
+                placeholder="이름 입력"
+                value={name}
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby={describe("name", id("name-help"))}
                 onChange={(event) => {
-                  setDisplayName(event.target.value);
-                  clearError("displayName");
+                  setName(event.target.value);
+                  clearError("name");
                 }}
               />
-              {fieldError("displayName")}
-              <p id={id("displayName-help")} className={styles.help}>
-                커뮤니티에서 사용할 이름 · {DISPLAY_NAME_MIN}~{DISPLAY_NAME_MAX}
-                자
+              {fieldError("name")}
+              <p id={id("name-help")} className={styles.help}>
+                학교에 등록된 이름 · 최대 {NAME_MAX}자
+              </p>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor={id("studentNo")} className={styles.label}>
+                학번
+              </label>
+              <input
+                ref={studentNoInput}
+                id={id("studentNo")}
+                className={styles.input}
+                type="text"
+                name="studentNo"
+                autoComplete="off"
+                required
+                placeholder="학번 입력"
+                value={studentNo}
+                aria-invalid={errors.studentNo ? true : undefined}
+                aria-describedby={describe("studentNo", id("studentNo-help"))}
+                onChange={(event) => {
+                  setStudentNo(event.target.value);
+                  clearError("studentNo");
+                }}
+              />
+              {fieldError("studentNo")}
+              <p id={id("studentNo-help")} className={styles.help}>
+                학교에서 발급받은 학번 · 최대 {STUDENT_NO_MAX}자
               </p>
             </div>
 
@@ -497,7 +527,7 @@ export function SignupScreen({
                 id={id("password")}
                 className={styles.input}
                 type="password"
-                name="new-password"
+                name="password"
                 autoComplete="new-password"
                 value={password}
                 aria-invalid={errors.password ? true : undefined}
