@@ -129,12 +129,12 @@
   transition: color var(--motion-fast) var(--curve-standard);
 }
 
-/* Small indicator: a soft capsule behind the icon only */
+/* Small indicator: a soft rounded rectangle behind the icon only */
 .navIcon {
   width: 3.25rem;
   height: 1.75rem;
   padding: 0.125rem 0;
-  border-radius: var(--round-pill);
+  border-radius: 0.625rem;
   transition: background-color var(--motion-standard) var(--curve-standard);
 }
 
@@ -333,7 +333,7 @@
   font-weight: 700;
 }
 
-/* Sliding thumb: a soft round pill on the track (flat, no lip) */
+/* Sliding thumb: a rounded rectangle inset in the track (flat, no lip) */
 .tabThumb {
   position: absolute;
   top: 0.25rem;
@@ -341,7 +341,7 @@
   left: 0.25rem;
   width: calc((100% - 0.5rem) / 3);
   border: 1.5px solid var(--input-border);
-  border-radius: 999px;
+  border-radius: 0.625rem;
   background: var(--canvas);
   transition: transform 260ms var(--bounce);
 }
@@ -366,7 +366,7 @@
   margin-top: var(--space-3);
   padding: 0 var(--space-4) 0 var(--space-3);
   border: 1.5px solid var(--input-border);
-  border-radius: var(--round-pill);
+  border-radius: var(--round-control);
   background: var(--canvas);
   color: var(--posts-text);
   font-size: var(--type-label);
@@ -911,7 +911,7 @@
   min-width: var(--touch-target);
   min-height: var(--touch-target);
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--round-control);
   color: var(--posts-muted);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1006,8 +1006,6 @@
     z-index: 29;
     min-height: 3.25rem;
     margin: 0;
-    /* Out of its box and on the bottom strip: back to pill buttons */
-    --button-round: 999px;
   }
 
   /* Typing: back into the content flow, above the keyboard */

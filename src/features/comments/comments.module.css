@@ -186,7 +186,7 @@
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 0.625rem;
   color: var(--posts-muted);
   transition: background-color var(--motion-fast) var(--curve-standard);
 }
@@ -258,7 +258,7 @@
   gap: var(--space-2);
   padding: 0.3125rem 0.3125rem 0.3125rem var(--space-4);
   border: 1.5px solid var(--input-border);
-  border-radius: 1.5rem;
+  border-radius: 1.125rem;
   background: var(--canvas);
   transition:
     border-color var(--motion-fast) var(--curve-standard),
@@ -312,7 +312,7 @@
   min-width: 3.75rem;
   height: 2.5rem;
   padding: 0 var(--space-4);
-  border-radius: var(--round-pill);
+  border-radius: 0.8125rem;
   background: var(--primary);
   color: var(--text);
   font-size: var(--type-label);
