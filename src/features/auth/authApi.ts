@@ -109,9 +109,8 @@ export const authOperations: AuthOperations = {
 };
 
 /**
- * Not connected: the backend sign-up takes @syu.ac.kr addresses and a student
- * number, which differs from the screen (@syuin.ac.kr, nickname). See
- * docs/backend-integration.md.
+ * Fields match the backend, but signup remains disconnected until text success
+ * responses and verification/password policies are adapted. See docs/backend-integration.md.
  */
 export const signupOperations: SignupOperations = {
   requestCode: notConnected,

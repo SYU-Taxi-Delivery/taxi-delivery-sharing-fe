@@ -4,12 +4,13 @@ import { ApiError } from "@/lib/api";
 import { AuthNotConnectedError } from "./authApi";
 import {
   codeError,
-  displayNameError,
-  normalizeDisplayName,
+  nameError,
+  normalizeName,
   passwordConfirmError,
   passwordError,
   registerErrorMessage,
   requestCodeErrorMessage,
+  studentNoError,
   verifyCodeErrorMessage,
 } from "./signup";
 
@@ -46,25 +47,42 @@ describe("passwordError", () => {
   });
 });
 
-describe("displayName", () => {
+describe("name", () => {
   it("NFC 후 양끝 공백만 정리하고 내부 공백은 유지한다", () => {
-    expect(normalizeDisplayName("  삼육 학생 ")).toBe("삼육 학생");
-    expect(normalizeDisplayName("é")).toBe("é");
+    expect(normalizeName("  삼육 학생 ")).toBe("삼육 학생");
+    expect(normalizeName("é")).toBe("é");
   });
 
   it.each([
-    ["", "닉네임을 입력해 주세요."],
-    ["   ", "닉네임을 입력해 주세요."],
-    ["가", "2~20자"],
-    ["가".repeat(21), "2~20자"],
+    ["", "이름을 입력해 주세요."],
+    ["   ", "이름을 입력해 주세요."],
+    ["가".repeat(51), "50자 이하"],
+    ["😀".repeat(25) + "가", "50자 이하"],
   ])("%j를 거절한다", (value, message) => {
-    expect(displayNameError(value)).toContain(message);
+    expect(nameError(value)).toContain(message);
   });
 
-  it.each(["가나", " 가나 ", "가".repeat(20), "😀😀"])(
+  it.each(["가", " 가나 ", "가".repeat(50), "😀".repeat(25)])(
     "%j를 허용한다",
     (value) => {
-      expect(displayNameError(value)).toBeNull();
+      expect(nameError(value)).toBeNull();
+    },
+  );
+});
+
+describe("studentNoError", () => {
+  it.each([
+    ["", "학번을 입력해 주세요."],
+    ["   ", "학번을 입력해 주세요."],
+    ["0".repeat(21), "20자 이하"],
+  ])("%j를 거절한다", (value, message) => {
+    expect(studentNoError(value)).toContain(message);
+  });
+
+  it.each(["0", " 0012345678 ", "0".repeat(20), "A012345678"])(
+    "%j를 문자열 학번으로 허용한다",
+    (value) => {
+      expect(studentNoError(value)).toBeNull();
     },
   );
 });
