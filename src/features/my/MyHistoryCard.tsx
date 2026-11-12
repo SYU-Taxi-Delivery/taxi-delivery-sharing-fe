@@ -63,12 +63,13 @@ export function MyHistoryCard({
             {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
             {item.type === "TAXI" ? "택시" : "배달"}
           </span>
-          {/* Two different states, each named: mine, and the post's */}
-          <span className={styles.statePair}>
-            <span className={styles.stateKey}>
-              {author ? "내 글" : "내 참여"}
-            </span>
+          {/* One compact tag, two states: mine (filled half) and the
+              post's (outlined half). Screen readers hear each name. */}
+          <span className={styles.stateTag}>
             <span className={styles.relation}>
+              <span className={styles.srOnly}>
+                {author ? "내 글, " : "내 참여, "}
+              </span>
               {author
                 ? "작성한 글"
                 : item.relation === "JOINED"
@@ -77,10 +78,10 @@ export function MyHistoryCard({
                     : "참여 이력"
                   : "참여 취소됨"}
             </span>
-          </span>
-          <span className={styles.statePair}>
-            <span className={styles.stateKey}>모집</span>
-            <span className={styles.status}>{label}</span>
+            <span className={styles.status}>
+              <span className={styles.srOnly}>모집, </span>
+              {label}
+            </span>
           </span>
         </div>
         {item.authorName && (

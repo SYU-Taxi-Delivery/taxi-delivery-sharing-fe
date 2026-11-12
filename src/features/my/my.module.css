@@ -129,7 +129,8 @@
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* Small labels (not pills): type with its sticker, relation, status tag */
@@ -417,14 +418,27 @@ p.meta {
 }
 
 /* "내 참여 [참여 중]" and "모집 [모집 중]": the word says whose state it is */
-.statePair {
+/* Relation + post status in one bordered tag, split by a thin line */
+.stateTag {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1.5px solid var(--posts-primary-text);
+  border-radius: 0.5rem;
 }
 
-.stateKey {
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
+.stateTag .relation,
+.stateTag .status {
+  min-height: calc(1.625rem - 3px);
+  border: 0;
+  border-radius: 0;
+}
+
+.stateTag .status {
+  border-left: 1.5px solid var(--posts-primary-text);
+}
+
+.card[data-muted="true"] .stateTag,
+.card[data-muted="true"] .stateTag .status {
+  border-color: var(--input-border);
 }
