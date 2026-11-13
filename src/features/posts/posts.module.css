@@ -1000,6 +1000,12 @@
   min-width: 0;
 }
 
+/* A short loading page and a long loaded one get the same width where
+   scrollbars take space, so cards never slide sideways between tabs. */
+:global(html):has(.searchLayout) {
+  scrollbar-gutter: stable;
+}
+
 .searchMain {
   min-width: 0;
   container: board / inline-size;
