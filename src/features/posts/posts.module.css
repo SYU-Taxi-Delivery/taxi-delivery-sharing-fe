@@ -754,27 +754,29 @@
   }
 }
 
+/* Loading keeps the loaded layout: the status sits where the result count
+   goes and the placeholders are cards in the same list grid, with the
+   card's padding, corners and line heights. */
 .loading {
   display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
 }
 
 .loadingText {
+  margin-top: var(--space-3);
   color: var(--posts-muted);
   font-size: var(--type-label);
 }
 
-.skeletonList {
-  display: grid;
-}
-
 .skeleton {
   display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: start;
   gap: var(--space-3);
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--posts-border);
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
 }
 
 .skeletonSticker,
@@ -793,30 +795,44 @@
 }
 
 .skeletonSticker {
-  height: 3.5rem;
-  border-radius: 1rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
 }
 
 .skeletonLines {
   display: grid;
-  gap: var(--space-2);
+  align-content: start;
 }
 
+/* Each bar is one text line tall (1lh at that line's size), painted only
+   in its middle so the bars read as lines with space between. */
 .skeletonLines > span {
-  height: 0.75rem;
+  height: 1lh;
+  padding-block: 0.3lh;
+  background-clip: content-box;
 }
 
-.skeletonLines > span:nth-child(1) {
+.skeletonLines > [data-line="title"] {
+  width: 70%;
+  font-size: var(--type-subhead);
+  line-height: 1.4;
+}
+
+.skeletonLines > [data-line="pickup"] {
   width: 30%;
+  font-size: var(--type-label);
 }
 
-.skeletonLines > span:nth-child(2) {
-  width: 75%;
-  height: 1.125rem;
+.skeletonLines > [data-line="facts"] {
+  width: 50%;
+  margin-top: var(--space-1);
+  font-size: var(--type-body);
 }
 
-.skeletonLines > span:nth-child(3) {
-  width: 55%;
+.skeletonLines > [data-line="meta"] {
+  width: 40%;
+  margin-top: var(--space-1);
+  font-size: var(--type-micro);
 }
 
 @keyframes shimmer {
@@ -1001,8 +1017,13 @@
     gap: var(--space-4);
   }
 
-  .list .card {
+  .list .card,
+  .list .skeleton {
     padding: 1.125rem var(--space-5);
+  }
+
+  .list .skeleton {
+    grid-row: span 3;
   }
 
   .list > li,

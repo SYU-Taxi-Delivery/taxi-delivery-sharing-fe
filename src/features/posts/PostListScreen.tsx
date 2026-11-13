@@ -294,21 +294,36 @@ function PostList({
 
           {loading ? (
             <div className={styles.loading}>
+              {/* Where the result count goes, so nothing moves on load. */}
               <p role="status" className={styles.loadingText}>
                 모집글을 불러오고 있어요.
               </p>
-              <ul className={styles.skeletonList} aria-hidden="true">
-                {[0, 1, 2].map((index) => (
-                  <li key={index} className={styles.skeleton}>
-                    <span className={styles.skeletonSticker} />
-                    <span className={styles.skeletonLines}>
-                      <span />
-                      <span />
-                      <span />
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {/* Card-shaped placeholders in the board's own grid. */}
+              <div className={styles.board} aria-hidden="true">
+                <ul className={styles.list}>
+                  {[0, 1, 2, 3, 4, 5].map((index) => {
+                    const delivery =
+                      query.type === "DELIVERY" ||
+                      (query.type === "ALL" && index % 2 === 1);
+                    return (
+                      <li key={index}>
+                        <span
+                          className={styles.skeleton}
+                          data-type={delivery ? "delivery" : "taxi"}
+                        >
+                          <span className={styles.skeletonSticker} />
+                          <span className={styles.skeletonLines}>
+                            <span data-line="title" />
+                            {delivery && <span data-line="pickup" />}
+                            <span data-line="facts" />
+                            <span data-line="meta" />
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </div>
           ) : error ? (
             <div className={styles.state}>
