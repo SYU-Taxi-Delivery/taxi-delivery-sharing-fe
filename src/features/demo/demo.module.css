@@ -56,7 +56,7 @@
 }
 
 .devPanel {
-  max-width: 64rem;
+  max-width: var(--app-width);
   margin: 0 auto;
   padding: 0 var(--page-gutter);
 }

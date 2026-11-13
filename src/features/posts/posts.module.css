@@ -63,7 +63,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  max-width: 64rem;
+  max-width: var(--app-width);
   height: 3.5rem;
   margin: 0 auto;
   padding: 0 var(--page-gutter);
@@ -207,7 +207,7 @@
 
 @media (min-width: 64rem) {
   .mainWide {
-    max-width: 64rem;
+    max-width: var(--app-width);
   }
 }
 
@@ -551,9 +551,10 @@
   padding-top: var(--space-4);
 }
 
+/* Tablets: the board already uses the header's full width. */
 @media (min-width: 48rem) {
   .mainWide:has(> .listHeading) {
-    max-width: 64rem;
+    max-width: var(--app-width);
   }
 }
 
@@ -619,7 +620,7 @@
 
 .cardBody {
   display: grid;
-  gap: 0.125rem;
+  align-content: start;
   min-width: 0;
 }
 
@@ -644,8 +645,9 @@
   font-weight: 600;
 }
 
-/* Line 2: when + seats left, side by side */
+/* Line 2: when + seats left, side by side, close under the title */
 .facts {
+  margin-top: var(--space-1);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -677,6 +679,7 @@
 
 /* Line 3: type · status · author, small and grey */
 .cardMeta {
+  margin-top: var(--space-1);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -978,38 +981,32 @@
 }
 
 /* Two cards per row once the board itself is wide enough (≥45rem, about
-   720px), so a 1024px window with the sidebar keeps one column. Cards in a
-   row share the row height and the title block keeps two lines, so the
-   time · seats lines sit on the same baseline. */
+   720px), so a 1024px window with the sidebar keeps one column. Each card
+   takes three rows of the list grid (title, time · seats, meta) through
+   subgrid, so the cards in one row line up their lines: a two-line title
+   pushes its neighbour's time line down only in that row, and one-line rows
+   stay tight. */
 @container board (min-width: 45rem) {
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: var(--space-5);
   }
 
-  .list > li {
+  .list > li,
+  .list .card,
+  .list .cardBody {
     display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
   }
 
-  .list .card {
-    grid-template-rows: auto;
-    align-content: start;
+  .list .sticker {
+    grid-row: 1 / span 3;
   }
 
   .list .cardBody {
-    grid-template-rows: calc(2 * 1.4 * var(--type-subhead)) auto auto;
-    align-content: start;
-  }
-
-  .list .cardTitle {
-    align-self: start;
-  }
-}
-
-/* Wide desktop: room for the sidebar and a two-column board. */
-@media (min-width: 80rem) {
-  .mainWide:has(> .listHeading) {
-    max-width: 76rem;
+    grid-column: 2;
   }
 }
 
@@ -1185,7 +1182,7 @@
 
 .panelBody {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-6); /* between groups: search, time, sort */
   padding: var(--space-3) var(--space-5) var(--space-5);
 }
 
@@ -1206,6 +1203,7 @@
 }
 
 .panelHint {
+  margin-top: calc(var(--space-1) * -1); /* reads as the input's own note */
   color: var(--posts-muted);
   font-size: var(--type-micro);
   font-weight: 500;
@@ -1252,7 +1250,19 @@
 .choiceRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  /* Rows: the chips' own 4px margins make an 8px gap between faces */
+  gap: 0 var(--space-2);
+}
+
+/* Time ranges: four chips as an even 2 × 2 grid, never one left alone. */
+.choiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-2);
+}
+
+.choiceGrid > .choice {
+  justify-content: center;
 }
 
 /* Suggestion and option chips: compact face, 44px tall hit area. */
@@ -1318,6 +1328,11 @@
   color: var(--posts-muted);
   font-size: var(--type-label);
   font-weight: 600;
+}
+
+/* Radio options: 44px rows stacked with no extra space between them */
+.sortOptions {
+  gap: 0;
 }
 
 .checkRow {

@@ -177,7 +177,7 @@ export function SearchPanel({
           <legend className={styles.panelLegend}>
             {taxi ? "출발 시간" : delivery ? "주문 마감 시간" : "시간대"}
           </legend>
-          <div className={styles.choiceRow}>
+          <div className={styles.choiceGrid}>
             {TIME_CHOICES.map((value) => (
               <button
                 key={value}
@@ -233,7 +233,7 @@ export function SearchPanel({
           )}
         </fieldset>
 
-        <fieldset className={styles.panelSection}>
+        <fieldset className={`${styles.panelSection} ${styles.sortOptions}`}>
           <legend className={styles.panelLegend}>정렬</legend>
           {SORTS.map((value) => (
             <label key={value} className={styles.checkRow}>
