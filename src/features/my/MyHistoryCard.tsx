@@ -11,9 +11,10 @@ import {
   type PastReason,
 } from "./myHistory";
 import styles from "./my.module.css";
+import { GUIDE_ID } from "@/features/posts/detail/postDetail";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, ClockIcon, TaxiArt } from "@/features/ui/art";
-import { dayLabel, formatDate, seoulDayDiff } from "@/lib/dateFormat";
+import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const time = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -29,11 +30,9 @@ const titleText = (item: LiveHistoryItem) =>
     ? `${item.departure} → ${item.destination}`
     : item.restaurantName;
 
-/** "23:49까지", or "내일 23:49까지" when the cutoff is not today. */
+/** "오늘 23:49까지", "내일 00:04까지": the day word is always there. */
 function untilText(deadline: number, nowMs: number) {
-  const day =
-    seoulDayDiff(deadline, nowMs) === 0 ? "" : `${dayLabel(deadline, nowMs)} `;
-  return `${day}${time.format(deadline)}까지`;
+  return `${dayTime(deadline, nowMs)}까지`;
 }
 
 /** Upcoming card: time, place, cancel cutoff, then actions. */
@@ -52,6 +51,7 @@ export function MyHistoryCard({
 }) {
   const path = useAppPath();
   const titleId = useId();
+  const cutoffId = useId();
   const availability = getParticipationAvailability(
     toMySnapshot(item, serverTime),
     nowMs,
@@ -64,6 +64,7 @@ export function MyHistoryCard({
   const referenceMs = Date.parse(item.referenceTime);
   const verb = item.type === "TAXI" ? "출발" : "주문 마감";
   const cancellable = nowMs < availability.deadline;
+  const detailHref = path(`/posts/${encodeURIComponent(item.id)}`);
   const link =
     item.communicationUrl &&
     (author || item.relation === "JOINED") &&
@@ -104,33 +105,35 @@ export function MyHistoryCard({
 
       <div className={styles.place}>
         <h3 id={titleId} className={styles.cardTitle}>
-          {item.type === "TAXI" ? (
-            <>
-              <span className={styles.stop}>
-                {item.departure}
-                <span className={styles.srOnly}>에서</span>
-              </span>
-              <span className={styles.stop} data-end="true">
-                {item.destination}
-                <span className={styles.srOnly}>까지</span>
-              </span>
-            </>
-          ) : (
-            item.restaurantName
-          )}
+          <Link href={detailHref} className={styles.titleLink}>
+            {item.type === "TAXI" ? (
+              <>
+                <span className={styles.stop}>
+                  {item.departure}
+                  <span className={styles.srOnly}>에서</span>
+                </span>
+                <span className={styles.stop} data-end="true">
+                  {item.destination}
+                  <span className={styles.srOnly}>까지</span>
+                </span>
+              </>
+            ) : (
+              item.restaurantName
+            )}
+          </Link>
         </h3>
         {item.type === "DELIVERY" && (
           <p className={styles.muted}>수령 장소 · {item.pickupLocation}</p>
         )}
       </div>
 
-      <p className={styles.cutoff} data-closed={!cancellable}>
-        {cancellable
-          ? `${author ? "참여자는 " : ""}${untilText(availability.deadline, nowMs)} 취소할 수 있어요`
-          : author
-            ? "참여자 취소 마감됨"
-            : "취소 마감됨"}
-      </p>
+      {author && (
+        <p className={styles.cutoff} data-closed={!cancellable}>
+          {cancellable
+            ? `참여자는 ${untilText(availability.deadline, nowMs)} 취소할 수 있어요`
+            : "참여자 취소 마감됨"}
+        </p>
+      )}
 
       <p className={styles.meta}>
         <span>
@@ -144,33 +147,53 @@ export function MyHistoryCard({
         {item.authorName && !author && <span>작성자 {item.authorName}</span>}
       </p>
 
+      {/* One full-width primary action, then 참여 취소 on its own row. */}
       <div className={styles.actions}>
-        <Link
-          href={path(`/posts/${encodeURIComponent(item.id)}`)}
-          className={styles.button}
-        >
-          {author ? "모집 관리" : "상세 보기"}
-        </Link>
-        {link && (
+        {author ? (
+          <Link href={detailHref} className={styles.primaryAction}>
+            모집 관리
+          </Link>
+        ) : link ? (
           <a
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.button}
+            className={styles.primaryAction}
           >
-            소통 링크 <span className={styles.srOnly}>(새 창)</span>
+            오픈채팅 <span className={styles.srOnly}>(새 창)</span>
           </a>
-        )}
-        {availability.action === "cancel" && (
-          <button
-            type="button"
-            className={styles.button}
-            data-tone="danger"
-            disabled={busy}
-            onClick={(event) => onCancel(event.currentTarget)}
+        ) : (
+          <Link
+            href={`${detailHref}#${GUIDE_ID}`}
+            className={styles.primaryAction}
           >
-            참여 취소
-          </button>
+            모임 장소 보기
+          </Link>
+        )}
+        {!author && (
+          <div className={styles.cancelRow}>
+            {availability.action === "cancel" && (
+              <button
+                type="button"
+                className={styles.button}
+                data-tone="danger"
+                disabled={busy}
+                aria-describedby={cutoffId}
+                onClick={(event) => onCancel(event.currentTarget)}
+              >
+                참여 취소
+              </button>
+            )}
+            <span
+              id={cutoffId}
+              className={styles.cutoff}
+              data-closed={!cancellable}
+            >
+              {cancellable
+                ? `${untilText(availability.deadline, nowMs)} 가능`
+                : "취소 마감됨"}
+            </span>
+          </div>
         )}
       </div>
     </article>

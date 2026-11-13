@@ -155,7 +155,7 @@ describe("my history screen", () => {
     expect(first).toHaveTextContent("모집 중");
     expect(first).toHaveTextContent("참여 중");
     expect(first).toHaveTextContent("오늘 18:00 출발");
-    expect(first).toHaveTextContent("17:50까지 취소할 수 있어요");
+    expect(first).toHaveTextContent("오늘 17:50까지 가능");
     expect(first).toHaveTextContent("3 / 4명 · 작성자 포함");
     expect(second).toHaveTextContent("모집 마감");
     expect(past()[0]).toHaveTextContent("일정 종료");
@@ -186,7 +186,7 @@ describe("my history screen", () => {
     expect(first).toHaveTextContent("오늘 18:00 주문 마감");
     expect(first).toHaveTextContent("수령 장소 · 학생회관");
     expect(second).toHaveTextContent("내일 18:00 출발");
-    expect(second).toHaveTextContent("내일 17:50까지 취소할 수 있어요");
+    expect(second).toHaveTextContent("내일 17:50까지 가능");
     expect(group(/^지난 이력/)).toBeNull();
   });
 
@@ -205,6 +205,37 @@ describe("my history screen", () => {
     );
     expect(upcoming()[0]).toHaveTextContent("참여자 취소 마감됨");
     expect(upcoming()[0]).toHaveTextContent("작성한 글");
+  });
+
+  it("참여 카드: 제목은 상세 링크, 주 버튼은 오픈채팅, 참여 취소는 마감 시각과 함께 아래 줄에 둔다", async () => {
+    await setup(async () =>
+      history([post({ communicationUrl: "https://open.kakao.com/o/abc" })]),
+    );
+    const card = within(upcoming()[0]);
+    expect(card.getByRole("link", { name: /삼육대학교 정문/ })).toHaveAttribute(
+      "href",
+      "/posts/p1",
+    );
+    const chat = card.getByRole("link", { name: /오픈채팅/ });
+    expect(chat).toHaveAttribute("href", "https://open.kakao.com/o/abc");
+    expect(chat).toHaveAttribute("target", "_blank");
+    const cancel = card.getByRole("button", { name: "참여 취소" });
+    expect(cancel).toHaveAccessibleDescription("오늘 17:50까지 가능");
+    // Primary first on its own row, then the cancel row.
+    expect(chat.compareDocumentPosition(cancel)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(cancel.parentElement).not.toBe(chat.parentElement);
+  });
+
+  it("참여 카드에 소통 링크가 없으면 상세의 참여자 안내로 가는 모임 장소 보기를 둔다", async () => {
+    await setup(async () => history([post()]));
+    const card = within(upcoming()[0]);
+    expect(card.getByRole("link", { name: "모임 장소 보기" })).toHaveAttribute(
+      "href",
+      "/posts/p1#participant-guide",
+    );
+    expect(card.queryByRole("link", { name: /오픈채팅/ })).toBeNull();
   });
 
   it("출발 시각이 지나면 카드가 지난 이력으로 옮겨진다", async () => {

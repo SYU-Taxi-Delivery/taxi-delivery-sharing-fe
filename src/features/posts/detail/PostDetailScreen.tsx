@@ -23,6 +23,7 @@ import {
   canReport,
   detailStatus,
   effectiveStatus,
+  GUIDE_ID,
   PostDetailError,
   remainingLabel,
   toPostDetail,
@@ -45,9 +46,6 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
   hourCycle: "h23",
 });
-
-/** The 참여자 안내 section; 내 활동 links here for 모임 장소 보기. */
-export const GUIDE_ID = "participant-guide";
 
 export function PostDetailScreen({
   postId,
