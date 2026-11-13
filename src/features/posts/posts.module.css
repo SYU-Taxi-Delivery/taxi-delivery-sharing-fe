@@ -1010,7 +1010,7 @@
 /* Desktop: conditions on the left, the board on the right. */
 .searchLayout[data-sidebar="true"] {
   display: grid;
-  grid-template-columns: 17.5rem minmax(0, 1fr);
+  grid-template-columns: 18.5rem minmax(0, 1fr);
   align-items: start;
   gap: var(--space-6);
   margin-top: var(--space-4);
@@ -1023,7 +1023,9 @@
 .sidebar {
   position: sticky;
   top: calc(3.5rem + var(--space-4));
-  max-height: calc(100svh - 3.5rem - var(--space-8));
+  /* Ends at the window's bottom where the page starts (header + list
+     heading, 10.5rem), so 적용 shows without scrolling the page first. */
+  max-height: calc(100svh - 10.5rem);
   overflow-y: auto;
   border: 1.5px solid var(--posts-border);
   border-radius: var(--round-control);
@@ -1155,7 +1157,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 0 var(--space-5) var(--space-2);
+  padding: 0 var(--space-4) var(--space-2);
 }
 
 .sheetClose {
@@ -1168,7 +1170,7 @@
 }
 
 .sidebar .panelTitle {
-  padding: var(--space-4) var(--space-5) 0;
+  padding: var(--space-3) var(--space-4) 0;
 }
 
 .panelTitle {
@@ -1179,8 +1181,8 @@
 
 .panelBody {
   display: grid;
-  gap: var(--space-6); /* between groups: search, time, sort */
-  padding: var(--space-3) var(--space-5) var(--space-5);
+  gap: var(--space-4); /* between groups: places, search, time, sort */
+  padding: var(--space-2) var(--space-4) var(--space-3);
 }
 
 .panelSection {
@@ -1248,7 +1250,7 @@
   display: flex;
   flex-wrap: wrap;
   /* Rows: the chips' own 4px margins make an 8px gap between faces */
-  gap: 0 var(--space-2);
+  gap: 0 0.375rem;
 }
 
 /* Time ranges: four chips as an even 2 × 2 grid, never one left alone. */
@@ -1269,7 +1271,7 @@
   align-items: center;
   min-height: 2.25rem;
   margin: 0.25rem 0;
-  padding: 0 var(--space-3);
+  padding: 0 0.625rem;
   border: 1.5px solid var(--input-border);
   border-radius: var(--round-pill);
   background: var(--canvas);
@@ -1296,22 +1298,84 @@
   font-weight: 700;
 }
 
-.swap {
-  display: inline-flex;
-  justify-self: start;
+/* 출발지 and 도착지 stacked tight, their labels inline, with the swap
+   button beside both rows. */
+.route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--touch-target);
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2);
+  row-gap: var(--space-2);
+  align-items: center;
+}
+
+.routeField {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--touch-target);
-  padding: 0 var(--space-2);
-  border-radius: var(--round-chip);
-  color: var(--posts-primary-text);
+}
+
+.routeLabel {
+  color: var(--posts-muted);
   font-size: var(--type-label);
+  font-weight: 700;
+}
+
+/* The input the suggestion chips fill: primary label and border. */
+.routeField[data-target="true"] .routeLabel {
+  color: var(--posts-primary-text);
+}
+
+.routeField[data-target="true"] .searchInput {
+  border-color: var(--posts-primary-text);
+  box-shadow: inset 3px 0 0 var(--posts-primary-text);
+}
+
+.swap {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-pill);
+  background: var(--canvas);
+  color: var(--posts-primary-text);
+  font-size: 1.125rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .swap:hover {
   background: var(--primary-tint);
+}
+
+/* One suggestion list for whichever input is the target. */
+.suggestions {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.suggestLabel {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}
+
+.suggestLabel strong {
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+/* The hours a preset chip searches, right under the chips. */
+.rangeText {
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .rangeInputs {
@@ -1327,9 +1391,16 @@
   font-weight: 600;
 }
 
-/* Radio options: 44px rows stacked with no extra space between them */
+/* Radio options: side by side, each a 44px row; wraps when narrow. */
 .sortOptions {
-  gap: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+}
+
+.sortOptions .checkRow {
+  gap: var(--space-2);
+  font-size: var(--type-label);
 }
 
 .checkRow {
@@ -1353,8 +1424,8 @@
   bottom: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5)
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4)
     calc(var(--space-3) + env(safe-area-inset-bottom));
   border-top: 1px solid var(--posts-border);
   background: var(--canvas);
@@ -1362,4 +1433,21 @@
 
 .applyButton {
   composes: base primary from "../ui/button.module.css";
+}
+
+/* Draft differs from the list: say so above the buttons. */
+.draftNote {
+  grid-column: 1 / -1;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}
+
+.draftNote strong {
+  margin-right: var(--space-1);
+  padding: 0 0.375rem;
+  border-radius: var(--round-pill);
+  background: var(--soft);
+  color: var(--posts-warn);
+  font-weight: 700;
 }

@@ -135,7 +135,7 @@ function PostList({
   const filterButton = useRef<HTMLButtonElement>(null);
   const sheetTitleId = useId();
   const sidebarTitleId = useId();
-  const chips = searchChips(query);
+  const chips = searchChips(query, now);
   const searching = hasSearch(query);
   const active = tabs.find((tab) => tab.type === query.type) ?? tabs[0];
   // Changing a filter always starts from the first page (AC-UI-PAGE-01).
@@ -270,11 +270,11 @@ function PostList({
                   key={chip.key}
                   type="button"
                   className={styles.activeChip}
+                  aria-label={`${chip.label} 조건 지우기`}
                   onClick={() => go(chip.clear)}
                 >
                   {chip.label}
                   <span aria-hidden="true">×</span>
-                  <span className={styles.srOnly}> 조건 지우기</span>
                 </button>
               ))}
             </div>
