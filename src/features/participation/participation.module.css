@@ -11,7 +11,7 @@
   color: var(--participation-text);
   font-size: var(--type-body);
   line-height: 1.6;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .panel {
@@ -171,6 +171,7 @@
 
 .success {
   background: var(--primary-soft);
+  text-align: center;
   color: var(--participation-focus);
   animation: feedback-in var(--motion-standard)
     cubic-bezier(0.34, 1.36, 0.64, 1);

@@ -668,6 +668,7 @@ p.stop::before {
 
 .success {
   background: var(--primary-soft);
+  text-align: center;
   color: var(--posts-primary-text);
   animation: doo-pop var(--motion-standard) cubic-bezier(0.34, 1.36, 0.64, 1);
 }
@@ -797,6 +798,18 @@ p.stop::before {
 .dialogBody {
   margin-top: var(--space-2);
   color: var(--posts-muted);
+}
+
+/* A simple confirm (ConfirmDialog): short title and message centred; the
+   title is padded by the close button's width so it sits truly centred. */
+.dialog[data-simple="true"] .dialogHeading > h2 {
+  flex: 1;
+  padding-left: 2.75rem;
+  text-align: center;
+}
+
+.dialog[data-simple="true"] .dialogBody {
+  text-align: center;
 }
 
 /* Footer actions: secondary + primary side by side (Aceternity modal footer) */

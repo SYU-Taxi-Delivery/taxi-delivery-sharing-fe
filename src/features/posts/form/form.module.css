@@ -295,6 +295,12 @@ legend.labelGroup {
   margin-top: var(--space-2);
 }
 
+/* 작성 중인 내용을 버릴까요?: a simple confirm, title and message centred */
+.dialog > h2,
+.dialog > .dialogText {
+  text-align: center;
+}
+
 /* White boxes with a clear border; green ring on focus */
 .input,
 .textarea {
@@ -1055,6 +1061,7 @@ input.input:read-only,
 .stepperText {
   display: grid;
   justify-items: center;
+  text-align: center;
 }
 
 .stepperMeta {
