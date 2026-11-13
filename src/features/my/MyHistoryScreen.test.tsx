@@ -66,7 +66,17 @@ async function setup(
     switchTab: (next: MyTab) => view.rerender(viewFor(next)),
   };
 }
-const rows = () => within(screen.getByRole("list")).getAllByRole("listitem");
+const group = (name: RegExp) => screen.queryByRole("region", { name });
+const upcoming = () => {
+  const region = group(/^다가오는 일정/);
+  return region ? within(region).queryAllByRole("listitem") : [];
+};
+const past = () => {
+  const region = group(/^지난 이력/);
+  return region ? within(region).queryAllByRole("listitem") : [];
+};
+/** Upcoming rows first, then history rows, in screen order. */
+const rows = () => [...upcoming(), ...past()];
 async function openCancel(index = 0) {
   const button = within(rows()[index]).getByRole("button", {
     name: "참여 취소",
@@ -117,7 +127,7 @@ describe("my history screen", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("AC-MY-002-05/004-01: 모집 상태와 내 참여 상태·유형·서울 시각·작성자 포함 정원을 구분한다", async () => {
+  it("AC-MY-002-05/004-01: 다가오는 일정과 지난 이력을 나누고 각 상태를 구분한다", async () => {
     await setup(async () =>
       history([
         post(),
@@ -133,22 +143,78 @@ describe("my history screen", () => {
         }),
       ]),
     );
-    expect(rows()).toHaveLength(5);
-    expect(rows()[0]).toHaveTextContent("모집 중");
-    expect(rows()[0]).toHaveTextContent("참여 중");
-    // Time first, then "date · 출발", as on the post list
-    expect(rows()[0]).toHaveTextContent(/18:00\d{1,2}\/\d{1,2} \(.\) · 출발/);
-    expect(rows()[0]).toHaveTextContent("3 / 4명 · 작성자 포함");
-    expect(rows()[0]).toHaveTextContent("17:50 · 출발 10분 전");
-    expect(rows()[1]).toHaveTextContent("모집 마감");
-    expect(rows()[2]).toHaveTextContent("모집 완료");
-    expect(rows()[2]).toHaveTextContent("참여 이력");
-    expect(rows()[3]).toHaveTextContent("모집 취소");
-    expect(rows()[3]).toHaveTextContent("참여 취소됨");
-    expect(rows()[4]).toHaveTextContent("정문 김밥");
-    expect(rows()[4]).toHaveTextContent("수령 장소 · 학생회관");
-    expect(rows()[4]).toHaveTextContent("주문 마감");
+    expect(
+      screen.getByRole("heading", { name: "다가오는 일정 2건" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "지난 이력 3건" }),
+    ).toBeVisible();
+    expect(upcoming()).toHaveLength(2);
+    expect(past()).toHaveLength(3);
+    const [first, second] = upcoming();
+    expect(first).toHaveTextContent("모집 중");
+    expect(first).toHaveTextContent("참여 중");
+    expect(first).toHaveTextContent("오늘 18:00 출발");
+    expect(first).toHaveTextContent("17:50까지 취소할 수 있어요");
+    expect(first).toHaveTextContent("3 / 4명 · 작성자 포함");
+    expect(second).toHaveTextContent("모집 마감");
+    expect(past()[0]).toHaveTextContent("일정 종료");
+    expect(past()[1]).toHaveTextContent("참여 취소함");
+    expect(past()[2]).toHaveTextContent("배달정문 김밥");
+    expect(past()[2]).toHaveTextContent(/10\/20 \(화\) 18:00/);
+    expect(past()[2]).toHaveTextContent("참여 취소함");
     expect(screen.queryByRole("button", { name: /참여하기/ })).toBeNull();
+  });
+
+  it("다가오는 일정은 가까운 순으로 보여 주고 배달은 주문 마감·수령 장소를 쓴다", async () => {
+    await setup(async () =>
+      history([
+        post({
+          id: "later",
+          referenceTime: new Date(T + 86_400_000).toISOString(),
+        }),
+        post({
+          id: "soon",
+          type: "DELIVERY",
+          restaurantName: "정문 김밥",
+          pickupLocation: "학생회관",
+        }),
+      ]),
+    );
+    const [first, second] = upcoming();
+    expect(first).toHaveTextContent("정문 김밥");
+    expect(first).toHaveTextContent("오늘 18:00 주문 마감");
+    expect(first).toHaveTextContent("수령 장소 · 학생회관");
+    expect(second).toHaveTextContent("내일 18:00 출발");
+    expect(second).toHaveTextContent("내일 17:50까지 취소할 수 있어요");
+    expect(group(/^지난 이력/)).toBeNull();
+  });
+
+  it("작성한 글은 참여자 취소 기한을, 기한이 지나면 마감을 알린다", async () => {
+    await setup(
+      async () =>
+        history(
+          [
+            post({ relation: "AUTHOR" }),
+            post({ id: "p2", relation: "AUTHOR" }),
+          ],
+          T - 300_000,
+        ),
+      undefined,
+      "created",
+    );
+    expect(upcoming()[0]).toHaveTextContent("참여자 취소 마감됨");
+    expect(upcoming()[0]).toHaveTextContent("작성한 글");
+  });
+
+  it("출발 시각이 지나면 카드가 지난 이력으로 옮겨진다", async () => {
+    vi.useFakeTimers();
+    await setup(async () => history([post()], T - 1_000));
+    expect(upcoming()[0]).toHaveTextContent("취소 마감됨");
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(upcoming()).toHaveLength(0);
+    expect(screen.getByText("다가오는 일정이 없어요.")).toBeVisible();
+    expect(past()[0]).toHaveTextContent("일정 종료");
   });
 
   it("AC-MY-001-03/003-01, AC-UI-MY-COUNT-01: 두 이력 링크와 작성자 관리 진입을 제공한다", async () => {
@@ -183,6 +249,12 @@ describe("my history screen", () => {
         tab === "created" ? "아직 작성한 모집" : "아직 참여한 모집",
       );
       expect(screen.queryByRole("alert")).toBeNull();
+      // Next action: browse (participated) or write (created, also the top CTA)
+      expect(
+        screen.getAllByRole("link", {
+          name: tab === "created" ? "모집글 쓰기" : "모집 둘러보기",
+        }),
+      ).toHaveLength(tab === "created" ? 2 : 1);
       expect(
         screen.getByRole("link", { name: "모집글 목록으로" }),
       ).toHaveAttribute("href", "/posts");
@@ -204,6 +276,7 @@ describe("my history screen", () => {
       ]),
     );
     expect(rows()[0]).toHaveTextContent("관리자에 의해 삭제된 모집");
+    expect(rows()[0]).toHaveTextContent("삭제됨");
     expect(within(rows()[0]).queryByRole("link")).toBeNull();
     expect(within(rows()[0]).queryByRole("button")).toBeNull();
     expect(rows()[0]).not.toHaveTextContent(/비밀|18:00|박지민|명/);
@@ -240,7 +313,7 @@ describe("my history screen", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("불러오지 못했어요");
     expect(screen.queryByText("private server message")).toBeNull();
     await act(async () =>
-      fireEvent.click(screen.getByRole("button", { name: "다시 불러오기" })),
+      fireEvent.click(screen.getByRole("button", { name: "다시 시도" })),
     );
     expect(rows()).toHaveLength(1);
     expect(operations.list).toHaveBeenLastCalledWith("participated");
@@ -294,17 +367,20 @@ describe("my history screen", () => {
       fireEvent.click(confirm);
     });
     expect(operations.leave).toHaveBeenCalledTimes(1);
-    expect(rows()).toHaveLength(2);
-    expect(rows()[0]).toHaveTextContent("참여 취소됨");
-    expect(rows()[0]).toHaveTextContent("2 / 4명");
-    expect(rows()[0]).toHaveFocus();
+    expect(upcoming()).toHaveLength(1);
+    expect(past()).toHaveLength(1);
+    // The cancelled card moved to 지난 이력; focus follows it there.
+    expect(past()[0]).toHaveTextContent("참여 취소함");
+    expect(past()[0]).toHaveFocus();
     expect(
-      within(rows()[1]).getByRole("button", { name: "참여 취소" }),
+      within(upcoming()[0]).getByRole("button", { name: "참여 취소" }),
     ).toBeEnabled();
-    await openCancel(1);
+    await openCancel(0);
     await confirmCancel();
     expect(operations.leave).toHaveBeenCalledTimes(2);
-    expect(rows()[1]).toHaveTextContent("참여 취소됨");
+    expect(upcoming()).toHaveLength(0);
+    expect(past()).toHaveLength(2);
+    expect(past()[1]).toHaveTextContent("참여 취소함");
   });
 
   it("JOIN-006: 성공 후 조회 실패는 취소 관계를 유지하고 변경 재전송 없이 조회만 재시도한다", async () => {
@@ -321,18 +397,18 @@ describe("my history screen", () => {
     const { operations } = await setup(list);
     await openCancel();
     await confirmCancel();
-    expect(rows()[0]).toHaveTextContent("참여 취소됨");
+    expect(past()[0]).toHaveTextContent("참여 취소함");
     expect(screen.getByRole("alert")).toHaveTextContent("내 참여는 취소됐지만");
     expect(
-      within(rows()[1]).getByRole("button", { name: "참여 취소" }),
+      within(upcoming()[0]).getByRole("button", { name: "참여 취소" }),
     ).toBeDisabled();
     await act(async () =>
       fireEvent.click(screen.getByRole("button", { name: "다시 조회하기" })),
     );
     expect(operations.leave).toHaveBeenCalledTimes(1);
-    expect(rows()[0]).toHaveTextContent("2 / 4명");
+    expect(past()[0]).toHaveTextContent("참여 취소함");
     expect(
-      within(rows()[1]).getByRole("button", { name: "참여 취소" }),
+      within(upcoming()[0]).getByRole("button", { name: "참여 취소" }),
     ).toBeEnabled();
   });
 
@@ -346,7 +422,7 @@ describe("my history screen", () => {
     });
     await openCancel();
     await confirmCancel();
-    expect(rows()[0]).toHaveTextContent("참여 취소됨");
+    expect(past()[0]).toHaveTextContent("참여 취소함");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "최신 참여 상태를 확인했어요",
     );
@@ -419,7 +495,7 @@ describe("my history screen", () => {
     other.focus();
     await act(async () => finish());
     expect(other).toHaveFocus();
-    expect(rows()[0]).toHaveTextContent("참여 취소됨");
+    expect(past()[0]).toHaveTextContent("참여 취소함");
   });
 
   it("JOIN-006: 조회 후 오래 기다려 확인창을 열어도 정확히 T-10부터 취소하지 않는다", async () => {
@@ -447,7 +523,14 @@ describe("my history screen", () => {
     async (status) => {
       await setup(async () => history([post({ status })]));
       expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
-      expect(screen.getByRole("link", { name: "상세 보기" })).toBeVisible();
+      expect(upcoming()).toHaveLength(0);
+      const link = within(past()[0]).getByRole("link", {
+        name: /삼육대학교 정문 → 태릉입구역 7번 출구/,
+      });
+      expect(link).toHaveAttribute("href", "/posts/p1");
+      expect(link).toHaveTextContent(
+        status === "FINISHED" ? "일정 종료" : "모집 취소",
+      );
     },
   );
 
@@ -489,7 +572,7 @@ describe("my history screen", () => {
     );
 
     expect(list).toHaveBeenCalledTimes(3);
-    expect(rows()[0]).toHaveTextContent("참여 취소됨");
+    expect(past()[0]).toHaveTextContent("참여 취소함");
   });
 
   it("화면 복귀 재조회가 403이면 기존 이력을 지우고 접근 제한을 표시한다", async () => {

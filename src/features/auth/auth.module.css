@@ -679,3 +679,123 @@
     transform: translateY(-2px);
   }
 }
+
+/* Sign-up only: step indicator, address box, name note, step buttons */
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepperItem {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 3px solid var(--auth-border);
+  color: var(--auth-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+  text-align: center;
+}
+
+.stepperItem[data-state="done"],
+.stepperItem[data-state="current"] {
+  border-top-color: var(--auth-primary);
+}
+
+.stepperItem[data-state="current"] {
+  color: var(--auth-text);
+  font-weight: 700;
+}
+
+.stepperNo {
+  display: grid;
+  width: 1.5rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepperItem[data-state="current"] .stepperNo {
+  background: var(--auth-primary);
+  color: var(--text);
+}
+
+.stepperItem[data-state="done"] .stepperNo {
+  background: var(--primary-soft);
+  color: var(--auth-primary-text);
+}
+
+.stepperLabel {
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.stepTitle:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 2px;
+  border-radius: var(--round-chip);
+}
+
+.addressBox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  background: var(--soft);
+}
+
+.addressText {
+  display: grid;
+  min-width: 0;
+}
+
+.addressLabel {
+  color: var(--auth-muted);
+  font-size: var(--type-micro);
+}
+
+.addressText strong {
+  overflow-wrap: anywhere;
+}
+
+.smallButton {
+  composes: base secondary sm from "../ui/button.module.css";
+  flex-shrink: 0;
+}
+
+.visibility {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
+  font-size: var(--type-label);
+}
+
+.visibilityTitle {
+  color: var(--auth-primary-text);
+  font-weight: 700;
+}
+
+.allAgree {
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--auth-input-border);
+  border-radius: var(--round-control);
+  font-weight: 700;
+}
+
+.stepActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-2);
+}

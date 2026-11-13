@@ -2,13 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
 import { AppShell } from "@/features/posts/AppShell";
 import common from "@/features/posts/posts.module.css";
-import type { MyHistoryOperations, MyTab } from "./myHistory";
+import {
+  pastReason,
+  splitMyHistory,
+  type MyHistory,
+  type MyHistoryOperations,
+  type MyTab,
+} from "./myHistory";
 import { myHistoryOperations } from "./myHistoryApi";
-import { MyHistoryCard, type LiveHistoryItem } from "./MyHistoryCard";
+import {
+  MyHistoryCard,
+  MyHistoryRow,
+  type LiveHistoryItem,
+} from "./MyHistoryCard";
 import { ParticipationCancellation } from "./ParticipationCancellation";
 import { useMyHistory } from "./useMyHistory";
 import styles from "./my.module.css";
@@ -130,10 +140,7 @@ function History({
           restoreFocus={selected.restoreFocus}
         />
       )}
-      <section
-        aria-label={`${tab === "created" ? "작성한" : "참여한"} 모집 이력`}
-        aria-busy={loading}
-      >
+      <div aria-busy={loading}>
         {loading ? (
           <p role="status" className={common.state}>
             이력을 불러오고 있어요.
@@ -153,42 +160,37 @@ function History({
               <>
                 <p role="alert">{error}</p>
                 <button type="button" className={styles.button} onClick={retry}>
-                  다시 불러오기
+                  다시 시도
                 </button>
               </>
             )}
           </div>
         ) : history && history.content.length > 0 ? (
-          <ul className={styles.list}>
-            {history.content.map((item) => (
-              <li key={item.id} tabIndex={-1}>
-                {item.status === "REMOVED" ? (
-                  <p className={styles.tombstone}>관리자에 의해 삭제된 모집</p>
-                ) : (
-                  <MyHistoryCard
-                    item={item}
-                    serverTime={history.serverTime}
-                    nowMs={nowMs}
-                    busy={blocked}
-                    onCancel={(trigger) => {
-                      const row = trigger.closest("li");
-                      setSelection((previous) => ({
-                        item,
-                        operations,
-                        serverTime: new Date(serverNow()).toISOString(),
-                        attempt: (previous?.attempt ?? 0) + 1,
-                        restoreFocus: () => {
-                          if (trigger.isConnected && !trigger.disabled)
-                            trigger.focus();
-                          else row?.focus();
-                        },
-                      }));
-                    }}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
+          <Groups
+            tab={tab}
+            history={history}
+            nowMs={nowMs}
+            busy={blocked}
+            onCancel={(item, trigger) => {
+              setSelection((previous) => ({
+                item,
+                operations,
+                serverTime: new Date(serverNow()).toISOString(),
+                attempt: (previous?.attempt ?? 0) + 1,
+                // A cancelled card moves to 지난 이력, so the row is looked
+                // up again by id when focus comes back.
+                restoreFocus: () => {
+                  if (trigger.isConnected && !trigger.disabled) trigger.focus();
+                  else
+                    document
+                      .querySelector<HTMLElement>(
+                        `[data-history-id="${CSS.escape(item.id)}"]`,
+                      )
+                      ?.focus();
+                },
+              }));
+            }}
+          />
         ) : (
           <div className={common.state}>
             <SpotArt />
@@ -201,11 +203,11 @@ function History({
               href={path(tab === "created" ? "/posts/new" : "/posts")}
               className={styles.button}
             >
-              {tab === "created" ? "모집글 쓰기" : "모집글 둘러보기"}
+              {tab === "created" ? "모집글 쓰기" : "모집 둘러보기"}
             </Link>
           </div>
         )}
-      </section>
+      </div>
       <aside className={styles.help}>
         <span className={styles.helpIcon} aria-hidden="true">
           <InfoIcon />
@@ -218,6 +220,84 @@ function History({
           <Link href={path("/posts")}>모집글 목록으로</Link>
         </div>
       </aside>
+    </>
+  );
+}
+
+function Groups({
+  tab,
+  history,
+  nowMs,
+  busy,
+  onCancel,
+}: {
+  tab: MyTab;
+  history: MyHistory;
+  nowMs: number;
+  busy: boolean;
+  onCancel: (item: LiveHistoryItem, trigger: HTMLButtonElement) => void;
+}) {
+  const path = useAppPath();
+  const upcomingId = useId();
+  const pastId = useId();
+  const { upcoming, past } = splitMyHistory(history.content, nowMs);
+  return (
+    <>
+      <section className={styles.group} aria-labelledby={upcomingId}>
+        <h2 id={upcomingId} className={styles.groupTitle}>
+          다가오는 일정{" "}
+          <span className={styles.count}>
+            {upcoming.length}
+            <span className={styles.srOnly}>건</span>
+          </span>
+        </h2>
+        {upcoming.length > 0 ? (
+          <ul className={styles.list}>
+            {upcoming.map((item) => (
+              <li key={item.id} tabIndex={-1} data-history-id={item.id}>
+                <MyHistoryCard
+                  item={item}
+                  serverTime={history.serverTime}
+                  nowMs={nowMs}
+                  busy={busy}
+                  onCancel={(trigger) => onCancel(item, trigger)}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className={styles.groupEmpty}>
+            <p>다가오는 일정이 없어요.</p>
+            <Link
+              href={path(tab === "created" ? "/posts/new" : "/posts")}
+              className={styles.button}
+            >
+              {tab === "created" ? "모집글 쓰기" : "모집 둘러보기"}
+            </Link>
+          </div>
+        )}
+      </section>
+      {past.length > 0 && (
+        <section className={styles.group} aria-labelledby={pastId}>
+          <h2 id={pastId} className={styles.groupTitle}>
+            지난 이력{" "}
+            <span className={styles.count}>
+              {past.length}
+              <span className={styles.srOnly}>건</span>
+            </span>
+          </h2>
+          <ul className={styles.rows}>
+            {past.map((item) => (
+              <li key={item.id} tabIndex={-1} data-history-id={item.id}>
+                <MyHistoryRow
+                  item={item}
+                  reason={pastReason(item, nowMs) ?? "FINISHED"}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

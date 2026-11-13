@@ -114,3 +114,51 @@ export function toMySnapshot(
     participationDeadline: item.participationDeadline,
   };
 }
+
+export type LiveMyHistoryItem = Exclude<MyHistoryItem, { status: "REMOVED" }>;
+
+/** Why a record sits in 지난 이력, in the order the chip should win. */
+export type PastReason = "REMOVED" | "LEFT" | "CANCELLED" | "FINISHED";
+
+export const pastReasonLabel: Record<PastReason, string> = {
+  REMOVED: "삭제됨",
+  LEFT: "참여 취소함",
+  CANCELLED: "모집 취소",
+  FINISHED: "일정 종료",
+};
+
+/**
+ * Upcoming = still running (OPEN/FULL/CLOSED before its reference time) and
+ * still mine (author or joined). Everything else is history.
+ */
+export function pastReason(
+  item: MyHistoryItem,
+  nowMs: number,
+): PastReason | null {
+  if (item.status === "REMOVED") return "REMOVED";
+  if (item.relation === "CANCELLED") return "LEFT";
+  if (item.status === "CANCELLED") return "CANCELLED";
+  if (item.status === "FINISHED" || nowMs >= Date.parse(item.referenceTime))
+    return "FINISHED";
+  return null;
+}
+
+/** Upcoming soonest first; history newest first, removed records last. */
+export function splitMyHistory(
+  content: MyHistoryItem[],
+  nowMs: number,
+): { upcoming: LiveMyHistoryItem[]; past: MyHistoryItem[] } {
+  const upcoming: LiveMyHistoryItem[] = [];
+  const past: MyHistoryItem[] = [];
+  for (const item of content) {
+    if (item.status !== "REMOVED" && pastReason(item, nowMs) === null)
+      upcoming.push(item);
+    else past.push(item);
+  }
+  const at = (item: MyHistoryItem) =>
+    item.status === "REMOVED" ? -Infinity : Date.parse(item.referenceTime);
+  upcoming.sort((a, b) => at(a) - at(b));
+  // Stable sort keeps the server order among removed records.
+  past.sort((a, b) => (at(b) === at(a) ? 0 : at(b) > at(a) ? 1 : -1));
+  return { upcoming, past };
+}
