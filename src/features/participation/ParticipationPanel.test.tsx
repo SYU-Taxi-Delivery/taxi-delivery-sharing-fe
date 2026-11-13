@@ -279,8 +279,8 @@ describe("participation panel", () => {
       type: "DELIVERY",
       referenceTime: "2026-10-13T09:00:00Z",
     });
-    expect(screen.getByText(/18:00 주문 마감/)).toBeVisible();
-    expect(screen.getByText(/17:50 이전까지/)).toBeVisible();
+    expect(screen.getAllByText(/18:00 주문 마감/)[0]).toBeVisible();
+    expect(screen.getByText(/오늘 17:50 이전까지/)).toBeVisible();
     expect(screen.getByText(/주문 마감 10분 전부터/)).toBeVisible();
   });
 
@@ -306,8 +306,9 @@ describe("participation panel", () => {
     expect(screen.getByText(/현재 2 \/ 4명 · 작성자 포함/)).toBeVisible();
     expect(screen.queryByText(/18:00 출발/)).toBeNull();
     expect(screen.queryByText(/이전까지/)).toBeNull();
-    // The phone bar still names both times next to the button.
-    expect(screen.getByText("신청·취소 마감 17:50")).toBeInTheDocument();
+    // The phone bar: seats left and the sign-up cutoff with its day word.
+    expect(screen.getByText("2자리 남음")).toBeInTheDocument();
+    expect(screen.getByText("오늘 17:50까지 신청")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
   });
 
@@ -317,7 +318,7 @@ describe("participation panel", () => {
       serverTime: "2026-10-13T23:59:00Z",
       referenceTime: "2026-10-14T01:00:00Z",
     });
-    expect(screen.getByText(/오늘 10:00 출발/)).toBeVisible();
+    expect(screen.getAllByText(/오늘 10:00 출발/)[0]).toBeVisible();
   });
 
   it("next Seoul date has no today prefix even when both UTC dates match", () => {
@@ -326,8 +327,8 @@ describe("participation panel", () => {
       serverTime: "2026-10-13T14:59:00Z",
       referenceTime: "2026-10-13T15:01:00Z",
     });
-    expect(screen.getByText(/00:01 출발/)).toBeVisible();
-    expect(screen.queryByText(/오늘/)).toBeNull();
+    expect(screen.getAllByText(/내일 00:01 출발/)[0]).toBeVisible();
+    expect(screen.queryByText(/오늘 00:01/)).toBeNull();
   });
 
   it("AC-UI-STATE-01: unavailable button has a visible accessible reason", () => {

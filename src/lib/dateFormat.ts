@@ -78,3 +78,24 @@ export function dayLabel(value: number, now: number): string {
   if (diff === 2) return "모레";
   return formatDate(value);
 }
+
+const clock = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Seoul wall clock "HH:MM". */
+export function formatTime(value: number): string {
+  return clock.format(value);
+}
+
+/**
+ * Day word plus time for schedules and deadlines: "오늘 23:49",
+ * "내일 00:04", "11/16 (월) 09:00". Every time a student must act by gets
+ * one, so a deadline just after midnight never reads as tonight.
+ */
+export function dayTime(value: number, now: number): string {
+  return `${dayLabel(value, now)} ${formatTime(value)}`;
+}

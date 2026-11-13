@@ -37,12 +37,7 @@
 }
 
 .screen:has([data-bottom-action="true"]) {
-  --action-h: 4.5rem;
-}
-
-/* A hint line above the button: the strip grows by its height + gap */
-.screen:has([data-bottom-action="true"] [data-bottom-hint]) {
-  --action-h: 6.5rem;
+  --action-h: var(--action-bar-height);
 }
 
 /* While typing (AppShell sets data-typing), the bottom area steps aside for
@@ -921,17 +916,23 @@
     background: var(--canvas);
   }
 
+  /* 76px strip: 12px padding, one 52px row (helper text + button), 12px.
+     The safe area sits below, inside the nav bar's own height. */
   .screen [data-bottom-action="true"] {
     position: fixed;
     right: var(--page-gutter);
     bottom: calc(
-      var(--nav-h) + env(safe-area-inset-bottom) + (var(--action-h) - 3.25rem) /
-        2
+      var(--nav-h) + env(safe-area-inset-bottom) + var(--action-bar-padding)
     );
     left: var(--page-gutter);
     z-index: 29;
-    min-height: 3.25rem;
+    height: var(--action-button-height);
     margin: 0;
+  }
+
+  .screen [data-bottom-action="true"] > button,
+  .screen [data-bottom-action="true"] > a {
+    min-height: var(--action-button-height);
   }
 
   /* Typing: back into the content flow, above the keyboard */

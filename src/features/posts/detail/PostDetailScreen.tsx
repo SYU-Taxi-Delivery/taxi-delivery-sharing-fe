@@ -10,7 +10,10 @@ import {
   commentsOperations,
   type CommentsOperations,
 } from "@/features/comments/comments";
-import { ParticipationPanel } from "@/features/participation/ParticipationPanel";
+import {
+  ParticipationCancel,
+  ParticipationPanel,
+} from "@/features/participation/ParticipationPanel";
 import { useParticipation } from "@/features/participation/useParticipation";
 import { AppShell } from "../AppShell";
 import { postQueryHref } from "../posts";
@@ -34,7 +37,7 @@ import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
-import { dayLabel, formatDate } from "@/lib/dateFormat";
+import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -42,6 +45,9 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
   hourCycle: "h23",
 });
+
+/** The 참여자 안내 section; 내 활동 links here for 모임 장소 보기. */
+export const GUIDE_ID = "participant-guide";
 
 export function PostDetailScreen({
   postId,
@@ -184,8 +190,17 @@ function DetailLoader({
       <div className={styles.state}>
         <h1 className={styles.stateTitle}>삭제된 모집이에요</h1>
         <p>운영 정책에 따라 삭제되어 내용을 볼 수 없어요.</p>
-        <Link href={path(listPath)} className={styles.secondary}>
-          모집글 목록으로
+        <Link
+          href={path(
+            postQueryHref(listPath, {
+              type: detail.type,
+              joinableOnly: true,
+              page: 0,
+            }),
+          )}
+          className={styles.secondary}
+        >
+          다른 모집 보기
         </Link>
       </div>
     );
@@ -228,6 +243,7 @@ function DetailView({
   const report = operations.report;
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const reportNoticeRef = useRef<HTMLParagraphElement>(null);
+  const guideRef = useRef<HTMLElement>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -237,6 +253,12 @@ function DetailView({
     };
   }, []);
   const id = initial.id;
+
+  // 내 활동's 모임 장소 보기 links here with #participant-guide.
+  useEffect(() => {
+    // Only on arrival.
+    if (window.location.hash === `#${GUIDE_ID}`) showGuide();
+  }, []);
 
   // The report button disappears after reporting, so focus moves to the result.
   useEffect(() => {
@@ -308,10 +330,26 @@ function DetailView({
   const day = dayLabel(reference, clockMs);
   const deadlineDay = dayLabel(deadline, clockMs);
   const left = remainingLabel(deadline, clockMs);
-  const similar =
+  const similar = !author && !joined && chip.label === "정원 마감";
+  // Closed by the author or cancelled: nothing to join here, so point to
+  // other pods of the same type right under the explanation.
+  const others =
     !author &&
-    !joined &&
-    (chip.label === "정원 마감" || chip.label === "작성자 마감");
+    (status === "CANCELLED" || (!joined && chip.label === "작성자 마감"));
+  const guideShown = (joined && !history) || !!visible.communicationUrl;
+
+  function showGuide() {
+    const section = guideRef.current;
+    if (!section) return;
+    const still = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    section.scrollIntoView?.({
+      block: "start",
+      behavior: still ? "auto" : "smooth",
+    });
+    section.focus({ preventScroll: true });
+  }
   const remaining = detail.capacity - detail.currentMemberCount;
   const reportable = !author && canReport(latest) && !!report;
 
@@ -346,7 +384,7 @@ function DetailView({
             </span>
             {chip.joined && (
               <span className={styles.chip} data-joined="true">
-                참여 완료
+                참여 중
               </span>
             )}
             {author && (
@@ -412,8 +450,7 @@ function DetailView({
               <dt>{taxi ? "신청·취소 마감" : "참여·취소 마감"}</dt>
               <dd>
                 <strong>
-                  {deadlineDay !== day ? `${deadlineDay} ` : ""}
-                  {timeFormat.format(deadline)}
+                  {deadlineDay} {timeFormat.format(deadline)}
                 </strong>
                 <span
                   data-urgent={left !== null && deadline - clockMs < 3_600_000}
@@ -444,8 +481,14 @@ function DetailView({
         </p>
       </header>
 
-      {((joined && !history) || visible.communicationUrl) && (
-        <section className={styles.joinedInfo} aria-labelledby="post-link">
+      {guideShown && (
+        <section
+          ref={guideRef}
+          id={GUIDE_ID}
+          tabIndex={-1}
+          className={styles.joinedInfo}
+          aria-labelledby="post-link"
+        >
           <h2 id="post-link" className={styles.sectionTitle}>
             참여자 안내
           </h2>
@@ -455,21 +498,31 @@ function DetailView({
             </span>
             <strong>{taxi ? detail.departure : detail.pickupLocation}</strong>
           </p>
-          {visible.communicationUrl && (
+          <p className={styles.place}>
+            <span className={styles.meta}>{scheduleTerm}</span>
+            <strong>{dayTime(reference, clockMs)}</strong>
+          </p>
+          {author && visible.communicationUrl && (
             <a
               href={visible.communicationUrl}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.primary}
             >
-              소통 링크 열기 <span className={styles.srOnly}>(새 창)</span>
+              오픈채팅 열기 <span className={styles.srOnly}>(새 창)</span>
             </a>
           )}
           <p className={styles.help}>
             {visible.communicationUrl
-              ? `작성자와 참여한 학생에게만 보여요. ${scheduleTerm} 시간이 지나면 사라져요.`
+              ? `오픈채팅 링크는 작성자와 참여한 학생에게만 보여요. ${scheduleTerm} 시간이 지나면 사라져요.`
               : "작성자가 등록한 소통 링크가 없어요. 아래 모집 문의로 이야기해요."}
           </p>
+          {joined && !history && (
+            <ParticipationCancel
+              participation={participation}
+              onFocusFallback={() => guideRef.current?.focus()}
+            />
+          )}
         </section>
       )}
 
@@ -484,7 +537,51 @@ function DetailView({
             onUnauthorized={handleUnauthorized}
           />
         ) : (
-          <ParticipationPanel participation={participation} schedule={false} />
+          <ParticipationPanel
+            participation={participation}
+            schedule={false}
+            joinedAction={
+              visible.communicationUrl ? (
+                <a
+                  href={visible.communicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.barPrimary}
+                >
+                  오픈채팅 열기 <span className={styles.srOnly}>(새 창)</span>
+                </a>
+              ) : guideShown ? (
+                <button
+                  type="button"
+                  className={styles.barPrimary}
+                  onClick={showGuide}
+                >
+                  모임 장소 보기
+                </button>
+              ) : undefined
+            }
+          />
+        )}
+        {history && (
+          <p className={styles.notice}>
+            {status === "CANCELLED"
+              ? "작성자가 취소한 모집이에요. 기록으로만 볼 수 있어요."
+              : "일정이 끝난 모집이에요. 기록으로만 볼 수 있어요."}
+          </p>
+        )}
+        {others && (
+          <Link
+            href={path(
+              postQueryHref(listPath, {
+                type: detail.type,
+                joinableOnly: true,
+                page: 0,
+              }),
+            )}
+            className={styles.secondary}
+          >
+            다른 모집 보기
+          </Link>
         )}
         {similar && (
           <Link
@@ -511,14 +608,6 @@ function DetailView({
             {notice.text}
           </p>
         )}
-        {history && (
-          <p className={styles.notice}>
-            {status === "CANCELLED"
-              ? "작성자가 취소한 모집이에요. 기록으로만 볼 수 있어요."
-              : "일정이 끝난 모집이에요. 기록으로만 볼 수 있어요."}
-          </p>
-        )}
-
         {!taxi && detail.orderGuide && (
           <dl className={styles.info}>
             <div className={styles.infoRow}>

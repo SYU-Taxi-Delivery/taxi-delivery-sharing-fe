@@ -247,7 +247,7 @@
   color: var(--danger);
 }
 
-/* The main action and, on phones, a one-line hint naming its two times */
+/* The main action and, on phones, a short two-line helper on its left */
 .action {
   display: grid;
   gap: var(--space-2);
@@ -258,18 +258,57 @@
 }
 
 @media (max-width: 47.99rem) {
-  .actionHint {
-    display: flex;
-    justify-content: space-between;
+  .action[data-bottom-action="true"] {
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto);
+    align-items: center;
     gap: var(--space-3);
+  }
+
+  .action[data-bottom-action="true"]:not(:has(.actionHint)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actionHint {
+    display: grid;
+    gap: 0.125rem;
     color: var(--participation-muted);
     font-size: var(--type-micro);
-    line-height: 1;
+    line-height: 1.35;
+    text-align: left;
+  }
+
+  .actionHint span:first-child {
+    color: var(--participation-text);
+    font-size: var(--type-label);
+    font-weight: 700;
   }
 
   .actionHint span {
     font-variant-numeric: tabular-nums;
   }
+
+  .action .primary {
+    min-height: var(--action-button-height);
+  }
+}
+
+/* 참여 취소 in 참여자 안내: a secondary danger action, the cutoff beside it */
+.cancelRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.cancel {
+  composes: base danger from "../ui/button.module.css";
+}
+
+.cancelDeadline {
+  color: var(--muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Keep available cancellation actions, including their dialog, in colour. */

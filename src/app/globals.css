@@ -122,6 +122,14 @@
   --touch-target: 2.75rem;
   --page-gutter: 1rem;
 
+  /* Fixed bottom action bar (phones): 12px padding + 52px button + 12px.
+     The device safe area is added separately below it, never inside. */
+  --action-bar-padding: 12px;
+  --action-button-height: 52px;
+  --action-bar-height: calc(
+    var(--action-button-height) + 2 * var(--action-bar-padding)
+  ); /* 76px */
+
   /* Elevation (SOCAR "floating" style: several soft layers, no hard edge) */
   --elevation-card: 0 0 0 1px rgb(33 33 36 / 4%), 0 1px 2px rgb(33 33 36 / 4%);
   --elevation-raised:

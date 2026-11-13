@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useRef } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { cutoffMinutes } from "./participation";
 import type { ParticipationController } from "./useParticipation";
 import { ParticipationMotion } from "./ParticipationMotion";
 import styles from "./participation.module.css";
 import { ClockIcon, SeatSlots } from "@/features/ui/art";
-import { formatDate } from "@/lib/dateFormat";
+import { dayTime, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -19,6 +19,7 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
 export function ParticipationPanel({
   participation,
   schedule = true,
+  joinedAction,
 }: {
   participation: ParticipationController;
   /**
@@ -26,16 +27,17 @@ export function ParticipationPanel({
    * summary already shows both times, so the panel keeps only the seats.
    */
   schedule?: boolean;
+  /**
+   * While joined, the bar's one primary action (the post detail: 오픈채팅 열기
+   * or 모임 장소 보기). The caller then places <ParticipationCancel> in its
+   * own 참여자 안내 section; without it the bar keeps 참여 취소.
+   */
+  joinedAction?: ReactNode;
 }) {
   const { snapshot, availability, nowMs, busy, needsRefresh, feedback } =
     participation;
   const labelId = useId();
   const reasonId = useId();
-  const dialogLabelId = useId();
-  const dialogDescriptionId = useId();
-  const dialog = useRef<HTMLDialogElement>(null);
-  const cancelTrigger = useRef<HTMLButtonElement>(null);
-  const returnButton = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const timeClosed = nowMs >= availability.deadline;
   const active = ["OPEN", "FULL", "CLOSED"].includes(snapshot.status);
@@ -56,17 +58,8 @@ export function ParticipationPanel({
   const hasTime = Number.isFinite(referenceTime);
   const timeFinished =
     snapshot.status === "FINISHED" || (active && nowMs >= referenceTime);
-  const today =
-    hasTime &&
-    Number.isFinite(nowMs) &&
-    formatDate(referenceTime) === formatDate(nowMs);
-  const actionLabel = joined
-    ? "참여 취소"
-    : snapshot.viewerRelation === "CANCELLED"
-      ? "다시 참여하기"
-      : "참여하기";
-  const deadlineTerm =
-    snapshot.type === "TAXI" ? "신청·취소 마감" : "참여·취소 마감";
+  const actionLabel =
+    snapshot.viewerRelation === "CANCELLED" ? "다시 참여하기" : "참여하기";
   const status = timeFinished
     ? "일정 종료"
     : {
@@ -78,16 +71,26 @@ export function ParticipationPanel({
         REMOVED: "삭제된 모집",
       }[snapshot.status];
 
-  function returnFocus() {
-    const target = cancelTrigger.current;
-    if (target && !target.disabled) target.focus();
-    else heading.current?.focus();
-  }
-
-  function confirmCancellation() {
-    dialog.current?.close();
-    void participation.cancel();
-  }
+  // The fixed bar: only while there is something to do or open. Ended,
+  // cancelled or author-closed posts (unless I am in it) have none.
+  const bar =
+    active &&
+    !timeFinished &&
+    !author &&
+    snapshot.viewerRelation !== "GUEST" &&
+    (joined || snapshot.status !== "CLOSED");
+  const scheduleTerm = snapshot.type === "TAXI" ? "출발" : "주문 마감";
+  const hint =
+    Number.isFinite(availability.deadline) && hasTime
+      ? joined
+        ? ["참여 중", `${dayTime(referenceTime, nowMs)} ${scheduleTerm}`]
+        : [
+            snapshot.status === "OPEN" && !timeClosed
+              ? `${remaining}자리 남음`
+              : status,
+            `${dayTime(availability.deadline, nowMs)}까지 신청`,
+          ]
+      : null;
 
   if (snapshot.status === "REMOVED") {
     return <p role="status">관리자에 의해 삭제된 모집이에요.</p>;
@@ -99,14 +102,7 @@ export function ParticipationPanel({
       aria-labelledby={labelId}
       aria-busy={busy}
       data-closed={timeFinished || snapshot.status !== "OPEN" || timeClosed}
-      data-sticky-action={
-        active &&
-        !timeFinished &&
-        !author &&
-        snapshot.viewerRelation !== "GUEST"
-          ? "true"
-          : undefined
-      }
+      data-sticky-action={bar ? "true" : undefined}
     >
       <div className={styles.summary}>
         {joined &&
@@ -141,8 +137,7 @@ export function ParticipationPanel({
         <div className={styles.schedule}>
           <ClockIcon className={styles.scheduleIcon} />
           <p>
-            {today ? "오늘 " : ""}
-            {hasTime ? timeFormat.format(referenceTime) : "시각 확인 필요"}{" "}
+            {hasTime ? dayTime(referenceTime, nowMs) : "시각 확인 필요"}{" "}
             {snapshot.type === "TAXI" ? "출발" : "주문 마감"}
             <br />
             {hasTime ? formatDate(referenceTime) : "다시 조회해 주세요."}
@@ -150,46 +145,42 @@ export function ParticipationPanel({
         </div>
       )}
       {availability.reason && <p id={reasonId}>{availability.reason}</p>}
-      {active &&
-        !timeFinished &&
-        !author &&
-        snapshot.viewerRelation !== "GUEST" && (
-          <div className={styles.action} data-bottom-action="true">
-            {Number.isFinite(availability.deadline) && hasTime && (
-              /* Phones only: the two times, named apart, beside the button */
-              <p className={styles.actionHint} data-bottom-hint="true">
-                <span>
-                  {`${deadlineTerm} ${timeFormat.format(availability.deadline)}`}
-                </span>
-                <span>
-                  {`${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${timeFormat.format(referenceTime)}`}
-                </span>
-              </p>
-            )}
+      {bar && (
+        <div className={styles.action} data-bottom-action="true">
+          {hint && (
+            /* Phones: two short lines beside the button */
+            <p className={styles.actionHint} data-bottom-hint="true">
+              <span>{hint[0]}</span>
+              <span>{hint[1]}</span>
+            </p>
+          )}
+          {joined && joinedAction ? (
+            joinedAction
+          ) : joined ? (
+            <ParticipationCancel
+              participation={participation}
+              variant="bar"
+              onFocusFallback={() => heading.current?.focus()}
+            />
+          ) : (
             <button
               type="button"
-              ref={joined ? cancelTrigger : undefined}
               className={styles.primary}
-              data-tone={joined ? "danger" : undefined}
               disabled={busy || needsRefresh || availability.action === null}
               aria-describedby={availability.reason ? reasonId : undefined}
-              onClick={() => {
-                if (joined) {
-                  dialog.current?.showModal();
-                  returnButton.current?.focus();
-                } else void participation.join();
-              }}
+              onClick={() => void participation.join()}
             >
               {busy ? "처리 중…" : actionLabel}
             </button>
-          </div>
-        )}
+          )}
+        </div>
+      )}
       {schedule &&
         active &&
         !timeFinished &&
         Number.isFinite(availability.deadline) && (
           <p className={styles.help}>
-            참여 신청·취소는 {timeFormat.format(availability.deadline)} 이전까지
+            참여 신청·취소는 {dayTime(availability.deadline, nowMs)} 이전까지
             가능해요.
             <br />
             {snapshot.type === "TAXI" ? "출발" : "주문 마감"}{" "}
@@ -215,74 +206,6 @@ export function ParticipationPanel({
           최신 상태 다시 조회
         </button>
       )}
-      {joined && (
-        <dialog
-          ref={dialog}
-          className={styles.dialog}
-          aria-labelledby={dialogLabelId}
-          aria-describedby={dialogDescriptionId}
-          onClose={returnFocus}
-          onCancel={(event) => {
-            event.preventDefault();
-            dialog.current?.close();
-          }}
-        >
-          <div className={styles.dialogHeading}>
-            <h2 id={dialogLabelId}>내 참여를 취소할까요?</h2>
-            <button
-              type="button"
-              className={styles.close}
-              aria-label="참여 취소 확인창 닫기"
-              onClick={() => dialog.current?.close()}
-            >
-              <Image
-                src="/participation/close.svg"
-                width={20}
-                height={20}
-                alt=""
-              />
-            </button>
-          </div>
-          <p id={dialogDescriptionId} className={styles.dialogDescription}>
-            내 참여만 취소돼요.
-            <br />
-            취소 후 명단과 소통 링크를 볼 수 없어요.
-          </p>
-          <div className={styles.target}>
-            <p className={styles.targetTitle}>{snapshot.title}</p>
-            <p className={styles.targetMeta}>
-              {snapshot.type === "TAXI" ? "택시" : "배달"}
-              <br />
-              {hasTime ? formatDate(referenceTime) : "시각 확인 필요"}{" "}
-              {hasTime ? timeFormat.format(referenceTime) : ""} · 현재{" "}
-              {snapshot.currentMemberCount} / {snapshot.capacity}명
-            </p>
-          </div>
-          {availability.action !== "cancel" && availability.reason && (
-            <p role="alert">{availability.reason}</p>
-          )}
-          <div className={styles.dialogActions}>
-            <button
-              type="button"
-              className={styles.secondary}
-              ref={returnButton}
-              onClick={() => dialog.current?.close()}
-            >
-              돌아가기
-            </button>
-            <button
-              type="button"
-              className={styles.primary}
-              disabled={
-                busy || needsRefresh || availability.action !== "cancel"
-              }
-              onClick={() => void confirmCancellation()}
-            >
-              내 참여 취소
-            </button>
-          </div>
-        </dialog>
-      )}
       {/* Last in reading order; drawn in the corner kept free by .summary */}
       <ParticipationMotion
         motion={participation.motion}
@@ -291,5 +214,140 @@ export function ParticipationPanel({
         busy={busy}
       />
     </section>
+  );
+}
+
+/**
+ * 참여 취소 with its confirmation dialog. In the bar (participation preview)
+ * it is the primary button; on the post detail it sits in 참여자 안내 as a
+ * secondary danger action with the cancel cutoff right beside it.
+ */
+export function ParticipationCancel({
+  participation,
+  variant = "inline",
+  onFocusFallback,
+}: {
+  participation: ParticipationController;
+  variant?: "bar" | "inline";
+  /** Where focus goes when the trigger is gone or disabled after closing. */
+  onFocusFallback?: () => void;
+}) {
+  const { snapshot, availability, nowMs, busy, needsRefresh } = participation;
+  const dialogLabelId = useId();
+  const dialogDescriptionId = useId();
+  const deadlineId = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const returnButton = useRef<HTMLButtonElement>(null);
+  const referenceTime = Date.parse(snapshot.referenceTime);
+  const hasTime = Number.isFinite(referenceTime);
+  const open =
+    Number.isFinite(availability.deadline) && nowMs < availability.deadline;
+
+  function returnFocus() {
+    const target = trigger.current;
+    if (target && !target.disabled) target.focus();
+    else onFocusFallback?.();
+  }
+
+  const button = (
+    <button
+      type="button"
+      ref={trigger}
+      className={variant === "bar" ? styles.primary : styles.cancel}
+      data-tone="danger"
+      disabled={busy || needsRefresh || availability.action !== "cancel"}
+      aria-describedby={variant === "inline" ? deadlineId : undefined}
+      onClick={() => {
+        dialog.current?.showModal();
+        returnButton.current?.focus();
+      }}
+    >
+      {busy ? "처리 중…" : "참여 취소"}
+    </button>
+  );
+
+  return (
+    <>
+      {variant === "inline" ? (
+        <div className={styles.cancelRow}>
+          {button}
+          <span id={deadlineId} className={styles.cancelDeadline}>
+            {open
+              ? `${dayTime(availability.deadline, nowMs)}까지 가능`
+              : "취소 마감됐어요"}
+          </span>
+        </div>
+      ) : (
+        button
+      )}
+      <dialog
+        ref={dialog}
+        className={styles.dialog}
+        aria-labelledby={dialogLabelId}
+        aria-describedby={dialogDescriptionId}
+        onClose={returnFocus}
+        onCancel={(event) => {
+          event.preventDefault();
+          dialog.current?.close();
+        }}
+      >
+        <div className={styles.dialogHeading}>
+          <h2 id={dialogLabelId}>내 참여를 취소할까요?</h2>
+          <button
+            type="button"
+            className={styles.close}
+            aria-label="참여 취소 확인창 닫기"
+            onClick={() => dialog.current?.close()}
+          >
+            <Image
+              src="/participation/close.svg"
+              width={20}
+              height={20}
+              alt=""
+            />
+          </button>
+        </div>
+        <p id={dialogDescriptionId} className={styles.dialogDescription}>
+          내 참여만 취소돼요.
+          <br />
+          취소 후 명단과 소통 링크를 볼 수 없어요.
+        </p>
+        <div className={styles.target}>
+          <p className={styles.targetTitle}>{snapshot.title}</p>
+          <p className={styles.targetMeta}>
+            {snapshot.type === "TAXI" ? "택시" : "배달"}
+            <br />
+            {hasTime ? formatDate(referenceTime) : "시각 확인 필요"}{" "}
+            {hasTime ? timeFormat.format(referenceTime) : ""} · 현재{" "}
+            {snapshot.currentMemberCount} / {snapshot.capacity}명
+          </p>
+        </div>
+        {availability.action !== "cancel" && availability.reason && (
+          <p role="alert">{availability.reason}</p>
+        )}
+        <div className={styles.dialogActions}>
+          <button
+            type="button"
+            className={styles.secondary}
+            ref={returnButton}
+            onClick={() => dialog.current?.close()}
+          >
+            돌아가기
+          </button>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={busy || needsRefresh || availability.action !== "cancel"}
+            onClick={() => {
+              dialog.current?.close();
+              void participation.cancel();
+            }}
+          >
+            내 참여 취소
+          </button>
+        </div>
+      </dialog>
+    </>
   );
 }
