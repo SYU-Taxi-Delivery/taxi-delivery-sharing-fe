@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -6,6 +13,7 @@ import {
   CommentsError,
   type CommentsOperations,
 } from "@/features/comments/comments";
+import { rememberListOrigin } from "../listOrigin";
 import { postQueryHref } from "../posts";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
 import { PostDetailScreen } from "./PostDetailScreen";
@@ -366,6 +374,40 @@ describe("상세 조회", () => {
     expect(
       screen.getByRole("link", { name: "모집글 목록으로" }),
     ).toHaveAttribute("href", "/posts");
+  });
+
+  it("목록에서 연 상세의 모집글 목록은 연 목록 주소(유형·조건·쪽)로 돌아간다", async () => {
+    const listHref = "/posts?type=TAXI&destination=%EC%84%9D%EA%B3%84&page=2";
+    rememberListOrigin("p1", listHref);
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      listHref,
+    );
+    sessionStorage.clear();
+  });
+
+  it("공유 링크처럼 바로 연 상세나 다른 글을 열던 기록이면 기본 목록으로 간다", async () => {
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    cleanup();
+    rememberListOrigin("other", "/posts?type=DELIVERY");
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    cleanup();
+    rememberListOrigin("p1", "//evil.example/posts");
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    sessionStorage.clear();
   });
 
   it("403은 접근 권한 안내를 보여 준다", async () => {

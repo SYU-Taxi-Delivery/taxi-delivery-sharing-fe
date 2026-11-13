@@ -38,6 +38,7 @@ import { MoreMenu } from "./MoreMenu";
 import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { useListHref } from "../listOrigin";
 import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
@@ -60,9 +61,10 @@ export function PostDetailScreen({
   commentOperations?: CommentsOperations;
 }) {
   const path = useAppPath();
+  const listHref = useListHref(postId, path(listPath));
   return (
     <AppShell current="posts" postsPath={listPath} wide>
-      <Link href={path(listPath)} className={styles.back}>
+      <Link href={listHref} className={styles.back}>
         <span aria-hidden="true">‹</span> 모집글 목록
       </Link>
       <RequireAuth>
@@ -98,6 +100,7 @@ function DetailLoader({
   commentOperations: CommentsOperations;
 }) {
   const path = useAppPath();
+  const listHref = useListHref(postId, path(listPath));
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -158,7 +161,7 @@ function DetailLoader({
       <div className={styles.state}>
         <h1 className={styles.stateTitle}>모집을 찾을 수 없어요</h1>
         <p>삭제되었거나 주소가 잘못된 모집이에요.</p>
-        <Link href={path(listPath)} className={styles.secondary}>
+        <Link href={listHref} className={styles.secondary}>
           모집글 목록으로
         </Link>
       </div>

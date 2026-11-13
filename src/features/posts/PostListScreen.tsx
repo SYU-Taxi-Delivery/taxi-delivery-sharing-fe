@@ -27,6 +27,7 @@ import {
 import { SearchPanel, SearchSheet } from "./SearchPanel";
 import { newPostHref, searchChips, SORT_LABELS } from "./search";
 import { postListOperations } from "./postsApi";
+import { rememberListOrigin } from "./listOrigin";
 import { usePostList } from "./usePostList";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
@@ -327,9 +328,12 @@ function PostList({
               <div
                 className={styles.board}
                 onClickCapture={(event) => {
-                  if ((event.target as Element).closest("a")) {
-                    saveScroll(scrollKey);
-                  }
+                  const card = (event.target as Element).closest("a");
+                  if (!card) return;
+                  saveScroll(scrollKey);
+                  // "모집글 목록" on the detail comes back to this exact URL.
+                  const postId = card.getAttribute("data-post-id");
+                  if (postId) rememberListOrigin(postId, scrollKey);
                 }}
               >
                 {groups.map((group, index) => {

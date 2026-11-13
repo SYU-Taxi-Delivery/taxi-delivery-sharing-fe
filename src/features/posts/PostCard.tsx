@@ -145,6 +145,7 @@ export function PostCard({
     <Link
       href={path(`/posts/${encodeURIComponent(post.id)}`)}
       className={styles.card}
+      data-post-id={post.id}
       data-available={available}
       data-type={taxi ? "taxi" : "delivery"}
     >
