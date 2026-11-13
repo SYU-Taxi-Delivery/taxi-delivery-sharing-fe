@@ -7,6 +7,7 @@ import {
   fakeBackend,
   taxiDetail,
 } from "@/test/fakeBackend";
+import { ParticipationRejected } from "@/features/participation/participation";
 import { PostDetailError, toPostDetail, toSnapshot } from "./postDetail";
 import { postDetailOperations } from "./postDetailApi";
 
@@ -206,22 +207,108 @@ describe("참여 신청·취소 연동", () => {
     expect(calls.at(-1)).toMatchObject({ method: "DELETE" });
   });
 
-  it.each(["POST_FULL", "JOIN_TIME_CLOSED", "ALREADY_JOINED"])(
-    "AC-JOIN-002-02: 409 %s는 conflict로 알리고 화면이 최신 상태를 다시 읽는다",
-    async (code) => {
+  it.each([
+    ["POST_FULL", "방금 정원이 찼어요."],
+    ["JOIN_TIME_CLOSED", "신청 기한이 지났어요."],
+    ["POST_CLOSED", "작성자가 모집을 마감했어요."],
+    ["POST_CANCELLED", "모집이 취소됐어요."],
+    ["POST_FINISHED", "일정이 끝났어요."],
+  ])(
+    "409 %s는 이유와 error.details.post의 최신 공개 상태를 함께 넘긴다",
+    async (code, message) => {
       fakeBackend({
-        "POST /api/posts/1/participants": () => failure(409, code),
+        "POST /api/posts/1/participants": () =>
+          Response.json(
+            {
+              error: {
+                code,
+                message: "서버 메시지",
+                details: {
+                  post: {
+                    postId: "1",
+                    postStatus: "FULL",
+                    recruitmentStatus: "FULL",
+                    referenceTime: "2026-10-27T11:25:00+09:00",
+                    participationDeadline: "2026-10-27T11:15:00+09:00",
+                    capacity: 4,
+                    currentMemberCount: 4,
+                    remainingSeats: 0,
+                    joinable: false,
+                    communicationUrl: "https://must-not-leak.example",
+                  },
+                },
+              },
+              meta: envelope(null).meta,
+            },
+            { status: 409 },
+          ),
       });
-      await expect(postDetailOperations.join("1")).rejects.toMatchObject({
-        kind: "conflict",
+      const error = await postDetailOperations.join("1").catch((e) => e);
+      expect(error).toBeInstanceOf(ParticipationRejected);
+      expect(error.message).toBe(message);
+      expect(error.latest).toEqual({
+        status: "FULL",
+        recruitmentStatus: "FULL",
+        referenceTime: "2026-10-27T11:25:00+09:00",
+        participationDeadline: "2026-10-27T11:15:00+09:00",
+        capacity: 4,
+        currentMemberCount: 4,
+        joinable: false,
       });
     },
   );
 
-  it("작성자 마감·모집 취소·신고는 백엔드 API가 없어 제공하지 않는다", () => {
-    // Omitted callbacks make the screen show these actions as not ready.
-    expect(postDetailOperations.close).toBeUndefined();
-    expect(postDetailOperations.cancel).toBeUndefined();
+  it("취소 409 CANCEL_TIME_CLOSED도 이유를 넘기고, 이유를 모르는 409는 conflict다", async () => {
+    fakeBackend({
+      "DELETE /api/posts/1/participants": () =>
+        failure(409, "CANCEL_TIME_CLOSED"),
+      "POST /api/posts/1/participants": () => failure(409, "ALREADY_JOINED"),
+    });
+    await expect(postDetailOperations.leave("1")).rejects.toMatchObject({
+      name: "ParticipationRejected",
+      code: "CANCEL_TIME_CLOSED",
+      latest: undefined,
+    });
+    await expect(postDetailOperations.join("1")).rejects.toMatchObject({
+      kind: "conflict",
+    });
+  });
+
+  it.each(["close", "cancel"] as const)(
+    "작성자 %s은 본문 없이 CSRF와 함께 POST /api/posts/{id}/%s로 보낸다",
+    async (action) => {
+      const { calls } = fakeBackend({
+        [`POST /api/posts/1/${action}`]: () =>
+          Response.json(envelope({ ...taxiDetail })),
+      });
+      await postDetailOperations[action]!("1");
+      const call = calls.at(-1)!;
+      expect(call).toMatchObject({
+        method: "POST",
+        path: `/api/posts/1/${action}`,
+        body: undefined,
+      });
+      expect(call.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
+    },
+  );
+
+  it("마감·취소 경로가 아직 배포되지 않은 404는 준비 중, 409와 POST_NOT_FOUND는 화면 오류로 바꾼다", async () => {
+    fakeBackend({
+      "POST /api/posts/2/close": () => failure(404, "POST_NOT_FOUND"),
+      "POST /api/posts/3/cancel": () => failure(409, "POST_FINISHED"),
+    });
+    await expect(postDetailOperations.close!("1")).rejects.toMatchObject({
+      name: "PostDetailNotConnectedError",
+    });
+    await expect(postDetailOperations.close!("2")).rejects.toMatchObject({
+      kind: "notFound",
+    });
+    await expect(postDetailOperations.cancel!("3")).rejects.toMatchObject({
+      kind: "conflict",
+    });
+  });
+
+  it("신고는 백엔드 API가 없어 제공하지 않는다", () => {
     expect(postDetailOperations.report).toBeUndefined();
   });
 });

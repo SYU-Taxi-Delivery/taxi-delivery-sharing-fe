@@ -6,9 +6,14 @@ import {
   envelope,
   fakeBackend,
   taxiDetail,
+  taxiItem,
 } from "@/test/fakeBackend";
+import { failure } from "@/test/fakeBackend";
 import { toMyHistory, toMySnapshot } from "./myHistory";
-import { myHistoryOperations } from "./myHistoryApi";
+import {
+  MyHistoryNotConnectedError,
+  myHistoryOperations,
+} from "./myHistoryApi";
 
 beforeEach(() => vi.useFakeTimers());
 
@@ -19,6 +24,56 @@ afterEach(() => {
 });
 
 describe("GET /api/users/me/participations 연동", () => {
+  it("모집 정보가 함께 오면 상세를 다시 읽지 않고 공개 상태·작성자·링크를 쓴다", async () => {
+    const { calls } = fakeBackend({
+      "GET /api/users/me/participations?page=0&size=50": () =>
+        Response.json(
+          envelope({
+            items: [
+              {
+                participationId: "1",
+                participationStatus: "JOINED",
+                post: {
+                  ...taxiItem,
+                  currentMemberCount: 4,
+                  remainingSeats: 0,
+                  postStatus: "FULL",
+                  recruitmentStatus: "FULL",
+                  isRemoved: false,
+                  author: { displayName: "박지민" },
+                  communicationUrl: "https://open.kakao.com/o/room",
+                  joinable: undefined,
+                },
+              },
+            ],
+            page: 0,
+            size: 50,
+            totalElements: 1,
+            totalPages: 1,
+          }),
+        ),
+    });
+    const history = toMyHistory(
+      await myHistoryOperations.list("participated"),
+      "participated",
+    );
+    expect(history.content).toEqual([
+      expect.objectContaining({
+        id: "1",
+        status: "FULL",
+        recruitmentStatus: "FULL",
+        relation: "JOINED",
+        authorName: "박지민",
+        currentMemberCount: 4,
+        joinable: false,
+        communicationUrl: "https://open.kakao.com/o/room",
+      }),
+    ]);
+    expect(calls.map((call) => call.path)).toEqual([
+      "/api/users/me/participations?page=0&size=50",
+    ]);
+  });
+
   it("참여 기록에 상세를 더해 카드로 만들고, 삭제된 모집은 최소 정보만 둔다", async () => {
     fakeBackend({
       "GET /api/users/me/participations?page=0&size=50": () =>
@@ -168,5 +223,65 @@ describe("GET /api/users/me/participations 연동", () => {
     expect(history.content).toEqual([
       { id: "1", status: "REMOVED", relation: "JOINED" },
     ]);
+  });
+});
+
+describe("GET /api/users/me/posts 연동", () => {
+  it("작성한 글을 목록 형식으로 읽고 활성 일정의 링크를 남긴다", async () => {
+    fakeBackend({
+      "GET /api/users/me/posts?page=0&size=50": () =>
+        Response.json(
+          envelope({
+            items: [
+              {
+                ...taxiItem,
+                recruitmentStatus: "RECRUITING",
+                author: { displayName: "김하늘" },
+                communicationUrl: "https://open.kakao.com/o/mine",
+              },
+              {
+                ...taxiItem,
+                postId: "2",
+                postStatus: "CANCELLED",
+                recruitmentStatus: "CANCELLED",
+                joinable: false,
+                author: { displayName: "김하늘" },
+              },
+            ],
+            page: 0,
+            size: 50,
+            totalElements: 2,
+            totalPages: 1,
+          }),
+        ),
+    });
+    const history = toMyHistory(
+      await myHistoryOperations.list("created"),
+      "created",
+    );
+    expect(history.serverTime).toBe(EVALUATED_AT);
+    expect(history.content).toEqual([
+      expect.objectContaining({
+        id: "1",
+        relation: "AUTHOR",
+        recruitmentStatus: "RECRUITING",
+        authorName: "김하늘",
+        communicationUrl: "https://open.kakao.com/o/mine",
+      }),
+      expect.objectContaining({ id: "2", status: "CANCELLED" }),
+    ]);
+  });
+
+  it("서버에 아직 없는 경로(API_NOT_FOUND)면 준비 중으로 알린다", async () => {
+    fakeBackend({});
+    await expect(myHistoryOperations.list("created")).rejects.toBeInstanceOf(
+      MyHistoryNotConnectedError,
+    );
+    fakeBackend({
+      "GET /api/users/me/posts?page=0&size=50": () => failure(500, "INTERNAL"),
+    });
+    await expect(
+      myHistoryOperations.list("created"),
+    ).rejects.not.toBeInstanceOf(MyHistoryNotConnectedError);
   });
 });

@@ -1,6 +1,6 @@
 # 내 참여 · 모집 (#10)
 
-> 연동 상태(2026-11-09): "참여한 글"을 `GET /api/users/me/participations`에 연결했다(`myHistoryApi.ts`). "작성한 글"은 백엔드 API가 없어 "준비 중" 안내와 모집글 목록 링크를 보여 준다. 설정·불일치·요청 목록은
+> 연동 상태(2026-11-14): "참여한 글"은 `GET /api/users/me/participations`(모집 공개 정보가 함께 오면 상세를 다시 읽지 않는다), "작성한 글"은 `GET /api/users/me/posts`에 연결했다(`myHistoryApi.ts`). 상태는 서버 `recruitmentStatus`를 우선하고, 현재 참여 중인 활성 일정의 `communicationUrl`은 카드의 "소통 링크"로 연다. 작성 글 경로가 아직 배포되지 않은 서버(404 API_NOT_FOUND)에는 "준비 중" 안내를 유지한다. 설정·불일치·요청 목록은
 > [docs/backend-integration.md](../../../docs/backend-integration.md)를 참고한다.
 
 로그인 사용자용 `/my`에서 내가 참여한 모집과 내가 만든 모집을 전환한다. 모집 상태와

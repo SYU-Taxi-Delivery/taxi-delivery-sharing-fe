@@ -1,7 +1,10 @@
 import {
   hideUnavailableDetails,
   participationDeadlineMs,
+  recruitmentStatusAt,
+  toRecruitmentStatus,
   type ParticipationSnapshot,
+  type RecruitmentStatus,
 } from "@/features/participation/participation";
 import type { PostStatus } from "../posts";
 
@@ -23,6 +26,8 @@ type DetailBase = {
   joinable: boolean;
   /** Server join/cancel cutoff, ISO with offset. */
   participationDeadline?: string;
+  /** Server public status; preferred over the local derivation when present. */
+  recruitmentStatus?: RecruitmentStatus;
   relation: DetailRelation;
   authorName: string;
   /** Display names, author first. Only sent to the author and JOINED members. */
@@ -177,6 +182,9 @@ export function toPostDetail(value: unknown): PostDetail {
     ...(instant(raw.participationDeadline)
       ? { participationDeadline: instant(raw.participationDeadline)! }
       : {}),
+    ...(toRecruitmentStatus(raw.recruitmentStatus)
+      ? { recruitmentStatus: toRecruitmentStatus(raw.recruitmentStatus) }
+      : {}),
     relation,
     authorName: text(raw.authorName)!,
     ...(names ? { participantNames: names as string[] } : {}),
@@ -216,6 +224,9 @@ export function toSnapshot(detail: PostDetail): ParticipationSnapshot {
     viewerRelation: detail.relation,
     joinable: detail.joinable,
     participationDeadline: detail.participationDeadline,
+    ...(detail.recruitmentStatus
+      ? { recruitmentStatus: detail.recruitmentStatus }
+      : {}),
     participantNames: detail.participantNames,
     communicationUrl: detail.communicationUrl,
   });
@@ -265,12 +276,23 @@ export type DetailStatusLabel =
   | "일정 종료"
   | "삭제된 모집";
 
+const DETAIL_LABELS: Record<RecruitmentStatus, DetailStatusLabel> = {
+  RECRUITING: "모집 중",
+  FULL: "정원 마감",
+  CLOSED: "작성자 마감",
+  APPLICATION_CLOSED: "신청 마감",
+  CANCELLED: "모집 취소",
+  FINISHED: "일정 종료",
+  REMOVED: "삭제된 모집",
+};
+
 export function detailStatus(
   detail: Pick<
     PostDetail,
     | "status"
     | "referenceTime"
     | "participationDeadline"
+    | "recruitmentStatus"
     | "joinable"
     | "currentMemberCount"
     | "capacity"
@@ -279,11 +301,16 @@ export function detailStatus(
   nowMs: number,
 ): { label: DetailStatusLabel; history: boolean; joined: boolean } {
   const status = effectiveStatus(detail, nowMs);
+  const server = recruitmentStatusAt(detail, nowMs);
   const joined =
     detail.relation === "JOINED" &&
     status !== "CANCELLED" &&
-    status !== "REMOVED";
+    status !== "REMOVED" &&
+    server !== "CANCELLED" &&
+    server !== "REMOVED";
   const label: DetailStatusLabel = (() => {
+    // The server's single rule wins; the derivation below is for older servers.
+    if (server) return DETAIL_LABELS[server];
     switch (status) {
       case "CANCELLED":
         return "모집 취소";

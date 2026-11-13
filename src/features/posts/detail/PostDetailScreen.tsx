@@ -290,6 +290,8 @@ function DetailView({
     currentMemberCount: participation.snapshot.currentMemberCount,
     capacity: participation.snapshot.capacity,
     joinable: participation.snapshot.joinable,
+    participationDeadline: participation.snapshot.participationDeadline,
+    recruitmentStatus: participation.snapshot.recruitmentStatus,
     relation: participation.snapshot.viewerRelation as PostDetail["relation"],
   };
   const status = effectiveStatus(detail, nowMs);

@@ -139,9 +139,9 @@ describe("MyPreview", () => {
     await expect(list(props().operations)).rejects.toThrow("Failed to fetch");
     fireEvent.change(scenario, { target: { value: "boundary" } });
     await vi.advanceTimersByTimeAsync(5_000);
-    await expect(finish(props().operations.leave("preview-8"))).rejects.toThrow(
-      "현재 참여를 취소할 수 없습니다.",
-    );
+    await expect(
+      finish(props().operations.leave("preview-8")),
+    ).rejects.toMatchObject({ code: "CANCEL_TIME_CLOSED" });
     expect(relationOf(await list(props().operations), "preview-8")).toBe(
       "JOINED",
     );

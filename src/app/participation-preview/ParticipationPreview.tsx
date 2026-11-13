@@ -9,6 +9,7 @@ import {
   demoDetail,
   demoJoin,
   demoLeave,
+  demoParticipationError,
   findDemoPost,
 } from "@/features/demo/demoPosts";
 
@@ -37,11 +38,19 @@ function Panel({ initial }: { initial: ParticipationSnapshot }) {
   const participation = useParticipation(initial, {
     join: async () => {
       await pause();
-      demoJoin(initial.postId);
+      try {
+        demoJoin(initial.postId);
+      } catch (error) {
+        throw demoParticipationError(error, initial.postId);
+      }
     },
     cancel: async () => {
       await pause();
-      demoLeave(initial.postId);
+      try {
+        demoLeave(initial.postId);
+      } catch (error) {
+        throw demoParticipationError(error, initial.postId);
+      }
     },
     refresh: async () => {
       const latest = readSnapshot(initial.postId);

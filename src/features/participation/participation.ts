@@ -1,6 +1,31 @@
 export type ParticipationStatus =
   "OPEN" | "FULL" | "CLOSED" | "CANCELLED" | "FINISHED" | "REMOVED";
 
+/**
+ * Public recruitment status the server computes with one rule for every post
+ * shape (list, detail, participation, history, my posts). The viewer's own
+ * relation is separate (ViewerRelation).
+ */
+export const RECRUITMENT_STATUSES = [
+  "RECRUITING",
+  "FULL",
+  "CLOSED",
+  "APPLICATION_CLOSED",
+  "CANCELLED",
+  "FINISHED",
+  "REMOVED",
+] as const;
+export type RecruitmentStatus = (typeof RECRUITMENT_STATUSES)[number];
+
+/** A known server value, or undefined (older servers do not send it). */
+export function toRecruitmentStatus(
+  value: unknown,
+): RecruitmentStatus | undefined {
+  return RECRUITMENT_STATUSES.includes(value as RecruitmentStatus)
+    ? (value as RecruitmentStatus)
+    : undefined;
+}
+
 export type ViewerRelation =
   "GUEST" | "AUTHOR" | "NONE" | "JOINED" | "CANCELLED";
 
@@ -17,6 +42,8 @@ export type ParticipationSnapshot = {
   joinable: boolean;
   /** Server join/cancel cutoff (ISO with offset); T-10 is assumed when absent. */
   participationDeadline?: string;
+  /** Server public status; absent from older servers. */
+  recruitmentStatus?: RecruitmentStatus;
   participantNames?: readonly string[];
   communicationUrl?: string;
 };
@@ -42,6 +69,83 @@ export function cutoffMinutes(source: DeadlineSource): number {
     (Date.parse(source.referenceTime) - participationDeadlineMs(source)) /
       60_000,
   );
+}
+
+/**
+ * The server's recruitment status moved on by the clock: the value was true at
+ * evaluatedAt, so a post can since have reached its cutoff or start time.
+ * Returns undefined without a server value; callers then keep their own
+ * derivation from status, joinable and counts.
+ */
+export function recruitmentStatusAt(
+  source: DeadlineSource & { recruitmentStatus?: RecruitmentStatus },
+  nowMs: number,
+): RecruitmentStatus | undefined {
+  const server = source.recruitmentStatus;
+  if (!server || !Number.isFinite(nowMs)) return server;
+  const running =
+    server === "RECRUITING" ||
+    server === "FULL" ||
+    server === "CLOSED" ||
+    server === "APPLICATION_CLOSED";
+  if (running && nowMs >= Date.parse(source.referenceTime)) return "FINISHED";
+  if (
+    (server === "RECRUITING" || server === "FULL") &&
+    nowMs >= participationDeadlineMs(source)
+  )
+    return "APPLICATION_CLOSED";
+  return server;
+}
+
+/** Codes of a 409 join/cancel refusal the screen explains in its own words. */
+export const REJECTION_MESSAGES: Record<string, string> = {
+  POST_FULL: "방금 정원이 찼어요.",
+  JOIN_TIME_CLOSED: "신청 기한이 지났어요.",
+  CANCEL_TIME_CLOSED: "신청 기한이 지났어요.",
+  POST_CLOSED: "작성자가 모집을 마감했어요.",
+  POST_CANCELLED: "모집이 취소됐어요.",
+  POST_FINISHED: "일정이 끝났어요.",
+};
+
+/** The post's latest public state sent with a refusal (`error.details.post`). */
+export type LatestPublicState = Partial<
+  Pick<
+    ParticipationSnapshot,
+    | "status"
+    | "recruitmentStatus"
+    | "referenceTime"
+    | "participationDeadline"
+    | "capacity"
+    | "currentMemberCount"
+    | "joinable"
+  >
+>;
+
+/**
+ * A join/cancel the server refused with a known reason. `latest` lets the
+ * screen update counts and status without another request.
+ */
+export class ParticipationRejected extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly latest?: LatestPublicState,
+  ) {
+    super(REJECTION_MESSAGES[code] ?? "참여 요청이 거절되었습니다.");
+    this.name = "ParticipationRejected";
+  }
+}
+
+/** Applies a refusal's public state; the viewer's relation is left as it was. */
+export function withLatestState(
+  snapshot: ParticipationSnapshot,
+  latest: LatestPublicState,
+): ParticipationSnapshot {
+  const next = { ...snapshot };
+  for (const [key, value] of Object.entries(latest)) {
+    if (value !== undefined) (next as Record<string, unknown>)[key] = value;
+  }
+  if (next.currentMemberCount > next.capacity) return snapshot;
+  return next;
 }
 
 export function getParticipationAvailability(

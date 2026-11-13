@@ -10,6 +10,10 @@
  * tab — keeps the changes (sessionStorage), so list → detail → my activity
  * always agree.
  */
+import {
+  ParticipationRejected,
+  REJECTION_MESSAGES,
+} from "@/features/participation/participation";
 import type { PostQuery, PostType } from "@/features/posts/posts";
 
 export const DEMO_VIEWER = {
@@ -483,6 +487,28 @@ function live(id: string): DemoPostRecord {
   if (!post || post.state === "REMOVED")
     throw new DemoRejection(404, "POST_NOT_FOUND");
   return post;
+}
+
+/**
+ * A join/cancel refusal as the real adapter reports it: a known 409 carries
+ * the post's latest public state (`error.details.post`).
+ */
+export function demoParticipationError(
+  error: unknown,
+  id: string,
+  now = Date.now(),
+): unknown {
+  if (
+    !(error instanceof DemoRejection) ||
+    error.status !== 409 ||
+    !(error.code in REJECTION_MESSAGES)
+  )
+    return error;
+  const post = findDemoPost(id);
+  return new ParticipationRejected(
+    error.code,
+    post ? demoPublicState(post, now) : undefined,
+  );
 }
 
 export function demoJoin(id: string, now = Date.now()): DemoPostRecord {

@@ -19,6 +19,7 @@ import {
   demoDetail,
   demoJoin,
   demoLeave,
+  demoParticipationError,
   findDemoPost,
   regenerateDemoPost,
   removeDemoPost,
@@ -183,11 +184,19 @@ export function PostDetailPreview({
         }),
       join: (id) =>
         run(() => {
-          demoJoin(id);
+          try {
+            demoJoin(id);
+          } catch (error) {
+            throw demoParticipationError(error, id);
+          }
         }),
       leave: (id) =>
         run(() => {
-          demoLeave(id);
+          try {
+            demoLeave(id);
+          } catch (error) {
+            throw demoParticipationError(error, id);
+          }
         }),
       close: (id) =>
         run(() => {

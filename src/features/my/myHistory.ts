@@ -7,6 +7,8 @@ export type MyRelation = "AUTHOR" | "JOINED" | "CANCELLED";
 type MyHistoryPost = PostSummary & {
   status: Exclude<PostSummary["status"], "REMOVED">;
   relation: MyRelation;
+  /** Sent only while I am the author or a current member of an active schedule. */
+  communicationUrl?: string;
 };
 
 /** Screen model, not a server DTO; removed posts retain no original content. */
@@ -76,7 +78,16 @@ export function toMyHistory(value: unknown, tab: MyTab): MyHistory {
       }
       const [post] = toPostSummaries([item]);
       if (post.status === "REMOVED") throw new InvalidMyHistoryData();
-      return { ...post, status: post.status, relation };
+      const url = text(item.communicationUrl);
+      return {
+        ...post,
+        status: post.status,
+        relation,
+        // Only https links are ever rendered as a link.
+        ...(url && /^https:\/\//i.test(url) && relation !== "CANCELLED"
+          ? { communicationUrl: url }
+          : {}),
+      };
     });
     if (new Set(content.map((item) => item.id)).size !== content.length)
       throw new InvalidMyHistoryData();
@@ -112,6 +123,9 @@ export function toMySnapshot(
     viewerRelation: item.relation,
     joinable: item.joinable,
     participationDeadline: item.participationDeadline,
+    ...(item.recruitmentStatus
+      ? { recruitmentStatus: item.recruitmentStatus }
+      : {}),
   };
 }
 

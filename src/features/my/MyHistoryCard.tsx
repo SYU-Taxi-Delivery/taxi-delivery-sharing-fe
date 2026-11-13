@@ -56,14 +56,21 @@ export function MyHistoryCard({
     toMySnapshot(item, serverTime),
     nowMs,
   );
-  const { label, available } = postStatusLabel({
-    ...item,
-    joinable: item.joinable && nowMs < availability.deadline,
-  });
+  const { label, available } = postStatusLabel(
+    { ...item, joinable: item.joinable && nowMs < availability.deadline },
+    nowMs,
+  );
   const author = item.relation === "AUTHOR";
   const referenceMs = Date.parse(item.referenceTime);
   const verb = item.type === "TAXI" ? "출발" : "주문 마감";
   const cancellable = nowMs < availability.deadline;
+  const link =
+    item.communicationUrl &&
+    (author || item.relation === "JOINED") &&
+    ["OPEN", "FULL", "CLOSED"].includes(item.status) &&
+    nowMs < referenceMs
+      ? item.communicationUrl
+      : null;
 
   return (
     <article className={styles.card} aria-labelledby={titleId}>
@@ -144,6 +151,16 @@ export function MyHistoryCard({
         >
           {author ? "모집 관리" : "상세 보기"}
         </Link>
+        {link && (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.button}
+          >
+            소통 링크 <span className={styles.srOnly}>(새 창)</span>
+          </a>
+        )}
         {availability.action === "cancel" && (
           <button
             type="button"

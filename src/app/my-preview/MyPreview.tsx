@@ -8,10 +8,10 @@ import { MyHistoryScreen } from "@/features/my/MyHistoryScreen";
 import { DevTools } from "@/features/demo/DevTools";
 import {
   DEMO_VIEWER,
-  DemoRejection,
   demoHistory,
   demoHistoryItem,
   demoLeave,
+  demoParticipationError,
   demoStatus,
   resetDemoPosts,
   updateDemoPost,
@@ -92,9 +92,7 @@ export function MyPreview({ tab }: { tab: MyTab }) {
         try {
           demoLeave(id);
         } catch (error) {
-          if (error instanceof DemoRejection)
-            throw new Error("현재 참여를 취소할 수 없습니다.");
-          throw error;
+          throw demoParticipationError(error, id);
         }
         refreshFailure.pending = scenario === "refreshError";
       },

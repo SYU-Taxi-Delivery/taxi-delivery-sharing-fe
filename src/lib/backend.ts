@@ -37,6 +37,21 @@ export function errorCode(error: unknown): string | null {
   }
 }
 
+/** The error's `details` object, e.g. `{ post: {...} }` on a 409; null otherwise. */
+export function errorDetails(error: unknown): Record<string, unknown> | null {
+  if (!(error instanceof ApiError)) return null;
+  try {
+    const details = (
+      JSON.parse(error.body) as { error?: { details?: unknown } }
+    )?.error?.details;
+    return typeof details === "object" && details !== null
+      ? (details as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function toEnvelope<T>(value: unknown): Envelope<T> {
   if (typeof value !== "object" || value === null || !("data" in value)) {
     throw new InvalidBackendResponse();

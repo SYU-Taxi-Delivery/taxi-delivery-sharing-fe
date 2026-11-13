@@ -13,10 +13,7 @@ import {
   type MyHistoryItem,
   type MyTab,
 } from "./myHistory";
-import {
-  MyHistoryNotConnectedError,
-  myHistoryOperations,
-} from "./myHistoryApi";
+import { myHistoryOperations } from "./myHistoryApi";
 
 const serverTime = "2026-10-20T17:30:00+09:00";
 const taxi = {
@@ -53,7 +50,7 @@ describe("toMyHistory", () => {
     ).toMatchObject({ status: "FULL", relation: "CANCELLED" });
   });
 
-  it("알 수 없는 필드와 명단·소통 링크·개인정보를 버린다", () => {
+  it("알 수 없는 필드와 명단·개인정보를 버리고, https 소통 링크만 남긴다", () => {
     const result = toMyHistory(
       {
         ...history([
@@ -69,7 +66,27 @@ describe("toMyHistory", () => {
       },
       "participated",
     );
-    expect(result).toEqual(history([{ ...taxi, id: "1" }]));
+    expect(result).toEqual(
+      history([
+        { ...taxi, id: "1", communicationUrl: "https://example.com/private" },
+      ]),
+    );
+    const unsafe = toMyHistory(
+      history([{ ...taxi, communicationUrl: "javascript:alert(1)" }]),
+      "participated",
+    );
+    expect(unsafe.content[0]).not.toHaveProperty("communicationUrl");
+    const left = toMyHistory(
+      history([
+        {
+          ...taxi,
+          relation: "CANCELLED",
+          communicationUrl: "https://example.com/private",
+        },
+      ]),
+      "participated",
+    );
+    expect(left.content[0]).not.toHaveProperty("communicationUrl");
   });
 
   it("삭제 이력은 일반 필드 없이 읽고 원문을 모두 제거한다", () => {
@@ -218,11 +235,8 @@ describe("toMySnapshot", () => {
   );
 });
 
-it("작성 이력은 API가 없어 가장하지 않고, 참여 취소 adapter를 재사용한다", async () => {
+it("참여 취소는 상세의 참여 취소 adapter를 재사용한다", () => {
   expect(myHistoryOperations.leave).toBe(postDetailOperations.leave);
-  await expect(myHistoryOperations.list("created")).rejects.toBeInstanceOf(
-    MyHistoryNotConnectedError,
-  );
 });
 
 describe("splitMyHistory", () => {

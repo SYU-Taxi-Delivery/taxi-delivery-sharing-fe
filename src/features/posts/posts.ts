@@ -1,4 +1,9 @@
-import { cutoffMinutes } from "@/features/participation/participation";
+import {
+  cutoffMinutes,
+  recruitmentStatusAt,
+  toRecruitmentStatus,
+  type RecruitmentStatus,
+} from "@/features/participation/participation";
 import { formatDate } from "@/lib/dateFormat";
 
 export type PostType = "TAXI" | "DELIVERY";
@@ -17,6 +22,8 @@ type PostBase = {
   joinable: boolean;
   /** Server join/cancel cutoff, ISO with offset. */
   participationDeadline?: string;
+  /** Server public status; preferred over the local derivation when present. */
+  recruitmentStatus?: RecruitmentStatus;
   authorName?: string;
 };
 
@@ -125,6 +132,9 @@ function toPostSummary(value: unknown): PostSummary {
     ...(instant(raw.participationDeadline)
       ? { participationDeadline: instant(raw.participationDeadline)! }
       : {}),
+    ...(toRecruitmentStatus(raw.recruitmentStatus)
+      ? { recruitmentStatus: toRecruitmentStatus(raw.recruitmentStatus) }
+      : {}),
     ...(text(raw.authorName) ? { authorName: text(raw.authorName)! } : {}),
   };
   if (type === "TAXI") {
@@ -215,15 +225,62 @@ export function postQueryHref(basePath: string, query: PostQuery): string {
   return search ? `${basePath}?${search}` : basePath;
 }
 
+type StatusLabel = { label: string; reason: string | null; available: boolean };
+
+/** Card words for each server recruitment status. */
+function recruitmentLabel(
+  post: PostSummary,
+  status: RecruitmentStatus,
+): StatusLabel {
+  const deadline = post.type === "TAXI" ? "출발" : "주문 마감";
+  switch (status) {
+    case "RECRUITING":
+      return { label: "모집 중", reason: null, available: true };
+    case "FULL":
+      return { label: "정원 마감", reason: "정원 마감", available: false };
+    case "CLOSED":
+      return {
+        label: "모집 마감",
+        reason: "작성자 모집 마감",
+        available: false,
+      };
+    case "APPLICATION_CLOSED":
+      return {
+        label: "참여 마감",
+        reason: `${deadline} ${cutoffMinutes(post)}분 전 마감`,
+        available: false,
+      };
+    case "CANCELLED":
+      return {
+        label: "모집 취소",
+        reason: "작성자 모집 취소",
+        available: false,
+      };
+    case "FINISHED":
+      return {
+        label: "모집 완료",
+        reason: `${deadline} 시간 경과`,
+        available: false,
+      };
+    case "REMOVED":
+      return { label: "삭제된 모집", reason: "삭제된 모집", available: false };
+  }
+}
+
 /**
- * Text label for the card status. OPEN with joinable=false is shown as
+ * Text label for the card status. The server's recruitmentStatus wins (moved
+ * on by `nowMs` when given); without it, OPEN with joinable=false is shown as
  * "참여 마감" without inventing a new status (AC-DISC-003-04).
  */
-export function postStatusLabel(post: PostSummary): {
-  label: string;
-  reason: string | null;
-  available: boolean;
-} {
+export function postStatusLabel(
+  post: PostSummary,
+  nowMs?: number,
+): StatusLabel {
+  const server =
+    nowMs === undefined
+      ? post.recruitmentStatus
+      : recruitmentStatusAt(post, nowMs);
+  if (server) return recruitmentLabel(post, server);
   const deadline = post.type === "TAXI" ? "출발" : "주문 마감";
   switch (post.status) {
     case "OPEN":

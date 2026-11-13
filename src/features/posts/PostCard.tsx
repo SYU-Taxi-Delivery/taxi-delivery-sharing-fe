@@ -51,11 +51,15 @@ export function PostCard({
 }) {
   const path = useAppPath();
   const ownNow = useClientNow();
-  const { label, reason, available } = postStatusLabel(post);
+  const clock = now === undefined ? ownNow : now;
+  const { label, reason, available } = postStatusLabel(
+    post,
+    clock ?? undefined,
+  );
   const reference = Date.parse(post.referenceTime);
   const remaining = post.capacity - post.currentMemberCount;
   const taxi = post.type === "TAXI";
-  const day = postDayText(reference, now === undefined ? ownNow : now);
+  const day = postDayText(reference, clock);
 
   return (
     <Link

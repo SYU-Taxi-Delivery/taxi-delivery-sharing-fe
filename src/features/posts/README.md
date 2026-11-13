@@ -1,6 +1,6 @@
 # 모집글 목록 (#6)
 
-> 연동 상태(2026-10-27): `GET /api/posts`에 연결했다(`postsApi.ts`). "참여 가능한 글만"은 백엔드에 `joinable` 필터가 없어 `status=OPEN`으로 요청한다. 설정·불일치·요청 목록은
+> 연동 상태(2026-11-14): `GET /api/posts`에 연결했다(`postsApi.ts`). "참여 가능"은 서버 `joinable=true`로 요청하고(이전 서버 호환으로 `status=OPEN`도 함께 보낸다), 카드 상태는 서버 `recruitmentStatus`를 우선하며 없을 때만 기존 계산을 쓴다. 작성자 이름은 `author.displayName`이다. 설정·불일치·요청 목록은
 > [docs/backend-integration.md](../../../docs/backend-integration.md)를 참고한다.
 
 API 명세가 미정인 상태의 1차 구현이다. 로그인 사용자용 `/posts` 목록 화면,
