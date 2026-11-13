@@ -1,57 +1,61 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useState } from "react";
 import { ParticipationPanel } from "@/features/participation/ParticipationPanel";
-import {
-  hideUnavailableDetails,
-  type ParticipationSnapshot,
-} from "@/features/participation/participation";
+import type { ParticipationSnapshot } from "@/features/participation/participation";
 import { useParticipation } from "@/features/participation/useParticipation";
+import { toPostDetail, toSnapshot } from "@/features/posts/detail/postDetail";
+import {
+  demoDetail,
+  demoJoin,
+  demoLeave,
+  findDemoPost,
+} from "@/features/demo/demoPosts";
 
 const pause = () =>
   new Promise<void>((resolve) => window.setTimeout(resolve, 350));
 
-export function ParticipationPreview({
-  initialSnapshot,
-}: {
-  initialSnapshot: ParticipationSnapshot;
-}) {
-  const current = useRef(initialSnapshot);
-  const participation = useParticipation(initialSnapshot, {
+/** The shared demo record as the participation panel sees it. */
+function readSnapshot(postId: string): ParticipationSnapshot | null {
+  const post = findDemoPost(postId);
+  return post ? toSnapshot(toPostDetail(demoDetail(post, Date.now()))) : null;
+}
+
+/** One shared demo post; joining here shows up in the list and 내 활동 too. */
+export function ParticipationPreview({ postId }: { postId: string }) {
+  const [initial, setInitial] = useState<ParticipationSnapshot | null>(null);
+  useEffect(() => {
+    // The store lives in the browser, so it is read after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInitial(readSnapshot(postId));
+  }, [postId]);
+  if (!initial) return <p role="status">모집 정보를 불러오고 있어요.</p>;
+  return <Panel initial={initial} />;
+}
+
+function Panel({ initial }: { initial: ParticipationSnapshot }) {
+  const participation = useParticipation(initial, {
     join: async () => {
       await pause();
-      current.current = {
-        ...current.current,
-        viewerRelation: "JOINED",
-        currentMemberCount: current.current.currentMemberCount + 1,
-        participantNames: ["작성자", "참가자", "나"],
-        communicationUrl: "#preview-communication",
-      };
+      demoJoin(initial.postId);
     },
     cancel: async () => {
       await pause();
-      current.current = hideUnavailableDetails({
-        ...current.current,
-        viewerRelation: "CANCELLED",
-        currentMemberCount: current.current.currentMemberCount - 1,
-      });
+      demoLeave(initial.postId);
     },
     refresh: async () => {
-      current.current = {
-        ...current.current,
-        serverTime: new Date().toISOString(),
-      };
-      return current.current;
+      const latest = readSnapshot(initial.postId);
+      if (!latest) throw new Error("모집을 찾을 수 없습니다.");
+      return latest;
     },
   });
 
   return (
     <article>
       <h2 className="mb-3 font-bold">
-        {initialSnapshot.type === "TAXI"
-          ? "택시 · 참여 신청"
-          : "배달 · 참여 취소"}
+        {initial.type === "TAXI" ? "택시" : "배달"} · {initial.title}
       </h2>
+      <p className="mb-3 text-xs text-neutral-600">{initial.postId}</p>
       <ParticipationPanel participation={participation} />
       {participation.snapshot.participantNames && (
         <p className="mt-4 text-sm">
@@ -59,12 +63,9 @@ export function ParticipationPreview({
         </p>
       )}
       {participation.snapshot.communicationUrl && (
-        <a
-          className="mt-2 inline-block text-sm underline"
-          href={participation.snapshot.communicationUrl}
-        >
-          소통 링크 (모의)
-        </a>
+        <p className="mt-2 text-sm">
+          소통 링크 (데모): {participation.snapshot.communicationUrl}
+        </p>
       )}
     </article>
   );

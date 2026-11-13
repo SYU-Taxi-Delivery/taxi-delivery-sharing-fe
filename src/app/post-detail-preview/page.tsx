@@ -8,6 +8,6 @@ export default async function PostDetailPreviewPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { postId } = await searchParams;
-  const id = typeof postId === "string" ? postId : "preview-detail";
+  const id = typeof postId === "string" ? postId : "preview-6";
   return <PostDetailPreview key={id} postId={id} />;
 }

@@ -8,6 +8,10 @@ import {
 } from "@/features/my/myHistory";
 import { MyPreview } from "./MyPreview";
 import MyPreviewPage from "./page";
+import { resetDemoPosts } from "@/features/demo/demoPosts";
+
+const relationOf = (history: MyHistory, id: string) =>
+  history.content.find((item) => item.id === id)?.relation;
 
 const { renderHistory, notFound } = vi.hoisted(() => ({
   renderHistory: vi.fn(),
@@ -25,6 +29,8 @@ vi.mock("@/features/my/MyHistoryScreen", () => ({
 
 beforeEach(() => {
   vi.useFakeTimers();
+  sessionStorage.clear();
+  resetDemoPosts();
   renderHistory.mockClear();
   notFound.mockClear();
 });
@@ -110,18 +116,18 @@ describe("MyPreview", () => {
       target: { value: "leaveError" },
     });
     let operations = props().operations;
-    await expect(finish(operations.leave("participated-0"))).rejects.toThrow(
+    await expect(finish(operations.leave("preview-8"))).rejects.toThrow(
       "Failed to fetch",
     );
-    expect((await list(operations)).content[0].relation).toBe("JOINED");
+    expect(relationOf(await list(operations), "preview-8")).toBe("JOINED");
 
     fireEvent.change(screen.getByRole("combobox", { name: "상황" }), {
       target: { value: "refreshError" },
     });
     operations = props().operations;
-    await finish(operations.leave("participated-0"));
+    await finish(operations.leave("preview-8"));
     await expect(list(operations)).rejects.toThrow("Failed to fetch");
-    expect((await list(operations)).content[0].relation).toBe("CANCELLED");
+    expect(relationOf(await list(operations), "preview-8")).toBe("CANCELLED");
   });
 
   it("빈 이력·조회 오류·실제 시계의 취소 경계 시나리오를 제공한다", async () => {
@@ -133,10 +139,12 @@ describe("MyPreview", () => {
     await expect(list(props().operations)).rejects.toThrow("Failed to fetch");
     fireEvent.change(scenario, { target: { value: "boundary" } });
     await vi.advanceTimersByTimeAsync(5_000);
-    await expect(
-      finish(props().operations.leave("participated-0")),
-    ).rejects.toThrow("현재 참여를 취소할 수 없습니다.");
-    expect((await list(props().operations)).content[0].relation).toBe("JOINED");
+    await expect(finish(props().operations.leave("preview-8"))).rejects.toThrow(
+      "현재 참여를 취소할 수 없습니다.",
+    );
+    expect(relationOf(await list(props().operations), "preview-8")).toBe(
+      "JOINED",
+    );
   });
 
   it("미리보기 라우트는 운영 환경에서도 열리고 탭 query를 전달한다", async () => {

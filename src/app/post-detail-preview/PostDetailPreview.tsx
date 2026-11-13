@@ -11,21 +11,39 @@ import {
 import { PostDetailScreen } from "@/features/posts/detail/PostDetailScreen";
 import { createPreview as createCommentsPreview } from "../comments-preview/CommentsPreview";
 import { DevTools } from "@/features/demo/DevTools";
+import {
+  DEMO_VIEWER,
+  DemoRejection,
+  demoCancel,
+  demoClose,
+  demoDetail,
+  demoJoin,
+  demoLeave,
+  findDemoPost,
+  regenerateDemoPost,
+  removeDemoPost,
+  updateDemoPost,
+  type DemoPostRecord,
+} from "@/features/demo/demoPosts";
 
 const auth: AuthOperations = {
-  me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
+  me: async () => DEMO_VIEWER,
   login: async () => {},
   logout: async () => {},
 };
 
+/*
+ * Scenarios rewrite this post's shared record, so the list and 내 활동 show
+ * the same change. "목록 데이터 그대로" puts the record back as generated.
+ */
 const scenarios = {
-  viewer: "비참여자 · 택시 모집 중",
-  delivery: "비참여자 · 배달(주문 안내)",
+  current: "목록 데이터 그대로",
+  viewer: "비참여자 · 모집 중",
   joined: "참여 중 · 명단·링크",
   cancelledMember: "참여 취소한 학생",
   reported: "이미 신고한 모집",
   reportDuplicate: "신고 시 중복 응답",
-  author: "작성자 · 모집 중 3/4",
+  author: "작성자 · 모집 중",
   authorFull: "작성자 · 정원 마감",
   authorClosed: "작성자 · 직접 마감",
   closeConflict: "작성자 · 마감 중 상태 변경",
@@ -39,158 +57,179 @@ type Scenario = keyof typeof scenarios;
 const pause = () =>
   new Promise<void>((resolve) => window.setTimeout(resolve, 400));
 
-function initialState(scenario: Scenario) {
-  const now = Date.now();
-  const hours = scenario === "finished" ? -1 : 2;
-  const reference = new Date(now + hours * 3_600_000);
-  reference.setSeconds(0, 0);
-  const author = scenario.startsWith("author") || scenario === "closeConflict";
-  const joined = scenario === "joined" || scenario === "finished";
-  const base = {
-    id: "preview-detail",
-    title:
-      scenario === "delivery"
-        ? "점심 배달 같이 시켜요"
-        : "정문에서 태릉입구역까지 같이 가요",
-    description:
-      scenario === "delivery"
-        ? "점심은 정문 김밥에서 같이 시켜요.\n주문 마감 전까지 댓글로 메뉴를 남겨 주시고, 도착하면 학생회관 앞에서 함께 받아요."
-        : "수업 끝나고 태릉입구역으로 이동해요.\n출발 5분 전, 정문 바깥 택시 승차 장소에서 만나요.",
-    status:
-      scenario === "authorFull"
-        ? "FULL"
-        : scenario === "authorClosed"
-          ? "CLOSED"
-          : scenario === "cancelled"
-            ? "CANCELLED"
-            : scenario === "removed"
-              ? "REMOVED"
-              : "OPEN",
-    referenceTime: reference.toISOString(),
-    createdAt: new Date(now - 2 * 3_600_000).toISOString(),
-    capacity: 4,
-    currentMemberCount:
-      scenario === "authorFull" ? 4 : author ? 3 : joined ? 3 : 2,
-    relation: author
-      ? "AUTHOR"
-      : joined
-        ? "JOINED"
-        : scenario === "cancelledMember"
-          ? "CANCELLED"
-          : "NONE",
-    authorName: author ? "김하늘" : "박지민",
-    reported: scenario === "reported",
-    // The preview server sends names and links to everyone; the screen must hide them.
-    participantNames: author
-      ? ["김하늘", "윤서준", "강다은"]
-      : ["박지민", "이서연", ...(joined ? ["김하늘"] : [])],
-    communicationUrl: "https://open.kakao.com/o/preview",
-    email: "someone@syuin.ac.kr",
-    studentNumber: "2024101234",
-  };
-  return scenario === "delivery"
-    ? {
-        ...base,
-        type: "DELIVERY",
-        restaurantName: "정문 김밥",
-        pickupLocation: "학생회관 앞",
-        orderGuide: "메뉴는 각자 고르고 배달비는 나눠 내요.",
+/** Keeps `members` within what the scenario's headcount allows. */
+const seats = (post: DemoPostRecord, others: number): DemoPostRecord => ({
+  ...post,
+  members: Array.from(
+    { length: Math.max(0, others) },
+    (_, index) =>
+      post.members[index] ??
+      ["윤서준", "강다은", "조하린", "임도현", "서지아"][index % 5],
+  ),
+});
+
+function applyScenario(id: string, scenario: Scenario) {
+  if (scenario === "notFound") {
+    removeDemoPost(id);
+    return;
+  }
+  const base = regenerateDemoPost(id);
+  if (!base || scenario === "current") return;
+  const viewer = (post: DemoPostRecord, relation: DemoPostRecord["relation"]) =>
+    ({
+      ...post,
+      relation,
+      state: "OPEN",
+      authorName:
+        post.authorName === DEMO_VIEWER.displayName
+          ? "박지민"
+          : post.authorName,
+    }) satisfies DemoPostRecord;
+  const author = (post: DemoPostRecord) =>
+    ({
+      ...post,
+      relation: "AUTHOR",
+      state: "OPEN",
+      authorName: DEMO_VIEWER.displayName,
+    }) satisfies DemoPostRecord;
+  updateDemoPost(id, (post) => {
+    const cap = post.capacity;
+    switch (scenario) {
+      case "viewer":
+      case "reportDuplicate":
+        return seats(
+          viewer(post, "NONE"),
+          Math.min(post.members.length, cap - 2),
+        );
+      case "reported":
+        return { ...viewer(post, "NONE"), reported: true };
+      case "joined":
+        return seats(
+          viewer(post, "JOINED"),
+          Math.min(post.members.length, cap - 2),
+        );
+      case "cancelledMember":
+        return seats(
+          viewer(post, "CANCELLED"),
+          Math.min(post.members.length, cap - 2),
+        );
+      case "author":
+      case "closeConflict":
+        return seats(author(post), cap - 2);
+      case "authorFull":
+        return seats(author(post), cap - 1);
+      case "authorClosed":
+        return { ...seats(author(post), cap - 2), state: "CLOSED" };
+      case "finished": {
+        const reference = new Date(Date.now() - 3_600_000);
+        reference.setSeconds(0, 0);
+        return {
+          ...seats(
+            viewer(post, "JOINED"),
+            Math.min(post.members.length, cap - 2),
+          ),
+          referenceTime: reference.toISOString(),
+        };
       }
-    : {
-        ...base,
-        type: "TAXI",
-        departure: "삼육대학교 정문",
-        destination: "태릉입구역 7번 출구",
-      };
+      case "cancelled":
+        return { ...viewer(post, "NONE"), state: "CANCELLED", members: [] };
+      case "removed":
+        return { ...post, state: "REMOVED" };
+    }
+  });
 }
 
+/** A demo refusal as the detail adapter would report it. */
+function toScreenError(error: unknown): unknown {
+  if (!(error instanceof DemoRejection)) return error;
+  if (error.status === 404) return new PostDetailError("notFound");
+  if (error.status === 403) return new PostDetailError("forbidden");
+  return new PostDetailError("conflict");
+}
+
+const run = async <T,>(action: () => T): Promise<T> => {
+  await pause();
+  try {
+    return action();
+  } catch (error) {
+    throw toScreenError(error);
+  }
+};
+
 export function PostDetailPreview({
-  postId = "preview-detail",
+  postId = "preview-6",
 }: {
   postId?: string;
 }) {
-  const initialScenario: Scenario =
-    postId.startsWith("created-") ||
-    ["preview-created", "preview-edit"].includes(postId)
-      ? "author"
-      : postId.startsWith("participated-")
-        ? "joined"
-        : /^preview-\d+$/.test(postId) &&
-            (Number(postId.slice(8)) - 1) % 3 === 1
-          ? "delivery"
-          : "viewer";
-  const [scenario, setScenario] = useState<Scenario>(initialScenario);
+  const [scenario, setScenario] = useState<Scenario>("current");
   const [version, setVersion] = useState(0);
   // Comments follow the post: a pickup chat for delivery, a ride chat for taxi.
   const [taxiComments] = useState(() => createCommentsPreview("normal"));
   const [deliveryComments] = useState(() => createCommentsPreview("delivery"));
-  const comments = scenario === "delivery" ? deliveryComments : taxiComments;
+  const [delivery] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      findDemoPost(postId)?.type === "DELIVERY",
+  );
+  const comments = delivery ? deliveryComments : taxiComments;
 
-  const operations = useMemo<PostDetailOperations>(() => {
-    const state: Record<string, unknown> = {
-      ...initialState(scenario),
-      id: postId,
-    };
-    const snapshot = () => {
-      const count = state.currentMemberCount as number;
-      const capacity = state.capacity as number;
-      const joinable =
-        state.status === "OPEN" &&
-        count < capacity &&
-        Date.now() < Date.parse(state.referenceTime as string) - 600_000;
-      return { ...state, joinable, serverTime: new Date().toISOString() };
-    };
-    return {
-      load: async () => {
-        await pause();
-        if (scenario === "notFound") throw new ApiError(404, "");
-        return snapshot();
-      },
-      join: async () => {
-        await pause();
-        state.relation = "JOINED";
-        state.currentMemberCount = (state.currentMemberCount as number) + 1;
-        state.participantNames = ["박지민", "이서연", "김하늘"];
-      },
-      leave: async () => {
-        await pause();
-        state.relation = "CANCELLED";
-        state.currentMemberCount = (state.currentMemberCount as number) - 1;
-      },
-      close: async () => {
-        await pause();
-        if (scenario === "closeConflict") {
-          state.status = "FULL";
-          state.currentMemberCount = 4;
-          throw new PostDetailError("conflict");
-        }
-        state.status = "CLOSED";
-      },
-      cancel: async () => {
-        await pause();
-        state.status = "CANCELLED";
-      },
-      report: async () => {
+  const operations = useMemo<PostDetailOperations>(
+    () => ({
+      load: () =>
+        run(() => {
+          const post = findDemoPost(postId);
+          if (!post) throw new ApiError(404, "");
+          return demoDetail(post, Date.now());
+        }),
+      join: (id) =>
+        run(() => {
+          demoJoin(id);
+        }),
+      leave: (id) =>
+        run(() => {
+          demoLeave(id);
+        }),
+      close: (id) =>
+        run(() => {
+          if (scenario === "closeConflict") {
+            // Someone took the last seat while the author was deciding.
+            updateDemoPost(id, (post) => seats(post, post.capacity - 1));
+            throw new PostDetailError("conflict");
+          }
+          demoClose(id);
+        }),
+      cancel: (id) =>
+        run(() => {
+          demoCancel(id);
+        }),
+      report: async (id) => {
         await pause();
         if (scenario === "reportDuplicate") {
           throw new PostDetailError("duplicateReport");
         }
+        updateDemoPost(id, (post) => ({ ...post, reported: true }));
       },
-    };
-  }, [scenario, postId]);
+    }),
+    [scenario, postId],
+  );
 
   return (
     <AuthProvider operations={auth}>
       <DevTools>
         <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span>모집 상세 데모 · 새로고침하면 초기화돼요.</span>
+          <span>
+            모집 상세 데모 · 목록·내 활동과 같은 데이터예요. 상황을 바꾸면 모든
+            화면에 반영되고, 새로고침하면 처음 상태로 돌아가요.
+          </span>
           <label className="flex items-center gap-1">
             상황
             <select
               className="rounded border px-1"
               value={scenario}
               onChange={(event) => {
-                setScenario(event.target.value as Scenario);
+                const next = event.target.value as Scenario;
+                applyScenario(postId, next);
+                setScenario(next);
                 setVersion((value) => value + 1);
               }}
             >
