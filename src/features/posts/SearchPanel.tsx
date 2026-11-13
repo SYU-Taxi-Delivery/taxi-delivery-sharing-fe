@@ -180,7 +180,7 @@ export function SearchPanel({
 
         {delivery && (
           <fieldset className={styles.panelSection}>
-            <legend className={styles.panelLegend}>음식점·수령 장소</legend>
+            <legend className={styles.srOnly}>음식점·수령 장소</legend>
             <PlaceField
               label="음식점"
               value={draft.restaurant ?? ""}
