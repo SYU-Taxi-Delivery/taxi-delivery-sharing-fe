@@ -133,8 +133,13 @@ describe("PostListScreen", () => {
     await setup(async () => pageOf([delivery]));
     const card = cards()[0];
     expect(within(card).getByText("배달")).toBeVisible();
-    expect(card).toHaveTextContent("테스트음식점");
-    expect(card).toHaveTextContent("테스트음식점 · , 수령 장소 정문");
+    // The restaurant is the title; the pickup place is its own small line.
+    expect(card.querySelector("[class*=cardTitle]")).toHaveTextContent(
+      /^테스트음식점$/,
+    );
+    expect(card.querySelector("[class*=pickup]")).toHaveTextContent(
+      "수령 · 정문",
+    );
     expect(card).toHaveTextContent("10/5 (월) 17:50 주문 마감");
     expect(within(card).getByText("참여 마감")).toBeVisible();
     expect(card).toHaveTextContent("주문 마감 10분 전 마감");

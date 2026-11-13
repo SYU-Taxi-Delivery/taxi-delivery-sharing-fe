@@ -633,6 +633,22 @@
   overflow-wrap: break-word;
 }
 
+/* Row 1 of the card: the title, plus the delivery pickup line under it. */
+.cardHead {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+
+/* Delivery: where to pick the food up, its own small line under the
+   restaurant so the two places never read as one name. */
+.pickup {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .arrow {
   color: var(--posts-muted);
   font-weight: 600;
