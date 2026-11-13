@@ -23,6 +23,7 @@ import {
   canReport,
   detailStatus,
   effectiveStatus,
+  extraTitle,
   GUIDE_ID,
   PostDetailError,
   remainingLabel,
@@ -349,6 +350,8 @@ function DetailView({
     section.focus({ preventScroll: true });
   }
   const remaining = detail.capacity - detail.currentMemberCount;
+  // Shown only when it adds something to the route heading above.
+  const subtitle = extraTitle(detail);
   const reportable = !author && canReport(latest) && !!report;
 
   async function copyLink() {
@@ -430,6 +433,7 @@ function DetailView({
               </span>
             </p>
           )}
+          {subtitle && <p className={styles.postTitle}>{subtitle}</p>}
         </div>
         <dl className={styles.facts}>
           <div className={styles.fact}>
@@ -464,7 +468,6 @@ function DetailView({
             {menuNotice}
           </p>
         )}
-        <p className={styles.postTitle}>{detail.title}</p>
         <p className={styles.byline}>
           <span className={styles.avatar} aria-hidden="true">
             {Array.from(detail.authorName ?? "")

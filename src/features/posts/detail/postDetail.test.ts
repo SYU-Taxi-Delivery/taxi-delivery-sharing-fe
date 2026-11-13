@@ -5,6 +5,7 @@ import {
   canReport,
   detailStatus,
   effectiveStatus,
+  extraTitle,
   normalizeReportDetail,
   remainingLabel,
   reportDetailError,
@@ -295,5 +296,41 @@ describe("recruitmentStatus", () => {
       toPostDetail({ ...base, recruitmentStatus: "SOMETHING" }),
     ).not.toHaveProperty("recruitmentStatus");
     expect(detailStatus(base, at("17:30")).label).toBe("모집 중");
+  });
+});
+
+describe("extraTitle", () => {
+  const taxi = (title: string) =>
+    ({
+      type: "TAXI",
+      title,
+      departure: "삼육대학교 정문",
+      destination: "태릉입구역 7번 출구",
+    }) as PostDetail;
+  const delivery = (title: string) =>
+    ({
+      type: "DELIVERY",
+      title,
+      restaurantName: "기숙사 앞 분식",
+      pickupLocation: "후문",
+    }) as PostDetail;
+
+  it("경로만 반복하는 제목은 숨긴다", () => {
+    expect(
+      extraTitle(taxi("삼육대학교 정문 → 태릉입구역 7번 출구 택시")),
+    ).toBeNull();
+    expect(
+      extraTitle(taxi("삼육대학교 정문 -> 태릉입구역 7번 출구")),
+    ).toBeNull();
+    expect(extraTitle(delivery("기숙사 앞 분식 같이 주문해요"))).toBeNull();
+  });
+
+  it("정보가 더 있는 제목은 그대로 보여 준다", () => {
+    expect(extraTitle(taxi("정문 → 태릉 택시, 캐리어 있어요"))).toBe(
+      "정문 → 태릉 택시, 캐리어 있어요",
+    );
+    expect(extraTitle(delivery("기숙사 앞 분식 떡볶이 2인분 이상"))).toBe(
+      "기숙사 앞 분식 떡볶이 2인분 이상",
+    );
   });
 });

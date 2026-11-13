@@ -59,8 +59,10 @@
   position: relative;
   z-index: 2;
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-1) 0 var(--space-2);
+  gap: var(--space-4);
+  /* No top padding: the sticker lines up with the panel on the right.
+     The bottom space separates the post's facts from the sections below. */
+  padding: 0 0 var(--space-4);
 }
 
 .topRow {
@@ -318,17 +320,20 @@ p.stop::before {
   color: var(--posts-text);
 }
 
-/* The author's own title, like a note pinned under the route */
+/* The author's own title, only when it adds to the route: a quiet line
+   under the stops, aligned with their text. */
 .postTitle {
-  justify-self: start;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--round-control);
-  background: var(--primary-tint);
-  color: var(--posts-text);
+  margin-top: var(--space-1);
+  padding-left: 1.5rem;
+  color: var(--posts-muted);
+  font-size: var(--type-body);
   font-weight: 600;
+  line-height: 1.5;
 }
 
 .byline {
+  /* 12px under the schedule cards: the post's own info stays together */
+  margin-top: calc(var(--space-1) * -1);
   display: flex;
   align-items: center;
   gap: var(--space-2);
