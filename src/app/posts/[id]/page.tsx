@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PostDetailScreen } from "@/features/posts/detail/PostDetailScreen";
 
-export const metadata: Metadata = { title: "모집글 상세 | SYU 택시·배달 공유" };
+export const metadata: Metadata = { title: "모집글 상세 | 두유팟" };
 
 export default async function PostDetailPage({
   params,

@@ -3,7 +3,7 @@ import { parseMyTab } from "@/features/my/myHistory";
 import { MyHistoryScreen } from "@/features/my/MyHistoryScreen";
 
 export const metadata: Metadata = {
-  title: "내 참여 · 모집 | SYU 택시·배달 공유",
+  title: "내 참여 · 모집 | 두유팟",
 };
 
 export default async function MyPage({

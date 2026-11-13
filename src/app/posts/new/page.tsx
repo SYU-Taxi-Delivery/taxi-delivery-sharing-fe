@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PostFormScreen } from "@/features/posts/form/PostFormScreen";
 
-export const metadata: Metadata = { title: "모집글 작성 | SYU 택시·배달 공유" };
+export const metadata: Metadata = { title: "모집글 작성 | 두유팟" };
 
 export default async function NewPostPage({
   searchParams,
