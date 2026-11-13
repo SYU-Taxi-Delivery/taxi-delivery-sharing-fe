@@ -92,7 +92,7 @@ const STEP_ONE: readonly FieldName[] = [
   "time",
   "capacity",
 ];
-const STEPS = ["유형·장소·일정 및 정원", "안내·미리보기"] as const;
+const STEPS = ["유형·장소·일정", "안내·미리보기"] as const;
 
 export function PostForm({
   mode,
@@ -540,33 +540,28 @@ export function PostForm({
         </div>
       </div>
 
+      {/* One compact indicator: where you are, what comes next, and a
+          two-part bar. Focus lands on the heading on a step change. */}
       <div className={styles.progress}>
-        <p className={styles.progressCount}>
-          {step}/{STEPS.length} 단계
+        <h2
+          id={id("step-heading")}
+          tabIndex={-1}
+          className={styles.progressNow}
+        >
+          <span className={styles.progressCount}>
+            {step}/{STEPS.length}
+            <span className="sr-only">단계</span>
+          </span>{" "}
+          {STEPS[step - 1]}
+        </h2>
+        <p className={styles.progressNext}>
+          {step === 1 ? `다음: ${STEPS[1]}` : "마지막 단계"}
         </p>
-        <ol className={styles.progressSteps} aria-label="작성 단계">
+        <span className={styles.progressBar} aria-hidden="true">
           {STEPS.map((label, index) => (
-            <li
-              key={label}
-              className={styles.progressStep}
-              data-done={index + 1 < step}
-              data-current={index + 1 === step}
-              aria-current={index + 1 === step ? "step" : undefined}
-            >
-              <span className={styles.stepBadge} aria-hidden="true">
-                {index + 1 < step ? "✓" : index + 1}
-              </span>
-              <span className={styles.progressLabel}>{label}</span>
-              <span className="sr-only">
-                {index + 1 < step
-                  ? ", 완료"
-                  : index + 1 === step
-                    ? ", 지금 단계"
-                    : ", 다음 단계"}
-              </span>
-            </li>
+            <span key={label} data-filled={index < step} />
           ))}
-        </ol>
+        </span>
       </div>
 
       <form
@@ -582,14 +577,6 @@ export function PostForm({
           </p>
         )}
 
-        <h2
-          id={id("step-heading")}
-          tabIndex={-1}
-          className={styles.stepHeading}
-        >
-          {step}단계 · {STEPS[step - 1]}
-        </h2>
-
         <p className={styles.legend}>
           <Tag kind="required" visible /> 꼭 입력해요 ·{" "}
           <Tag kind="optional" visible /> 비워도 돼요
@@ -597,12 +584,12 @@ export function PostForm({
 
         {step === 1 && (
           <>
-            <Section id={id("section-type")} title="유형 선택">
-              <fieldset className={styles.field}>
-                <legend className={styles.labelGroup}>
-                  <span className={styles.label}>카테고리</span>
-                  <Tag kind="required" />
-                </legend>
+            {/* One label for the choice: the group title is the legend. */}
+            <fieldset className={styles.section}>
+              <legend className={styles.sectionLegend}>
+                유형 <Tag kind="required" />
+              </legend>
+              <div className={styles.field}>
                 <div className={styles.categories}>
                   {(["TAXI", "DELIVERY"] as const).map((type) => (
                     <label key={type} className={styles.category}>
@@ -626,8 +613,8 @@ export function PostForm({
                     등록한 뒤에는 유형을 바꿀 수 없어요.
                   </p>
                 )}
-              </fieldset>
-            </Section>
+              </div>
+            </fieldset>
 
             <Section id={id("section-place")} title="장소">
               {taxi ? (
@@ -742,7 +729,7 @@ export function PostForm({
 
             <Section
               id={id("section-schedule")}
-              title={taxi ? "날짜·시간·정원" : "주문 마감·정원"}
+              title={taxi ? "일정·정원" : "주문 마감·정원"}
             >
               <div className={styles.datetime}>
                 <Field
