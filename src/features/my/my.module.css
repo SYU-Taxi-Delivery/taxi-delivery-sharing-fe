@@ -2,6 +2,31 @@
 /* 내 참여 · 모집: same pod-board language as the list (labels, seats, stickers). */
 
 /* Same segmented switch as the list: lipped thumb on a light green track */
+/* Page heading row: title group left, 모집글 쓰기 right. The auth gate and
+   the history below are later children of the same grid, full width. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+}
+
+.page > * {
+  grid-column: 1 / -1;
+}
+
+.page > .pageTitle {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  min-width: 0;
+}
+
+.page > .writeCta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
 .tabs {
   position: relative;
   display: grid;
@@ -235,11 +260,13 @@ p.meta {
   composes: base primary block from "../ui/button.module.css";
 }
 
+/* 참여 취소 and its deadline stay one pair: a small gap beside the button,
+   and when the line wraps the deadline sits right under it. */
 .cancelRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-1) var(--space-2);
 }
 
 /* The title is the link to the detail; the whole heading stays readable. */

@@ -274,30 +274,6 @@
   line-height: 1;
 }
 
-.cta {
-  composes: base primary from "../ui/button.module.css";
-  flex-shrink: 0;
-  margin-top: var(--space-4);
-}
-
-.cta > span[aria-hidden="true"] {
-  font-size: 1.25rem;
-  line-height: 1;
-}
-
-/* A CTA that must stay inside the auth gate (My page): end-aligned. */
-.main > .cta {
-  display: flex;
-  width: fit-content;
-  margin-left: auto;
-}
-
-@media (max-width: 39.99rem) {
-  .main > .cta {
-    width: 100%;
-  }
-}
-
 @media (max-width: 20rem) {
   .headingBean {
     display: none;

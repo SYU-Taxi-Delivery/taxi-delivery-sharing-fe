@@ -43,19 +43,29 @@ export function MyHistoryScreen({
   const path = useAppPath();
   return (
     <AppShell current="my" wide>
-      <h1 className={common.title}>내 참여 · 모집</h1>
-      <p className={common.lead}>참여한 글·작성한 글 관리</p>
-      <RequireAuth loginLabel="로그인하고 내 내역 보기">
-        <Link href={path("/posts/new")} className={common.cta}>
-          <Image src="/my/plus.svg" width={18} height={18} alt="" /> 모집글 쓰기
-        </Link>
-        <History
-          key={tab}
-          tab={tab}
-          basePath={basePath}
-          operations={operations}
-        />
-      </RequireAuth>
+      {/* Title + subtitle on the left, 모집글 쓰기 on the right of the same
+          row; everything after spans the full width (my.module.css .page). */}
+      <div className={styles.page}>
+        <div className={styles.pageTitle}>
+          <h1 className={common.title}>내 참여 · 모집</h1>
+          <p className={common.lead}>참여한 글·작성한 글 관리</p>
+        </div>
+        <RequireAuth loginLabel="로그인하고 내 내역 보기">
+          <Link
+            href={path("/posts/new")}
+            className={`${common.headingCta} ${styles.writeCta}`}
+          >
+            <Image src="/my/plus.svg" width={16} height={16} alt="" /> 모집글
+            쓰기
+          </Link>
+          <History
+            key={tab}
+            tab={tab}
+            basePath={basePath}
+            operations={operations}
+          />
+        </RequireAuth>
+      </div>
     </AppShell>
   );
 }
