@@ -469,7 +469,7 @@
 /* ───────── Pod board rows ───────── */
 
 .board {
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
 }
 
 /* Day group heading: "오늘 · 11/13 (금)" before the first card of each day */
@@ -477,20 +477,31 @@
   position: sticky;
   top: calc(3.5rem + 1px); /* below the sticky app bar */
   z-index: 2;
-  margin-top: var(--space-3);
-  padding: var(--space-1) 0;
+  margin-top: var(--space-4);
+  padding: var(--space-1) 0 var(--space-2);
   background: var(--color-paper);
   color: var(--posts-text);
   font-size: var(--type-label);
   font-weight: 700;
 }
 
+/* The first day heading sits right under the result summary (the board's
+   own top margin); later ones open a new day with more space. */
+.day:first-child > .dayHeading {
+  margin-top: 0;
+}
+
+.day + .day {
+  margin-top: var(--space-2);
+}
+
+/* Cards stand apart on the paper background: gaps, no row dividers. */
 .list {
   display: grid;
+  gap: var(--space-3);
 }
 
 .list > li {
-  border-bottom: 1px solid var(--posts-border);
   animation: row-in 320ms var(--curve-enter) both;
 }
 
@@ -534,20 +545,26 @@
   }
 }
 
+/* One pod = one white card: thin light border, the app's card corners.
+   The whole card is the link to the detail page. */
 .card {
   display: grid;
   grid-template-columns: 2.5rem minmax(0, 1fr);
   align-items: start;
   gap: var(--space-3);
-  margin: 0 calc(var(--space-2) * -1);
-  padding: var(--space-3) var(--space-2);
-  border-radius: var(--round-control);
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
   transition:
     background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
     transform var(--motion-fast) var(--bounce);
 }
 
 .card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--posts-border));
   background: var(--primary-tint);
 }
 
@@ -956,16 +973,20 @@
   container: board / inline-size;
 }
 
-/* Two cards per row once the board itself is wide enough (≥45rem, about
-   720px), so a 1024px window with the sidebar keeps one column. Each card
+/* Two cards per row once the board itself is wide enough (≥50rem, about
+   800px), so a 1024px window with the sidebar keeps one column. Each card
    takes three rows of the list grid (title, time · seats, meta) through
    subgrid, so the cards in one row line up their lines: a two-line title
    pushes its neighbour's time line down only in that row, and one-line rows
    stay tight. */
-@container board (min-width: 45rem) {
+@container board (min-width: 50rem) {
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--space-5);
+    gap: var(--space-4);
+  }
+
+  .list .card {
+    padding: 1.125rem var(--space-5);
   }
 
   .list > li,
