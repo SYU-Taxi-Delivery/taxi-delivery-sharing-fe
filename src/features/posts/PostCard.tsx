@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useSyncExternalStore } from "react";
 import { postStatusLabel, type PostSummary } from "./posts";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, ClockIcon, SeatSlots, TaxiArt } from "@/features/ui/art";
-import { formatDate } from "@/lib/dateFormat";
+import { BagArt, TaxiArt } from "@/features/ui/art";
+import { dayLabel, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -14,17 +15,47 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   hourCycle: "h23",
 });
 
-/*
- * One pod on the board: a taxi or bag sticker, the route as two stops, the
- * time, and seat slots filled to the real headcount (the "n / m명" text stays
- * next to them). The whole row is one link.
+const noSubscribe = () => () => {};
+
+/**
+ * The browser's clock, read once per mount. Server render and hydration get
+ * null (so relative words like "오늘" never mismatch the server HTML); the
+ * client re-renders with the real time right after.
  */
-export function PostCard({ post }: { post: PostSummary }) {
+export function useClientNow(): number | null {
+  const [now] = useState(() => Date.now());
+  return useSyncExternalStore(
+    noSubscribe,
+    () => now,
+    () => null,
+  );
+}
+
+/** "오늘", "내일", "모레" or "11/16 (월)"; the plain date until `now` is known. */
+export function postDayText(time: number, now: number | null): string {
+  return now === null ? formatDate(time) : dayLabel(time, now);
+}
+
+/*
+ * One pod on the board, read top-down on a phone: where (route or
+ * restaurant), then when + seats left side by side, then type · status ·
+ * author in small grey text. The whole row is one link.
+ */
+export function PostCard({
+  post,
+  now,
+}: {
+  post: PostSummary;
+  /** Current time from the list screen; the card reads its own otherwise. */
+  now?: number | null;
+}) {
   const path = useAppPath();
+  const ownNow = useClientNow();
   const { label, reason, available } = postStatusLabel(post);
   const reference = Date.parse(post.referenceTime);
   const remaining = post.capacity - post.currentMemberCount;
   const taxi = post.type === "TAXI";
+  const day = postDayText(reference, now === undefined ? ownNow : now);
 
   return (
     <Link
@@ -35,67 +66,53 @@ export function PostCard({ post }: { post: PostSummary }) {
     >
       <span className={styles.sticker}>{taxi ? <TaxiArt /> : <BagArt />}</span>
       <span className={styles.cardBody}>
-        <span className={styles.chips}>
-          <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
-          <span className={styles.status}>{label}</span>
-        </span>
         <span className={styles.cardTitle}>
           {taxi ? (
             <>
-              <span className={styles.stop}>
-                {post.departure}
-                <span className={styles.srOnly}>에서</span>
+              {post.departure}
+              <span className={styles.srOnly}>에서</span>
+              <span className={styles.arrow} aria-hidden="true">
+                {" → "}
               </span>
-              <span className={styles.stop} data-end="true">
-                {post.destination}
-                <span className={styles.srOnly}>까지</span>
-              </span>
+              {post.destination}
+              <span className={styles.srOnly}>까지</span>
             </>
           ) : (
             <>
-              <span className={styles.stop}>{post.restaurantName}</span>
-              <span className={styles.stop} data-end="true">
-                <span className={styles.stopMeta}>
-                  수령 장소 · {post.pickupLocation}
-                </span>
+              {post.restaurantName}
+              <span className={styles.arrow} aria-hidden="true">
+                {" · "}
               </span>
+              <span className={styles.srOnly}>, 수령 장소 </span>
+              {post.pickupLocation}
             </>
           )}
         </span>
-        <span className={styles.when}>
-          <ClockIcon className={styles.whenIcon} />
-          <span className={styles.time}>{timeFormat.format(reference)}</span>
-          <span className={styles.meta}>
-            {formatDate(reference)} · {taxi ? "출발" : "주문 마감"}
-          </span>
-        </span>
-        <span className={styles.figures}>
-          <SeatSlots
-            className={styles.seatSlots}
-            total={post.capacity}
-            filled={post.currentMemberCount}
-          />
-          <span className={styles.people}>
-            {post.currentMemberCount} / {post.capacity}명
+        <span className={styles.facts}>
+          <span className={styles.when}>
+            {day} {timeFormat.format(reference)} {taxi ? "출발" : "주문 마감"}
           </span>
           {available ? (
             <span className={styles.seats} data-last={remaining === 1}>
               {remaining}자리 남음
             </span>
           ) : (
-            // The status chip above already says it; repeat only extra detail.
+            // The status in the line below already says it; add only detail.
             reason &&
-            reason !== label && <span className={styles.meta}>{reason}</span>
+            reason !== label && <span className={styles.reason}>{reason}</span>
           )}
         </span>
-        {post.authorName && (
-          <span className={styles.author}>
-            <span className={styles.avatar} aria-hidden="true">
-              {post.authorName.slice(-2)}
-            </span>
-            {post.authorName}
-          </span>
-        )}
+        <span className={styles.cardMeta}>
+          <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
+          <span aria-hidden="true">·</span>
+          <span className={styles.status}>{label}</span>
+          {post.authorName && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className={styles.author}>{post.authorName}</span>
+            </>
+          )}
+        </span>
       </span>
     </Link>
   );

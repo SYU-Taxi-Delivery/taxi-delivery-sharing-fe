@@ -1,4 +1,5 @@
 import { cutoffMinutes } from "@/features/participation/participation";
+import { formatDate } from "@/lib/dateFormat";
 
 export type PostType = "TAXI" | "DELIVERY";
 export type PostStatus =
@@ -169,7 +170,25 @@ export function toPostPage(value: unknown): PostPage {
   return { content, totalElements, totalPages, number, size };
 }
 
-/** Reads `?type=&joinable=&page=` with a 1-based page; anything invalid falls back. */
+/** Default list view: every type, only pods you can still join, first page. */
+export const DEFAULT_POST_QUERY: PostQuery = {
+  type: "ALL",
+  joinableOnly: true,
+  page: 0,
+};
+
+/** True when type or the joinable filter differ from the default view. */
+export function isFilteredQuery(query: PostQuery): boolean {
+  return (
+    query.type !== DEFAULT_POST_QUERY.type ||
+    query.joinableOnly !== DEFAULT_POST_QUERY.joinableOnly
+  );
+}
+
+/**
+ * Reads `?type=&joinable=&page=` with a 1-based page; anything invalid falls
+ * back. 참여 가능 is on by default, so only `joinable=false` turns it off.
+ */
 export function parsePostQuery(params: {
   type?: string | string[];
   joinable?: string | string[];
@@ -181,7 +200,7 @@ export function parsePostQuery(params: {
   const page = Number(first(params.page));
   return {
     type: type === "TAXI" || type === "DELIVERY" ? type : "ALL",
-    joinableOnly: first(params.joinable) === "true",
+    joinableOnly: first(params.joinable) !== "false",
     page:
       Number.isSafeInteger(page) && page >= 1 && page <= 10_000 ? page - 1 : 0,
   };
@@ -190,7 +209,7 @@ export function parsePostQuery(params: {
 export function postQueryHref(basePath: string, query: PostQuery): string {
   const params = new URLSearchParams();
   if (query.type !== "ALL") params.set("type", query.type);
-  if (query.joinableOnly) params.set("joinable", "true");
+  if (!query.joinableOnly) params.set("joinable", "false");
   if (query.page > 0) params.set("page", String(query.page + 1));
   const search = params.toString();
   return search ? `${basePath}?${search}` : basePath;
@@ -241,4 +260,28 @@ export function postStatusLabel(post: PostSummary): {
     case "REMOVED":
       return { label: "삭제된 모집", reason: "삭제된 모집", available: false };
   }
+}
+
+export type PostDayGroup = {
+  /** Seoul calendar date, e.g. "2026/11/13 (금)". */
+  key: string;
+  /** referenceTime of the first post in the group, epoch ms. */
+  time: number;
+  posts: PostSummary[];
+};
+
+/**
+ * Splits a server-ordered page into runs of the same Seoul day, keeping the
+ * order. A run only breaks where the day changes between neighbours.
+ */
+export function groupPostsByDay(posts: PostSummary[]): PostDayGroup[] {
+  const groups: PostDayGroup[] = [];
+  for (const post of posts) {
+    const time = Date.parse(post.referenceTime);
+    const key = formatDate(time, { year: true });
+    const last = groups.at(-1);
+    if (last?.key === key) last.posts.push(post);
+    else groups.push({ key, time, posts: [post] });
+  }
+  return groups;
 }

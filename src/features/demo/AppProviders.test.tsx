@@ -42,7 +42,7 @@ describe("데모 화면의 연결과 세션", () => {
           }}
         >
           <PostListScreen
-            query={{ type: "ALL", joinableOnly: false, page: 0 }}
+            query={{ type: "ALL", joinableOnly: true, page: 0 }}
             operations={{
               list: async () => ({
                 content: [

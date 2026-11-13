@@ -235,36 +235,53 @@
   color: var(--posts-muted);
 }
 
-/* The write button lines up with the bottom of the title block, not with
-   the art above it. */
+/* List header: one compact row (bean, eyebrow + title, write button) so the
+   first cards fit on a 390×844 phone screen. */
 .listHeading {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-3);
 }
 
+.headingBean {
+  flex: none;
+  width: 2.25rem;
+  height: 2.5rem;
+}
+
 .headingText {
-  position: relative;
+  flex: 1;
   min-width: 0;
 }
 
-/* Board scene above the title (ui/art CampusScene) */
-.headingArt {
-  display: block;
-  width: 8.75rem;
-  height: 2.875rem;
-  margin-bottom: var(--space-2);
+.eyebrow {
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.listTitle {
+  font-size: var(--type-heading);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-heading);
+}
+
+.headingCta {
+  composes: base primary sm from "../ui/button.module.css";
+  flex-shrink: 0;
+}
+
+.headingCta > span[aria-hidden="true"] {
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .cta {
   composes: base primary from "../ui/button.module.css";
   flex-shrink: 0;
   margin-top: var(--space-4);
-}
-
-.listHeading .cta {
-  margin-top: 0;
 }
 
 .cta > span[aria-hidden="true"] {
@@ -285,20 +302,32 @@
   }
 }
 
-@media (max-width: 22rem) {
-  .listHeading {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 20rem) {
+  .headingBean {
+    display: none;
   }
 }
 
 /* ───────── Explore: game-menu type switch + filter chip ───────── */
 
+.filters {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .tabs {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: var(--space-5);
   padding: 0.25rem;
   border: 1.5px solid var(--input-border);
   border-radius: 0.875rem;
@@ -309,7 +338,7 @@
   position: relative;
   z-index: 1;
   display: inline-flex;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 0.625rem;
@@ -358,15 +387,15 @@
   opacity: 0;
 }
 
-.check {
+/* 참여 가능: a real toggle button (aria-pressed), drawn as a filter chip. */
+.toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   min-height: var(--touch-target);
-  margin-top: var(--space-3);
   padding: 0 var(--space-4) 0 var(--space-3);
   border: 1.5px solid var(--input-border);
-  border-radius: var(--round-control);
+  border-radius: var(--round-pill);
   background: var(--canvas);
   color: var(--posts-text);
   font-size: var(--type-label);
@@ -375,41 +404,35 @@
   transition:
     background-color var(--motion-fast) var(--curve-standard),
     border-color var(--motion-fast) var(--curve-standard),
-    color var(--motion-fast) var(--curve-standard),
-    transform var(--motion-fast) var(--bounce);
+    color var(--motion-fast) var(--curve-standard);
 }
 
-.check:active {
+.toggle:active {
   background: var(--primary-soft);
 }
 
-.check:has(input:checked) {
+.toggle[aria-pressed="true"] {
   border-color: var(--posts-primary-text);
   background: var(--primary-soft);
   color: var(--posts-primary-text);
+  font-weight: 700;
 }
 
-/* Still a real checkbox; only redrawn. */
-.check input {
+.toggleMark {
   display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0;
+  width: 1.125rem;
+  height: 1.125rem;
   place-items: center;
   border: 1.5px solid var(--input-border);
-  border-radius: 0.4rem;
+  border-radius: 50%;
   background: var(--canvas);
-  appearance: none;
-  transition:
-    background-color var(--motion-fast) var(--curve-standard),
-    border-color var(--motion-fast) var(--curve-standard);
 }
 
-.check input:checked {
+.toggle[aria-pressed="true"] .toggleMark {
   border-color: var(--posts-primary-text);
   background: var(--posts-primary-text)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / 0.875rem no-repeat;
+    center / 0.75rem no-repeat;
   animation: tick 220ms var(--bounce);
 }
 
@@ -417,6 +440,25 @@
   from {
     transform: scale(0.6);
   }
+}
+
+/* Plain text action (초기화, 마감된 모집도 보기) with a 44px hit area. */
+.textButton {
+  display: inline-flex;
+  min-height: var(--touch-target);
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--round-chip);
+  color: var(--posts-primary-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.textButton:hover {
+  background: var(--primary-tint);
 }
 
 .results {
@@ -429,39 +471,49 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-1) var(--space-3);
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
   font-size: var(--type-label);
 }
 
-.sort {
+.count {
   color: var(--posts-text);
+  font-weight: 700;
+}
+
+.sort {
+  color: var(--posts-muted);
   font-weight: 600;
 }
 
 @media (min-width: 40rem) {
-  .main:has(> .tabs) {
-    display: grid;
-    grid-template-columns: minmax(0, 21rem) auto 1fr;
-    column-gap: var(--space-3);
+  .filters {
+    grid-template-columns: minmax(0, 21rem) 1fr;
     align-items: center;
-    align-content: start;
-  }
-
-  .main:has(> .tabs) > :not(.tabs, .check) {
-    grid-column: 1 / -1;
-  }
-
-  .main:has(> .tabs) > .check {
-    justify-self: start;
-    margin-top: var(--space-5);
+    column-gap: var(--space-3);
   }
 }
 
 /* ───────── Pod board rows ───────── */
 
+.board {
+  margin-top: var(--space-1);
+}
+
+/* Day group heading: "오늘 · 11/13 (금)" before the first card of each day */
+.dayHeading {
+  position: sticky;
+  top: calc(3.5rem + 1px); /* below the sticky app bar */
+  z-index: 2;
+  margin-top: var(--space-3);
+  padding: var(--space-1) 0;
+  background: var(--color-paper);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
 .list {
   display: grid;
-  margin-top: var(--space-2);
 }
 
 .list > li {
@@ -492,75 +544,29 @@
   }
 }
 
-/* Tablet: keep route and author together, with time and headcount alongside. */
+.listEnd {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.main:has(> .listHeading) {
+  padding-top: var(--space-4);
+}
+
 @media (min-width: 48rem) {
   .mainWide:has(> .listHeading) {
     max-width: 64rem;
-  }
-
-  .mainWide .card {
-    grid-template-columns: 3.5rem minmax(0, 1fr) 15rem;
-    grid-template-areas:
-      "art chips when"
-      "art title figures"
-      "art author figures";
-    align-items: center;
-    column-gap: var(--space-5);
-    row-gap: var(--space-1);
-    padding-block: var(--space-3);
-  }
-
-  .mainWide .cardBody {
-    display: contents;
-  }
-
-  .mainWide .sticker {
-    grid-area: art;
-    align-self: start;
-  }
-
-  .mainWide .chips {
-    grid-area: chips;
-  }
-
-  .mainWide .cardTitle {
-    grid-area: title;
-  }
-
-  .mainWide .when {
-    grid-area: when;
-  }
-
-  .mainWide .figures {
-    grid-area: figures;
-  }
-
-  .mainWide .author {
-    grid-area: author;
-    justify-self: start;
-  }
-}
-
-/* Desktop: fixed metadata tracks align each column across rows. */
-@media (min-width: 64rem) {
-  .mainWide .card {
-    grid-template-columns: 3.5rem minmax(0, 1fr) 12.5rem 15rem 6.5rem;
-    grid-template-areas:
-      "art chips chips chips chips"
-      "art title when figures author";
-  }
-
-  .mainWide .author {
-    justify-self: end;
   }
 }
 
 .card {
   display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: start;
   gap: var(--space-3);
   margin: 0 calc(var(--space-2) * -1);
-  padding: var(--space-4) var(--space-2);
+  padding: var(--space-3) var(--space-2);
   border-radius: var(--round-control);
   transition:
     background-color var(--motion-fast) var(--curve-standard),
@@ -571,22 +577,17 @@
   background: var(--primary-tint);
 }
 
-.card:hover .sticker svg {
-  transform: translateY(-2px);
-}
-
 .card:active {
   transform: scale(0.985);
 }
 
-/* Art tile (same rule everywhere): tinted rounded square, no border or
-   shadow; the drawing keeps its own outline. */
+/* Small type icon tile; the drawing keeps its own outline. */
 .sticker {
   display: grid;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   place-items: center;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--primary-soft);
 }
 
@@ -596,45 +597,92 @@
 
 .sticker svg {
   flex: none;
-  width: 3rem;
+  width: 2.125rem;
   height: auto;
-  transition: transform var(--motion-standard) var(--bounce);
 }
 
 .sticker svg[data-art="bag"] {
-  width: 2.5rem;
+  width: 1.75rem;
 }
 
 .card[data-available="false"] .sticker {
   background: var(--soft);
 }
 
-.card[data-available="false"] .sticker svg {
-  opacity: 0.75;
-}
-
 /* Closed (full, closed, past deadline, finished, cancelled): the whole card
-   turns black and white so open pods stand out on the board. */
+   turns black and white and quieter so open pods stand out on the board. */
 .card[data-available="false"] {
   filter: grayscale(1);
 }
 
+.card[data-available="false"] .cardTitle,
+.card[data-available="false"] .when {
+  color: var(--posts-muted);
+}
+
 .cardBody {
   display: grid;
-  gap: 0.375rem;
+  gap: 0.125rem;
   min-width: 0;
 }
 
-.chips {
+/* Line 1, the biggest: route or restaurant · pickup */
+.cardTitle {
+  font-size: var(--type-subhead);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.arrow {
+  color: var(--posts-muted);
+  font-weight: 600;
+}
+
+/* Line 2: when + seats left, side by side */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  font-size: var(--type-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.when {
+  color: var(--posts-text);
+  font-weight: 700;
+}
+
+.seats {
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+/* Last seat: warm brown-orange (--warn, 5.5:1 on white) */
+.seats[data-last="true"] {
+  color: var(--posts-warn);
+}
+
+.reason {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+/* Line 3: type · status · author, small and grey */
+.cardMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0 0.375rem;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
 }
 
 .chip {
   color: var(--posts-primary-text);
-  font-size: var(--type-micro);
   font-weight: 700;
 }
 
@@ -642,160 +690,17 @@
   color: var(--posts-warn);
 }
 
-/* Status as a small tag label with a punched hole */
 .status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 1.375rem;
-  padding: 0 var(--space-2);
-  border-radius: 0.375rem;
-  background: var(--primary-soft);
   color: var(--posts-primary-text);
-  font-size: var(--type-micro);
   font-weight: 700;
 }
 
-/* Closed reads by shape as well as tint: an outline, where open is filled. */
 .card[data-available="false"] .status {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--input-border);
   color: var(--posts-text);
-}
-
-/* Route: two stops joined by a short line */
-.cardTitle {
-  position: relative;
-  display: grid;
-  gap: 0.125rem;
-  font-size: var(--type-subhead);
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-}
-
-.cardTitle::before {
-  content: "";
-  position: absolute;
-  top: 0.75rem;
-  bottom: 0.75rem;
-  left: 0.25rem;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--primary-soft);
-}
-
-.stop {
-  position: relative;
-  padding-left: 1.125rem;
-}
-
-.stop::before {
-  content: "";
-  position: absolute;
-  top: 0.5rem;
-  left: 0;
-  width: 0.625rem;
-  height: 0.625rem;
-  border: 2px solid var(--posts-primary-text);
-  border-radius: 50%;
-  background: var(--canvas);
-}
-
-.stop[data-end="true"]::before {
-  border-color: var(--posts-primary);
-  background: var(--posts-primary);
-}
-
-.stopMeta {
-  color: var(--posts-text);
-  font-size: var(--type-label);
-  font-weight: 600;
-}
-
-.when {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.whenIcon {
-  width: 1rem;
-  height: 1rem;
-  color: var(--posts-primary-text);
-}
-
-.time {
-  color: var(--posts-primary-text);
-  font-size: var(--type-body);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.meta {
-  font-size: var(--type-micro);
-}
-
-.when .meta {
-  font-weight: 600;
-}
-
-.figures {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem var(--space-2);
-}
-
-/* Seat slots: one per seat, filled to the real headcount */
-.seatSlots {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 1px;
-}
-
-.seatSlots svg {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.people {
-  font-size: var(--type-label);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.seats {
-  color: var(--posts-warn);
-  font-size: var(--type-micro);
-  font-weight: 700;
-}
-
-.seats[data-last="true"] {
-  color: var(--posts-danger);
 }
 
 .author {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
-}
-
-.avatar {
-  display: grid;
-  flex-shrink: 0;
-  width: 1.375rem;
-  height: 1.375rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  color: var(--posts-primary-text);
-  font-size: 0.625rem;
-  font-weight: 700;
+  min-width: 0;
 }
 
 /* ───────── Loading, empty, error ───────── */
@@ -1029,7 +934,8 @@
 
 .navLink:focus-visible,
 .tab:focus-visible,
-.check:has(input:focus-visible),
+.toggle:focus-visible,
+.textButton:focus-visible,
 .card:focus-visible,
 .pageLink:focus-visible {
   outline: 2px solid var(--posts-focus);

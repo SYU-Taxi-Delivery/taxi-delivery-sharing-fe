@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import type { AuthOperations } from "@/features/auth/auth";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -19,6 +19,12 @@ vi.mock("next/font/google", () => ({
 beforeEach(() => {
   router.push.mockReset();
   router.replace.mockReset();
+  sessionStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const taxi = {
@@ -53,7 +59,8 @@ const pageOf = (content: unknown[], extra: object = {}) => ({
   ...extra,
 });
 
-const defaultQuery: PostQuery = { type: "ALL", joinableOnly: false, page: 0 };
+const defaultQuery: PostQuery = { type: "ALL", joinableOnly: true, page: 0 };
+const allQuery: PostQuery = { type: "ALL", joinableOnly: false, page: 0 };
 
 async function setup(
   list: PostListOperations["list"],
@@ -76,7 +83,10 @@ async function setup(
   return { operations, view };
 }
 
-const cards = () => within(screen.getByRole("list")).getAllByRole("link");
+const cards = () =>
+  within(screen.getByRole("region", { name: /모집글 목록/ }))
+    .getAllByRole("listitem")
+    .map((item) => within(item).getByRole("link"));
 
 describe("PostListScreen", () => {
   it("AC-DISC-001-01, AC-NFR-TIME-01-01: 서버 순서대로 카드와 Asia/Seoul 시각을 표시한다", async () => {
@@ -85,23 +95,33 @@ describe("PostListScreen", () => {
     const [first, second] = cards();
     expect(first).toHaveTextContent("석계역");
     expect(first).toHaveTextContent("삼육대학교");
-    expect(first).toHaveTextContent("18:00");
-    expect(first).toHaveTextContent("10/5 (월) · 출발");
+    expect(first).toHaveTextContent("10/5 (월) 18:00 출발");
     expect(first).toHaveAttribute("href", "/posts/t1");
     expect(second).toHaveTextContent("테스트음식점");
-    expect(screen.getByText("전체 2개 · 정원은 작성자 포함")).toBeVisible();
+    expect(screen.getByText("참여 가능 2개")).toBeVisible();
   });
 
-  it("AC-TAXI-003-01: 택시 카드는 유형·경로·출발·작성자 포함 인원·상태를 보여 준다", async () => {
+  it("AC-TAXI-003-01: 택시 카드는 경로, 출발·남은 자리, 유형·상태·작성자를 세 줄로 보여 준다", async () => {
     await setup(async () => pageOf([taxi]));
     const card = cards()[0];
     expect(within(card).getByText("택시")).toBeVisible();
     expect(within(card).getByText("모집 중")).toBeVisible();
-    expect(card).toHaveTextContent("석계역에서");
-    expect(card).toHaveTextContent("삼육대학교까지");
-    expect(card).toHaveTextContent("3 / 4명");
-    expect(card).toHaveTextContent("1자리 남음");
-    expect(card).toHaveTextContent("박지민");
+    expect(card).toHaveTextContent("석계역에서 → 삼육대학교까지");
+    expect(card).toHaveAccessibleName(/석계역에서\s*삼육대학교까지/);
+    expect(within(card).getByText("1자리 남음")).toHaveAttribute(
+      "data-last",
+      "true",
+    );
+    expect(card).toHaveTextContent("택시·모집 중·박지민");
+    expect(card).not.toHaveTextContent("3 / 4명");
+  });
+
+  it("남은 자리가 여럿이면 마지막 자리 강조를 하지 않는다", async () => {
+    await setup(async () => pageOf([{ ...taxi, currentMemberCount: 2 }]));
+    expect(within(cards()[0]).getByText("2자리 남음")).toHaveAttribute(
+      "data-last",
+      "false",
+    );
   });
 
   it("AC-DELIVERY-003-01, AC-DISC-003-04: 배달 카드는 음식점·수령 장소·주문 마감과 참여 마감을 보여 준다", async () => {
@@ -109,9 +129,8 @@ describe("PostListScreen", () => {
     const card = cards()[0];
     expect(within(card).getByText("배달")).toBeVisible();
     expect(card).toHaveTextContent("테스트음식점");
-    expect(card).toHaveTextContent("수령 장소 · 정문");
-    expect(card).toHaveTextContent("17:50");
-    expect(card).toHaveTextContent("주문 마감");
+    expect(card).toHaveTextContent("테스트음식점 · , 수령 장소 정문");
+    expect(card).toHaveTextContent("10/5 (월) 17:50 주문 마감");
     expect(within(card).getByText("참여 마감")).toBeVisible();
     expect(card).toHaveTextContent("주문 마감 10분 전 마감");
     expect(card).not.toHaveTextContent("자리 남음");
@@ -156,7 +175,7 @@ describe("PostListScreen", () => {
   });
 
   it("AC-DISC-001-02: 빈 목록은 작성 진입을 제공한다", async () => {
-    await setup(async () => pageOf([]));
+    await setup(async () => pageOf([]), allQuery);
     expect(screen.getByRole("status")).toHaveTextContent(
       "아직 모집글이 없어요",
     );
@@ -176,8 +195,8 @@ describe("PostListScreen", () => {
     );
     expect(
       screen.getByRole("link", { name: "전체 모집글 보기" }),
-    ).toHaveAttribute("href", "/posts");
-    expect(screen.getByText("배달 0개 · 정원은 작성자 포함")).toBeVisible();
+    ).toHaveAttribute("href", "/posts?joinable=false");
+    expect(screen.getByText("배달 0개")).toBeVisible();
   });
 
   it("AC-DISC-002-01~03: 유형 탭은 현재 유형을 표시하고 첫 페이지 주소로 이동한다", async () => {
@@ -193,24 +212,111 @@ describe("PostListScreen", () => {
     );
     expect(tabs.getByRole("link", { name: "전체" })).toHaveAttribute(
       "href",
-      "/posts?joinable=true",
+      "/posts",
     );
     expect(tabs.getByRole("link", { name: "배달" })).toHaveAttribute(
       "href",
-      "/posts?type=DELIVERY&joinable=true",
+      "/posts?type=DELIVERY",
     );
   });
 
-  it("AC-UI-FILTER-07: 참여 가능 체크는 유형을 유지하고 첫 페이지로 이동한다", async () => {
+  it("참여 가능은 기본으로 켜져 있고 기본 조건에서는 초기화가 없다", async () => {
+    const { operations } = await setup(async () => pageOf([taxi]));
+    expect(operations.list).toHaveBeenCalledWith(
+      expect.objectContaining({ joinableOnly: true }),
+    );
+    expect(screen.getByRole("button", { name: "참여 가능" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: "초기화" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("AC-UI-FILTER-07: 참여 가능 토글은 유형을 유지하고 첫 페이지로 이동한다", async () => {
     await setup(async () => pageOf([taxi]), {
       type: "TAXI",
       joinableOnly: false,
       page: 1,
     });
-    fireEvent.click(screen.getByLabelText("참여 가능한 글만 보기"));
-    expect(router.push).toHaveBeenCalledWith("/posts?type=TAXI&joinable=true", {
+    const toggle = screen.getByRole("button", { name: "참여 가능" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(router.push).toHaveBeenCalledWith("/posts?type=TAXI", {
       scroll: false,
     });
+  });
+
+  it("조건이 기본과 다르면 초기화로 기본 목록에 돌아간다", async () => {
+    await setup(async () => pageOf([taxi]), {
+      type: "TAXI",
+      joinableOnly: true,
+      page: 2,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "초기화" }));
+    expect(router.push).toHaveBeenCalledWith("/posts", { scroll: false });
+  });
+
+  it("목록 끝에서 마감된 모집도 보기로 참여 가능을 끈다", async () => {
+    await setup(async () => pageOf([taxi]));
+    fireEvent.click(screen.getByRole("button", { name: "마감된 모집도 보기" }));
+    expect(router.push).toHaveBeenCalledWith("/posts?joinable=false", {
+      scroll: false,
+    });
+  });
+
+  it("참여 가능한 글이 없으면 마감된 모집도 보기를 안내한다", async () => {
+    await setup(async () => pageOf([]));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "지금 참여할 수 있는 모집글이 없어요",
+    );
+    expect(
+      screen.getByRole("button", { name: "마감된 모집도 보기" }),
+    ).toBeVisible();
+  });
+
+  it("날짜가 바뀌는 곳마다 오늘·내일 제목을 넣는다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T22:30:00+09:00"));
+    await setup(async () =>
+      pageOf([
+        { ...taxi, id: "a", referenceTime: "2026-11-13T23:40:00+09:00" },
+        { ...taxi, id: "b", referenceTime: "2026-11-14T00:10:00+09:00" },
+        { ...taxi, id: "c", referenceTime: "2026-11-14T09:00:00+09:00" },
+      ]),
+    );
+    const headings = screen.getAllByRole("heading", { level: 3 });
+    expect(headings.map((h) => h.textContent)).toEqual([
+      "오늘 · 11/13 (금)",
+      "내일 · 11/14 (토)",
+    ]);
+    const [a, b] = cards();
+    expect(a).toHaveTextContent("오늘 23:40 출발");
+    expect(b).toHaveTextContent("내일 00:10 출발");
+  });
+
+  it("하루치 목록에는 날짜 제목을 넣지 않는다", async () => {
+    await setup(async () => pageOf([taxi, delivery]));
+    expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+  });
+
+  it("상세에서 돌아오면 저장한 스크롤 위치로 돌아간다", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const first = await setup(async () => pageOf([taxi]));
+    Object.defineProperty(window, "scrollY", {
+      value: 640,
+      configurable: true,
+    });
+    const card = cards()[0];
+    card.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(card);
+    first.view.unmount();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+
+    await setup(async () => pageOf([taxi]));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 640, behavior: "instant" });
+    expect(sessionStorage.length).toBe(0);
   });
 
   it("AC-UI-FILTER-08, AC-UI-FILTER-09: 최신순 선택 없이 기준시각 빠른 순을 표시한다", async () => {
@@ -225,18 +331,18 @@ describe("PostListScreen", () => {
     await setup(
       async () =>
         pageOf([taxi], { totalElements: 41, totalPages: 3, number: 1 }),
-      { type: "TAXI", joinableOnly: true, page: 1 },
+      { type: "TAXI", joinableOnly: false, page: 1 },
     );
     const pager = within(
       screen.getByRole("navigation", { name: "모집글 페이지" }),
     );
     expect(pager.getByRole("link", { name: "이전 페이지" })).toHaveAttribute(
       "href",
-      "/posts?type=TAXI&joinable=true",
+      "/posts?type=TAXI&joinable=false",
     );
     expect(pager.getByRole("link", { name: "다음 페이지" })).toHaveAttribute(
       "href",
-      "/posts?type=TAXI&joinable=true&page=3",
+      "/posts?type=TAXI&joinable=false&page=3",
     );
     expect(pager.getByRole("link", { name: "2페이지" })).toHaveAttribute(
       "aria-current",
@@ -261,7 +367,7 @@ describe("PostListScreen", () => {
   it("AC-DISC-001-09: 마지막 이후 페이지는 마지막 페이지로 안내한다", async () => {
     await setup(
       async () => pageOf([], { totalElements: 41, totalPages: 3, number: 5 }),
-      { type: "ALL", joinableOnly: false, page: 5 },
+      { type: "ALL", joinableOnly: true, page: 5 },
     );
     expect(
       screen.getByRole("link", { name: "마지막 페이지로 이동" }),
