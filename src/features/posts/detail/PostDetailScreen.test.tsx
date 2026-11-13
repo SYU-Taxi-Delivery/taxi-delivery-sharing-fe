@@ -581,6 +581,35 @@ describe("상세 요약·참여자 안내·더보기", () => {
     expect(header.nextElementSibling).toBe(info);
   });
 
+  it("참여 중인 배달은 요약과 겹치는 수령 장소·주문 시각 대신 주문 안내를 먼저 보여 준다", async () => {
+    await setup(
+      load({
+        relation: "JOINED",
+        type: "DELIVERY",
+        departure: undefined,
+        destination: undefined,
+        restaurantName: "정문 김밥",
+        pickupLocation: "학생회관 앞",
+        orderGuide: "메뉴는 각자 골라요",
+      }),
+    );
+    const info = screen.getByRole("region", { name: "참여자 안내" });
+    expect(info).not.toHaveTextContent("학생회관 앞");
+    expect(within(info).queryByText("주문 마감")).not.toBeInTheDocument();
+    const guide = within(info).getByText("메뉴는 각자 골라요");
+    const heading = within(info).getByRole("heading", { name: "참여자 안내" });
+    // Right after the heading, before the help text and 참여 취소.
+    expect(heading.nextElementSibling).toContainElement(guide);
+    // Said once: not repeated further down the page.
+    expect(screen.getAllByText("메뉴는 각자 골라요")).toHaveLength(1);
+    const cancel = within(info).getByRole("button", { name: "참여 취소" });
+    // Its deadline sits right beside it.
+    expect(cancel).toHaveAccessibleDescription(/까지 가능$/);
+    expect(cancel.nextElementSibling).toHaveTextContent(/까지 가능$/);
+    // The member's main action stays 오픈채팅 in the bar.
+    expect(screen.getByRole("link", { name: /오픈채팅 열기/ })).toBeVisible();
+  });
+
   it("정원 마감에 참여 중이면 모집 상태와 참여 중을 함께 보여 준다", async () => {
     await setup(
       load({

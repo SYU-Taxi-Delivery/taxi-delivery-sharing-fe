@@ -339,6 +339,8 @@ function DetailView({
     !author &&
     (status === "CANCELLED" || (!joined && chip.label === "작성자 마감"));
   const guideShown = (joined && !history) || !!visible.communicationUrl;
+  // Delivery members read the order guide first, inside 참여자 안내.
+  const guideNote = guideShown && !taxi ? detail.orderGuide : undefined;
 
   function showGuide() {
     const section = guideRef.current;
@@ -496,16 +498,27 @@ function DetailView({
           <h2 id="post-link" className={styles.sectionTitle}>
             참여자 안내
           </h2>
-          <p className={styles.place}>
-            <span className={styles.meta}>
-              {taxi ? "만나는 곳" : "수령 장소"}
-            </span>
-            <strong>{taxi ? detail.departure : detail.pickupLocation}</strong>
-          </p>
-          <p className={styles.place}>
-            <span className={styles.meta}>{scheduleTerm}</span>
-            <strong>{dayTime(reference, clockMs)}</strong>
-          </p>
+          {taxi ? (
+            <>
+              <p className={styles.place}>
+                <span className={styles.meta}>만나는 곳</span>
+                <strong>{detail.departure}</strong>
+              </p>
+              <p className={styles.place}>
+                <span className={styles.meta}>{scheduleTerm}</span>
+                <strong>{dayTime(reference, clockMs)}</strong>
+              </p>
+            </>
+          ) : (
+            // Pickup place and order time are already in the summary above;
+            // the author's own order guide is what a member needs here.
+            guideNote && (
+              <div className={styles.guideNote}>
+                <span className={styles.meta}>주문 안내</span>
+                <p>{guideNote}</p>
+              </div>
+            )
+          )}
           {author && visible.communicationUrl && (
             <a
               href={visible.communicationUrl}
@@ -612,7 +625,7 @@ function DetailView({
             {notice.text}
           </p>
         )}
-        {!taxi && detail.orderGuide && (
+        {!taxi && detail.orderGuide && !guideNote && (
           <dl className={styles.info}>
             <div className={styles.infoRow}>
               <dt className={styles.meta}>주문 안내</dt>
