@@ -387,7 +387,7 @@
   opacity: 0;
 }
 
-/* 참여 가능: a real toggle button (aria-pressed), drawn as a filter chip. */
+/* 참여 가능만: a real toggle button (aria-pressed), drawn as a filter chip. */
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -442,7 +442,7 @@
   }
 }
 
-/* Plain text action (초기화, 마감된 모집도 보기) with a 44px hit area. */
+/* Plain text action (초기화) with a 44px hit area. */
 .textButton {
   display: inline-flex;
   min-height: var(--touch-target);
@@ -626,12 +626,20 @@
   min-width: 0;
 }
 
-/* Line 1, the biggest: route or restaurant · pickup */
+/* Line 1, the biggest: route or restaurant · pickup. Long names wrap at
+   word boundaries (keep-all) and stop at two lines. */
 .cardTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: var(--type-subhead);
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: -0.01em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .arrow {
@@ -701,6 +709,19 @@
 
 .author {
   min-width: 0;
+}
+
+/* The viewer's relation, next to the post status: its own small pill. */
+.joinedChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.4375rem;
+  border: 1px solid var(--posts-primary-text);
+  border-radius: var(--round-pill);
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 /* ───────── Loading, empty, error ───────── */
@@ -950,6 +971,43 @@
 
 .searchMain {
   min-width: 0;
+  container: board / inline-size;
+}
+
+/* Two cards per row once the board itself is wide enough (≥45rem, about
+   720px), so a 1024px window with the sidebar keeps one column. Cards in a
+   row share the row height and the title block keeps two lines, so the
+   time · seats lines sit on the same baseline. */
+@container board (min-width: 45rem) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-5);
+  }
+
+  .list > li {
+    display: grid;
+  }
+
+  .list .card {
+    grid-template-rows: auto;
+    align-content: start;
+  }
+
+  .list .cardBody {
+    grid-template-rows: calc(2 * 1.4 * var(--type-subhead)) auto auto;
+    align-content: start;
+  }
+
+  .list .cardTitle {
+    align-self: start;
+  }
+}
+
+/* Wide desktop: room for the sidebar and a two-column board. */
+@media (min-width: 80rem) {
+  .mainWide:has(> .listHeading) {
+    max-width: 76rem;
+  }
 }
 
 /* Desktop: conditions on the left, the board on the right. */

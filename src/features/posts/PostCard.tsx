@@ -39,15 +39,22 @@ export function postDayText(time: number, now: number | null): string {
 /*
  * One pod on the board, read top-down on a phone: where (route or
  * restaurant), then when + seats left side by side, then type · status ·
- * author in small grey text. The whole row is one link.
+ * author in small grey text. The whole row is one link. The post form's
+ * preview renders the same card without the link (`preview`).
  */
 export function PostCard({
   post,
   now,
+  preview = false,
+  hideStatus = false,
 }: {
   post: PostSummary;
   /** Current time from the list screen; the card reads its own otherwise. */
   now?: number | null;
+  /** Form preview: the same card as a plain block, not a link. */
+  preview?: boolean;
+  /** Edit preview: the saved status is not known here, so leave it out. */
+  hideStatus?: boolean;
 }) {
   const path = useAppPath();
   const ownNow = useClientNow();
@@ -60,14 +67,10 @@ export function PostCard({
   const remaining = post.capacity - post.currentMemberCount;
   const taxi = post.type === "TAXI";
   const day = postDayText(reference, clock);
+  const joined = post.viewerJoined === true && label !== "삭제된 모집";
 
-  return (
-    <Link
-      href={path(`/posts/${encodeURIComponent(post.id)}`)}
-      className={styles.card}
-      data-available={available}
-      data-type={taxi ? "taxi" : "delivery"}
-    >
+  const body = (
+    <>
       <span className={styles.sticker}>{taxi ? <TaxiArt /> : <BagArt />}</span>
       <span className={styles.cardBody}>
         <span className={styles.cardTitle}>
@@ -108,8 +111,13 @@ export function PostCard({
         </span>
         <span className={styles.cardMeta}>
           <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
-          <span aria-hidden="true">·</span>
-          <span className={styles.status}>{label}</span>
+          {!hideStatus && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className={styles.status}>{label}</span>
+            </>
+          )}
+          {joined && <span className={styles.joinedChip}>참여 중</span>}
           {post.authorName && (
             <>
               <span aria-hidden="true">·</span>
@@ -118,6 +126,29 @@ export function PostCard({
           )}
         </span>
       </span>
+    </>
+  );
+
+  if (preview) {
+    return (
+      <div
+        className={styles.card}
+        data-available={available}
+        data-type={taxi ? "taxi" : "delivery"}
+        data-preview="true"
+      >
+        {body}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={path(`/posts/${encodeURIComponent(post.id)}`)}
+      className={styles.card}
+      data-available={available}
+      data-type={taxi ? "taxi" : "delivery"}
+    >
+      {body}
     </Link>
   );
 }

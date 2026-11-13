@@ -220,12 +220,12 @@ describe("PostListScreen", () => {
     );
   });
 
-  it("참여 가능은 기본으로 켜져 있고 기본 조건에서는 초기화가 없다", async () => {
+  it("참여 가능만은 기본으로 켜져 있고 기본 조건에서는 초기화가 없다", async () => {
     const { operations } = await setup(async () => pageOf([taxi]));
     expect(operations.list).toHaveBeenCalledWith(
       expect.objectContaining({ joinableOnly: true }),
     );
-    expect(screen.getByRole("button", { name: "참여 가능" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "참여 가능만" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -234,13 +234,13 @@ describe("PostListScreen", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("AC-UI-FILTER-07: 참여 가능 토글은 유형을 유지하고 첫 페이지로 이동한다", async () => {
+  it("AC-UI-FILTER-07: 참여 가능만 토글은 유형을 유지하고 첫 페이지로 이동한다", async () => {
     await setup(async () => pageOf([taxi]), {
       type: "TAXI",
       joinableOnly: false,
       page: 1,
     });
-    const toggle = screen.getByRole("button", { name: "참여 가능" });
+    const toggle = screen.getByRole("button", { name: "참여 가능만" });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(toggle);
     expect(router.push).toHaveBeenCalledWith("/posts?type=TAXI", {
@@ -248,22 +248,66 @@ describe("PostListScreen", () => {
     });
   });
 
-  it("조건이 기본과 다르면 초기화로 기본 목록에 돌아간다", async () => {
+  it("초기화는 검색 조건이 있을 때만 보이고, 유형과 참여 가능만은 그대로 두고 조건만 지운다", async () => {
     await setup(async () => pageOf([taxi]), {
       type: "TAXI",
-      joinableOnly: true,
+      joinableOnly: false,
       page: 2,
     });
-    fireEvent.click(screen.getByRole("button", { name: "초기화" }));
-    expect(router.push).toHaveBeenCalledWith("/posts", { scroll: false });
+    // Type and the toggle alone are not search conditions.
+    expect(
+      screen.queryByRole("button", { name: "초기화" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("목록 끝에서 마감된 모집도 보기로 참여 가능을 끈다", async () => {
-    await setup(async () => pageOf([taxi]));
-    fireEvent.click(screen.getByRole("button", { name: "마감된 모집도 보기" }));
-    expect(router.push).toHaveBeenCalledWith("/posts?joinable=false", {
-      scroll: false,
+  it("검색 조건이 있으면 초기화로 조건만 지운다", async () => {
+    await setup(async () => pageOf([taxi]), {
+      type: "TAXI",
+      joinableOnly: false,
+      page: 2,
+      time: "tonight",
+      sort: "RECENT",
     });
+    fireEvent.click(screen.getByRole("button", { name: "초기화" }));
+    expect(router.push).toHaveBeenCalledWith(
+      "/posts?type=TAXI&joinable=false",
+      { scroll: false },
+    );
+  });
+
+  it("참여 가능만 토글은 목록 위 한 곳에만 있고, 목록 끝이나 필터 안에는 없다", async () => {
+    await setup(async () => pageOf([taxi]));
+    expect(screen.getAllByRole("button", { name: /참여 가능/ })).toHaveLength(
+      1,
+    );
+    expect(
+      screen.queryByRole("button", { name: "마감된 모집도 보기" }),
+    ).not.toBeInTheDocument();
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /필터/ }));
+    const sheet = screen.getByRole("dialog", { name: "필터" });
+    expect(
+      within(sheet).queryByRole("checkbox", { name: /참여 가능/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByRole("radio", { name: "최근 등록 순" }),
+    ).toBeInTheDocument();
+  });
+
+  it("참여 중인 모집은 상태 옆에 참여 중을 함께 보여 준다", async () => {
+    await setup(async () =>
+      pageOf([
+        { ...taxi, viewerJoined: true, currentMemberCount: 4, joinable: false },
+      ]),
+    );
+    const [card] = cards();
+    expect(card).toHaveTextContent("정원 마감");
+    expect(within(card).getByText("참여 중")).toBeInTheDocument();
   });
 
   it("참여 가능한 글이 없으면 마감된 모집도 보기를 안내한다", async () => {

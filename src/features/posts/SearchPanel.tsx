@@ -26,10 +26,10 @@ import styles from "./posts.module.css";
 const TIME_CHOICES: TimeWindow[] = ["hour", "tonight", "morning", "custom"];
 const SORTS: PostSort[] = ["TIME", "RECENT"];
 
-/** Search conditions only; type and page come from the list. */
+/** Search conditions only; type, 참여 가능만 and page come from the list. */
 const resetDraft = (query: PostQuery): PostQuery => ({
   type: query.type,
-  joinableOnly: true,
+  joinableOnly: query.joinableOnly,
   page: 0,
 });
 
@@ -232,23 +232,6 @@ export function SearchPanel({
             </div>
           )}
         </fieldset>
-
-        <div className={styles.panelSection}>
-          <label className={styles.checkRow}>
-            <input
-              type="checkbox"
-              checked={draft.joinableOnly}
-              onChange={(event) => set({ joinableOnly: event.target.checked })}
-            />
-            <span>
-              참여 가능만
-              <span className={styles.panelHint}>
-                {" "}
-                정원·신청 마감 전인 모집
-              </span>
-            </span>
-          </label>
-        </div>
 
         <fieldset className={styles.panelSection}>
           <legend className={styles.panelLegend}>정렬</legend>
