@@ -14,6 +14,7 @@ import {
   toSeoulParts,
   type PostDraft,
 } from "./postDraft";
+import { dayLabel } from "@/lib/dateFormat";
 
 const RECENT_LIMIT = 5;
 const recentKey = (type: PostType) => `doyupot:recent-places:${type}`;
@@ -118,7 +119,8 @@ export function deadlinePreview(
   if (!referenceTime) return null;
   const deadline = participationDeadlineMs({ referenceTime });
   const minutes = cutoffMinutes({ referenceTime });
-  const at = toSeoulParts(deadline).time;
+  // The day word comes first: a 00:05 departure has its cutoff "오늘 23:55".
+  const at = `${dayLabel(deadline, nowMs)} ${toSeoulParts(deadline).time}`;
   const taxi = type === "TAXI";
   const what = taxi ? "신청·취소 마감" : "참여·취소 마감";
   const before = `${taxi ? "출발" : "주문 마감"} ${minutes}분 전`;

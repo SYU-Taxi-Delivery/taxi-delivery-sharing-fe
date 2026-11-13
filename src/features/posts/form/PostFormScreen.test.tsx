@@ -79,8 +79,20 @@ async function setup(
   await act(async () => {});
 }
 
-const type = (label: string | RegExp, value: string) =>
+/** 다음 (validates step 1) or 이전; nothing when already there. */
+function goStep(step: 1 | 2) {
+  const button = screen.queryByRole("button", {
+    name: step === 2 ? "다음" : "이전",
+  });
+  if (button) fireEvent.click(button);
+}
+
+/** Types into a field, moving to the step that shows it first. */
+function type(label: string | RegExp, value: string) {
+  if (!screen.queryByLabelText(label))
+    goStep(screen.queryByRole("button", { name: "다음" }) ? 2 : 1);
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
+}
 
 function pickTime(label: string, hour: string, minute: string) {
   fireEvent.click(screen.getByLabelText(label));
@@ -89,18 +101,27 @@ function pickTime(label: string, hour: string, minute: string) {
   fireEvent.click(within(picker).getByRole("option", { name: `${minute}분` }));
 }
 
-function fillTaxi() {
-  type("제목", "정문에서 석계역까지");
+function fillStepOne() {
+  goStep(1);
   type("출발지", "삼육대학교 정문");
   type("도착지", "석계역 1번 출구");
   pickTime("출발 시간", "18", "00");
+}
+
+function fillTaxi() {
+  fillStepOne();
+  type("제목", "정문에서 석계역까지");
   type("함께할 학생에게 전할 말", "정문 앞에서 만나요");
 }
 
-const submit = () =>
-  act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+/** 다음 if still on step 1, then the given step-2 submit button. */
+async function submit(name = "등록하기") {
+  goStep(2);
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
   });
+}
+const save = () => submit("저장하기");
 
 describe("작성 폼", () => {
   it("AC-POST-001-01: 택시는 출발지·도착지·출발 날짜/시간·2~4명 정원을 받는다", async () => {
@@ -109,13 +130,7 @@ describe("작성 폼", () => {
       screen.getByRole("heading", { level: 1, name: "택시 모집글 작성" }),
     ).toBeVisible();
     expect(screen.getByLabelText("택시")).toBeChecked();
-    for (const label of [
-      "제목",
-      "출발지",
-      "도착지",
-      "출발 날짜",
-      "출발 시간",
-    ]) {
+    for (const label of ["출발지", "도착지", "출발 날짜", "출발 시간"]) {
       expect(screen.getByLabelText(label)).toBeVisible();
     }
     expect(screen.getByText("나 포함 총 4명")).toBeVisible();
@@ -131,11 +146,15 @@ describe("작성 폼", () => {
       "수령 장소",
       "주문 마감 날짜",
       "주문 마감 시간",
-      "주문 안내",
     ]) {
       expect(screen.getByLabelText(label)).toBeVisible();
     }
     expect(screen.getByText(/2~10명/)).toBeVisible();
+    type("음식점명", "정문 김밥");
+    type("수령 장소", "정문");
+    pickTime("주문 마감 시간", "18", "00");
+    goStep(2);
+    expect(screen.getByLabelText("주문 안내")).toBeVisible();
     expect(screen.queryByText(/한식|중식|음식 종류/)).not.toBeInTheDocument();
   });
 
@@ -161,15 +180,15 @@ describe("작성 폼", () => {
 
   it("AC-UI-FORM-01: 유형을 바꿔도 공통값과 유형별 초안·정원을 따로 보관한다", async () => {
     await setup(ops());
-    type("제목", "공통 제목");
+    pickTime("출발 시간", "18", "00");
     type("출발지", "석계역");
     fireEvent.click(screen.getByLabelText("배달"));
     for (let i = 0; i < 6; i += 1) {
       fireEvent.click(screen.getByRole("button", { name: "정원 1명 늘리기" }));
     }
     expect(screen.getByText("나 포함 총 10명")).toBeVisible();
-    expect(screen.getByLabelText("제목")).toHaveValue("공통 제목");
     fireEvent.click(screen.getByLabelText("택시"));
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("18:00");
     expect(screen.getByLabelText("출발지")).toHaveValue("석계역");
     expect(screen.getByText("나 포함 총 4명")).toBeVisible();
     fireEvent.click(screen.getByLabelText("배달"));
@@ -190,6 +209,7 @@ describe("작성 폼", () => {
 
   it("AC-NFR-SEC-02-01: 입력 중 길이 초과를 바로 알리고 글자 수를 보여 준다", async () => {
     await setup(ops());
+    fillStepOne();
     type("제목", "가".repeat(61));
     fireEvent.blur(screen.getByLabelText("제목"));
     const title = screen.getByLabelText("제목");
@@ -209,21 +229,40 @@ describe("작성 폼", () => {
     expect(screen.getByLabelText("외부 소통 링크")).toHaveFocus();
   });
 
-  it("빈 폼 제출은 요청 없이 첫 오류 칸으로 포커스를 옮긴다", async () => {
+  it("빈 1단계에서 다음은 넘어가지 않고 첫 오류 칸으로 포커스를 옮긴다", async () => {
     const operations = ops();
     await setup(operations);
-    await submit();
-    expect(operations.create).not.toHaveBeenCalled();
+    type("도착지", "석계역 1번 출구");
+    goStep(2);
+    expect(operations.findSimilar).not.toHaveBeenCalled();
     // Focus follows the section order: 장소 comes first.
     expect(screen.getByLabelText("출발지")).toHaveFocus();
     expect(screen.getByLabelText("출발지")).toHaveAccessibleDescription(
       /출발지를 입력해 주세요/,
     );
-    expect(screen.getByLabelText("제목")).toHaveAttribute(
-      "aria-invalid",
-      "true",
+    expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
+      /시간/,
     );
+    // Still step 1, values kept.
+    expect(screen.getByLabelText("도착지")).toHaveValue("석계역 1번 출구");
+    expect(screen.queryByLabelText("제목")).toBeNull();
+    expect(screen.getByRole("button", { name: "다음" })).toBeVisible();
+  });
+
+  it("2단계에서 빈 안내로 등록하면 요청 없이 그 단계의 첫 오류 칸으로 간다", async () => {
+    const operations = ops();
+    await setup(operations);
+    fillStepOne();
+    goStep(2);
+    type("제목", "");
+    await submit();
+    expect(operations.create).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("제목")).toHaveFocus();
     expect(screen.getByText("전할 말을 입력해 주세요.")).toBeVisible();
+    // 이전 keeps every value from step 1.
+    goStep(1);
+    expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("18:00");
   });
 
   it("AC-POST-002-05: 오늘은 정확히 10분 뒤까지의 시각을 고를 수 없다", async () => {
@@ -282,6 +321,7 @@ describe("작성 폼", () => {
     const operations = ops();
     await setup(operations);
     fillTaxi();
+    goStep(1);
     await act(async () => {
       fireEvent.click(screen.getByLabelText("출발 날짜"));
     });
@@ -358,7 +398,7 @@ describe("작성 폼", () => {
     fillTaxi();
     await submit();
     expect(screen.getByRole("region", { name: /비슷한 모집이/ })).toBeVisible();
-    type("도착지", "화랑대역");
+    type("제목", "다른 제목");
     expect(
       screen.queryByRole("region", { name: /비슷한 모집이/ }),
     ).not.toBeInTheDocument();
@@ -396,6 +436,8 @@ describe("작성 폼", () => {
     expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
       /같은 시각\(분\)/,
     );
+    expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
     expect(router.push).not.toHaveBeenCalled();
   });
@@ -452,7 +494,7 @@ describe("작성 폼", () => {
       screen.getByRole("link", { name: "내 참여 · 모집 확인" }),
     ).toHaveAttribute("href", "/my?tab=created");
     expect(operations.create).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
   });
 
   it("AC-POST-002-09: 응답 대기 중 추가 제출을 막는다", async () => {
@@ -490,7 +532,7 @@ describe("작성 폼", () => {
 
   it("AC-UI-FORM-06~08: 입력이 있으면 취소 전에 확인하고 돌아가기는 입력을 유지한다", async () => {
     await setup(ops());
-    type("제목", "작성 중");
+    type("출발지", "작성 중");
     const cancel = screen.getByRole("button", { name: "취소" });
     fireEvent.click(cancel);
     const dialog = screen.getByRole("dialog", {
@@ -501,7 +543,7 @@ describe("작성 폼", () => {
     ).toHaveFocus();
     fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
     expect(cancel).toHaveFocus();
-    expect(screen.getByLabelText("제목")).toHaveValue("작성 중");
+    expect(screen.getByLabelText("출발지")).toHaveValue("작성 중");
     expect(router.push).not.toHaveBeenCalled();
     fireEvent.click(cancel);
     fireEvent.click(screen.getByRole("button", { name: "입력 폐기" }));
@@ -535,23 +577,34 @@ describe("작성 도우미", () => {
       name,
     });
 
-  it("단계 표시와 필수/선택 안내를 보여 준다", async () => {
+  it("단계 표시는 정확히 두 단계이고 필수/선택 안내를 보여 준다", async () => {
     await setup(ops());
-    const steps = screen.getByRole("navigation", { name: "작성 단계" });
-    expect(within(steps).getByText("1/4 완료")).toBeVisible();
-    expect(
-      within(steps).getByRole("button", { name: "유형 선택, 완료" }),
-    ).toBeVisible();
+    const steps = screen.getByRole("list", { name: "작성 단계" });
+    const items = within(steps).getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent("유형·장소·일정 및 정원");
+    expect(items[1]).toHaveTextContent("안내·미리보기");
+    expect(items[0]).toHaveAttribute("aria-current", "step");
+    expect(screen.getByText("1/2 단계")).toBeVisible();
     expect(screen.getByText(/꼭 입력해요/)).toBeVisible();
     expect(screen.getByLabelText("출발지")).toHaveAttribute(
       "aria-required",
       "true",
     );
+    fillStepOne();
+    goStep(2);
+    expect(screen.getByText("2/2 단계")).toBeVisible();
+    expect(
+      within(screen.getByRole("list", { name: "작성 단계" })).getAllByRole(
+        "listitem",
+      )[1],
+    ).toHaveAttribute("aria-current", "step");
+    expect(
+      screen.getByRole("heading", { name: "2단계 · 안내·미리보기" }),
+    ).toHaveFocus();
     expect(screen.getByLabelText("외부 소통 링크")).not.toHaveAttribute(
       "aria-required",
     );
-    fillTaxi();
-    expect(within(steps).getByText("4/4 완료")).toBeVisible();
   });
 
   it("장소 칩은 입력을 채우고 직접 입력도 그대로 된다", async () => {
@@ -575,6 +628,8 @@ describe("작성 도우미", () => {
     fireEvent.click(chip("수령 장소 추천 장소", "학생회관"));
     expect(screen.getByLabelText("수령 장소")).toHaveValue("학생회관");
     type("음식점명", "정문 김밥");
+    pickTime("주문 마감 시간", "18", "00");
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue(
       "정문 김밥 같이 주문해요",
     );
@@ -584,15 +639,21 @@ describe("작성 도우미", () => {
     await setup(ops());
     fireEvent.click(chip("출발지 추천 장소", "삼육대학교 정문"));
     fireEvent.click(chip("도착지 추천 장소", "화랑대역 2번 출구"));
+    pickTime("출발 시간", "18", "00");
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue(
       "삼육대학교 정문 → 화랑대역 2번 출구 택시",
     );
+    goStep(1);
     fireEvent.click(chip("도착지 추천 장소", "석계역 1번 출구"));
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue(
       "삼육대학교 정문 → 석계역 1번 출구 택시",
     );
     type("제목", "같이 타요");
+    goStep(1);
     fireEvent.click(chip("도착지 추천 장소", "기숙사"));
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue("같이 타요");
   });
 
@@ -601,10 +662,12 @@ describe("작성 도우미", () => {
     fireEvent.click(chip("출발 시간 빠르게 고르기", /30분 뒤/));
     expect(screen.getByLabelText("출발 시간")).toHaveTextContent("18:00");
     expect(
-      screen.getByText("신청·취소 마감 17:50이 함께 정해져요 (출발 10분 전)"),
+      screen.getByText(
+        "신청·취소 마감 오늘 17:50이 함께 정해져요 (출발 10분 전)",
+      ),
     ).toBeVisible();
     expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
-      /신청·취소 마감 17:50/,
+      /신청·취소 마감 오늘 17:50/,
     );
     fireEvent.click(chip("출발 날짜 빠르게 고르기", "내일"));
     expect(screen.getByLabelText("출발 날짜")).toHaveTextContent("10/6");
@@ -614,24 +677,53 @@ describe("작성 도우미", () => {
     vi.setSystemTime(new Date("2026-10-05T23:42:00+09:00"));
     const operations = ops();
     await setup(operations);
-    fillTaxi();
+    type("출발지", "삼육대학교 정문");
+    type("도착지", "석계역 1번 출구");
     fireEvent.click(chip("출발 시간 빠르게 고르기", /30분 뒤/));
     expect(screen.getByLabelText("출발 시간")).toHaveTextContent("00:15");
+    expect(
+      screen.getByText(
+        "신청·취소 마감 내일 00:05가 함께 정해져요 (출발 10분 전)",
+      ),
+    ).toBeVisible();
+    type("함께할 학생에게 전할 말", "정문 앞에서 만나요");
     await submit();
     expect(operations.create).toHaveBeenCalledWith(
       expect.objectContaining({ referenceTime: "2026-10-06T00:15:00+09:00" }),
     );
   });
 
-  it("목록 카드 미리보기를 같은 순서로 보여 준다", async () => {
+  it("2단계 미리보기는 목록과 같은 카드로 등록 직후 모습을 보여 준다", async () => {
     await setup(ops());
     fillTaxi();
     const preview = screen.getByRole("region", {
-      name: "목록에 이렇게 보여요",
+      name: "등록하면 목록에 이렇게 보여요",
     });
-    expect(preview).toHaveTextContent(
-      /삼육대학교 정문→에서석계역 1번 출구.*오늘 18:00 출발.*3자리 남음.*택시 · 모집 중 · 김하늘/,
+    // The list's own card (PostCard), shown as a block instead of a link.
+    const card = preview.querySelector('[data-preview="true"]');
+    expect(card).not.toBeNull();
+    expect(within(preview).queryByRole("link")).toBeNull();
+    expect(card).toHaveTextContent(
+      /삼육대학교 정문에서 → 석계역 1번 출구까지.*오늘 18:00 출발.*3자리 남음.*택시·모집 중·김하늘/,
     );
+  });
+
+  it("장소·일정·정원 고치기는 값을 유지한 채 1단계로 돌아간다", async () => {
+    await setup(ops());
+    fillTaxi();
+    fireEvent.click(
+      screen.getByRole("button", { name: "장소·일정·정원 고치기" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "1단계 · 유형·장소·일정 및 정원" }),
+    ).toHaveFocus();
+    expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    fireEvent.click(screen.getByRole("button", { name: "정원 1명 줄이기" }));
+    goStep(2);
+    expect(
+      screen.getByRole("region", { name: "등록하면 목록에 이렇게 보여요" }),
+    ).toHaveTextContent("2자리 남음");
+    expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
   });
 
   it("등록에 성공하면 쓴 장소를 최근 장소로 보여 준다", async () => {
@@ -738,10 +830,9 @@ describe("수정 폼", () => {
     expect(screen.queryByLabelText("제목")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "저장하기" })).toBeNull();
     await act(async () => resolveNext(next));
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue("두 번째 모집");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
-    });
+    await save();
     expect(operations.update).toHaveBeenCalledWith(
       "p2",
       expect.objectContaining({ title: "두 번째 모집" }),
@@ -763,9 +854,7 @@ describe("수정 폼", () => {
     const operations = ops({ load: vi.fn(async () => post()) });
     await edit(operations);
     type("출발지", "화랑대역");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
-    });
+    await save();
     expect(operations.findSimilar).not.toHaveBeenCalled();
     expect(operations.update).toHaveBeenCalledWith(
       "p1",
@@ -792,9 +881,7 @@ describe("수정 폼", () => {
     ).toBeDisabled();
     expect(screen.getByText(/현재 2 \/ 4명/)).toBeVisible();
     type("제목", "바뀐 제목");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
-    });
+    await save();
     expect(operations.update).toHaveBeenCalledWith("p1", {
       title: "바뀐 제목",
       description: "기존 설명",
@@ -807,9 +894,7 @@ describe("수정 폼", () => {
     const operations = ops({ load: vi.fn(async () => post()) });
     await edit(operations);
     type("제목", "바뀐 제목");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
-    });
+    await save();
     expect(operations.update).toHaveBeenCalledTimes(1);
   });
 
@@ -835,9 +920,7 @@ describe("수정 폼", () => {
     });
     await edit(operations);
     type("출발지", "화랑대역");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장하기" }));
-    });
+    await save();
     await act(async () => {});
     expect(load).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("alert")).toHaveTextContent("모집 상태가 바뀌어");
@@ -855,6 +938,7 @@ describe("수정 폼", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "다시 불러오기" }));
     });
+    goStep(2);
     expect(screen.getByLabelText("제목")).toHaveValue("기존 제목");
   });
 });
