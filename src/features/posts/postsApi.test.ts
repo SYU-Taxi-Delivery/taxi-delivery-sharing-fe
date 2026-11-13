@@ -117,6 +117,42 @@ describe("GET /api/posts 연동", () => {
     expect(postStatusLabel(delivery).label).toBe("정원 마감");
   });
 
+  it("검색 조건을 서버 이름(q·장소·direction·from/to·sort)으로 보낸다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T22:47:30+09:00"));
+    const { calls } = fakeBackend({});
+    await postListOperations
+      .list({
+        type: "TAXI",
+        joinableOnly: true,
+        page: 0,
+        q: "역",
+        departure: "석계",
+        destination: "삼육대",
+        restaurant: "무시됨",
+        direction: "TO_SCHOOL",
+        time: "hour",
+        sort: "RECENT",
+      })
+      .catch(() => {});
+    vi.useRealTimers();
+    const params = new URL(`http://x${calls.at(-1)!.path}`).searchParams;
+    expect(Object.fromEntries(params)).toEqual({
+      page: "0",
+      size: "20",
+      type: "TAXI",
+      joinable: "true",
+      status: "OPEN",
+      q: "역",
+      departure: "석계",
+      destination: "삼육대",
+      direction: "TO_SCHOOL",
+      from: "2026-11-13T22:47:00+09:00",
+      to: "2026-11-13T23:47:00+09:00",
+      sort: "RECENT",
+    });
+  });
+
   it("401은 로그인 만료 처리를 위해 그대로 전달한다", async () => {
     fakeBackend({
       "GET /api/posts?page=0&size=20": () =>

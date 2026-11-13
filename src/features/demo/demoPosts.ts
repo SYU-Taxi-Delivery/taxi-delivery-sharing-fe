@@ -15,6 +15,7 @@ import {
   REJECTION_MESSAGES,
 } from "@/features/participation/participation";
 import type { PostQuery, PostType } from "@/features/posts/posts";
+import { matchesSearch } from "@/features/posts/search";
 
 export const DEMO_VIEWER = {
   id: "1",
@@ -442,19 +443,25 @@ export function demoHistoryItem(post: DemoPostRecord, now: number) {
   };
 }
 
-/** Like GET /api/posts without a status: only active OPEN/FULL posts. */
+/**
+ * Like GET /api/posts: only active OPEN/FULL posts, the same search rules as
+ * the server (places ignore spaces, case and "역"; direction by "삼육대";
+ * from inclusive, to exclusive) and the same two sort orders.
+ */
 export function listDemoPosts(query: PostQuery, now: number) {
   return state()
     .posts.filter((post) => {
       const status = demoStatus(post, now);
       return status === "OPEN" || status === "FULL";
     })
-    .filter((post) => query.type === "ALL" || post.type === query.type)
     .filter((post) => !query.joinableOnly || demoJoinable(post, now))
-    .sort(
-      (a, b) =>
-        Date.parse(a.referenceTime) - Date.parse(b.referenceTime) ||
-        a.id.localeCompare(b.id, "en", { numeric: true }),
+    .filter((post) => matchesSearch(post, query, now))
+    .sort((a, b) =>
+      query.sort === "RECENT"
+        ? Date.parse(b.createdAt) - Date.parse(a.createdAt) ||
+          b.id.localeCompare(a.id, "en", { numeric: true })
+        : Date.parse(a.referenceTime) - Date.parse(b.referenceTime) ||
+          a.id.localeCompare(b.id, "en", { numeric: true }),
     )
     .map((post) => demoSummary(post, now));
 }

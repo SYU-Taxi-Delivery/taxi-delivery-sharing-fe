@@ -47,16 +47,15 @@ import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { dayLabel } from "@/lib/dateFormat";
 import {
   deadlinePreview,
-  PICKUP_PLACES,
   quickTime,
   readRecentPlaces,
   rememberPlaces,
   seoulTomorrow,
   suggestTitle,
-  TAXI_PLACES,
   usedPlaces,
   withSuggestedTitle,
 } from "./formAssist";
+import { PICKUP_PLACES, TAXI_PLACES } from "../places";
 
 type Phase =
   | { kind: "idle" }

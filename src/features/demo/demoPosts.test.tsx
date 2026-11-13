@@ -17,6 +17,7 @@ import {
   demoPosts,
   findDemoPost,
   generateDemoPost,
+  listDemoPosts,
   resetDemoPosts,
 } from "./demoPosts";
 
@@ -180,6 +181,36 @@ describe("공유 데모 모집글", () => {
       status: "CANCELLED",
       currentMemberCount: 1,
     });
+  });
+
+  it("데모 목록도 서버와 같은 검색 규칙(장소·방향·시간·정렬)을 쓴다", () => {
+    const query = { type: "TAXI" as const, joinableOnly: false, page: 0 };
+    const fromStation = listDemoPosts({ ...query, departure: "석계 역" }, NOW);
+    expect(fromStation.length).toBeGreaterThan(0);
+    expect(
+      fromStation.every((post) => post.departure === "석계역 1번 출구"),
+    ).toBe(true);
+    const toSchool = listDemoPosts({ ...query, direction: "TO_SCHOOL" }, NOW);
+    expect(toSchool.every((post) => post.destination?.includes("삼육대"))).toBe(
+      true,
+    );
+    const hour = listDemoPosts({ ...query, time: "hour" }, NOW);
+    expect(
+      hour.every((post) => {
+        const at = Date.parse(post.referenceTime);
+        return at >= NOW && at < NOW + 3_600_000;
+      }),
+    ).toBe(true);
+    expect(hour.map((post) => post.id)).toContain("preview-6");
+    const recent = listDemoPosts({ ...query, sort: "RECENT" }, NOW);
+    const created = recent.map((post) => Date.parse(post.createdAt));
+    expect(created).toEqual([...created].sort((a, b) => b - a));
+    // 참여 가능 = joinable only, as the server's joinable=true.
+    expect(
+      listDemoPosts({ ...query, joinableOnly: true }, NOW).every(
+        (post) => post.joinable,
+      ),
+    ).toBe(true);
   });
 
   it("알 수 없는 ID는 상세에서 찾을 수 없음으로 끝난다", async () => {

@@ -319,7 +319,7 @@ describe("PostListScreen", () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it("AC-UI-FILTER-08, AC-UI-FILTER-09: 최신순 선택 없이 기준시각 빠른 순을 표시한다", async () => {
+  it("AC-UI-FILTER-08, AC-UI-FILTER-09: 기본은 기준시각 빠른 순이고 정렬·검색은 목록에 펼치지 않는다", async () => {
     await setup(async () => pageOf([taxi]));
     expect(screen.getByText("출발·마감 빠른 순")).toBeVisible();
     expect(screen.queryByText("최신순")).not.toBeInTheDocument();

@@ -4,11 +4,18 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
+  parsePostQuery,
+  postQueryHref,
   toPostPage,
-  type PostFilter,
   type PostListOperations,
   type PostPage,
+  type PostQuery,
 } from "./posts";
+
+/** The URL form is a stable identity for every condition, and reads back. */
+const toKey = (query: PostQuery) => postQueryHref("", query);
+const fromKey = (key: string) =>
+  parsePostQuery(Object.fromEntries(new URLSearchParams(key.slice(1))));
 
 type Result =
   | { key: string; page: PostPage; error?: undefined }
@@ -25,21 +32,17 @@ function errorMessage(error: unknown) {
 }
 
 /** Loads one page; a newer query or retry always wins over an older response. */
-export function usePostList(
-  type: PostFilter,
-  joinableOnly: boolean,
-  page: number,
-  operations: PostListOperations,
-) {
+export function usePostList(query: PostQuery, operations: PostListOperations) {
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const key = `${type}:${joinableOnly}:${page}:${attempt}`;
+  const queryKey = toKey(query);
+  const key = `${queryKey}:${attempt}`;
 
   useEffect(() => {
     let active = true;
     operations
-      .list({ type, joinableOnly, page })
+      .list(fromKey(queryKey))
       .then((raw) => {
         if (active) setResult({ key, page: toPostPage(raw) });
       })
@@ -54,7 +57,7 @@ export function usePostList(
     return () => {
       active = false;
     };
-  }, [key, type, joinableOnly, page, operations, handleUnauthorized]);
+  }, [key, queryKey, operations, handleUnauthorized]);
 
   const current = result?.key === key ? result : null;
   return {
@@ -63,4 +66,41 @@ export function usePostList(
     error: current?.error ?? null,
     retry: () => setAttempt((value) => value + 1),
   };
+}
+
+/**
+ * Result count for conditions not applied yet (the "결과 N개 보기" button).
+ * Waits briefly while typing; null while loading or when the count failed.
+ */
+export function usePostCount(
+  query: PostQuery,
+  operations: PostListOperations,
+  enabled: boolean,
+) {
+  const queryKey = toKey({ ...query, page: 0 });
+  const [result, setResult] = useState<{ key: string; count: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      operations
+        .list(fromKey(queryKey))
+        .then((raw) => {
+          if (active)
+            setResult({ key: queryKey, count: toPostPage(raw).totalElements });
+        })
+        .catch(() => {
+          // The button still works without a number.
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [queryKey, operations, enabled]);
+
+  return result?.key === queryKey ? result.count : null;
 }

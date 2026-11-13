@@ -1,5 +1,6 @@
 import { InvalidBackendResponse, backendGet } from "@/lib/backend";
-import { PAGE_SIZE, type PostListOperations } from "./posts";
+import { cleanSearch, PAGE_SIZE, type PostListOperations } from "./posts";
+import { timeRange } from "./search";
 
 export class PostsNotConnectedError extends Error {
   constructor() {
@@ -34,7 +35,9 @@ export function fromBackendSummary(value: unknown): unknown {
  * filter still leaves out full and closed posts.
  */
 export const postListOperations: PostListOperations = {
-  list: async ({ type, joinableOnly, page }) => {
+  list: async (query) => {
+    const search = cleanSearch(query);
+    const { type, joinableOnly, page } = search;
     const params = new URLSearchParams({
       page: String(page),
       size: String(PAGE_SIZE),
@@ -44,6 +47,21 @@ export const postListOperations: PostListOperations = {
       params.set("joinable", "true");
       params.set("status", "OPEN");
     }
+    // Place matching (spaces, case, "역") and direction are the server's.
+    for (const key of [
+      "q",
+      "departure",
+      "destination",
+      "restaurant",
+      "pickup",
+      "direction",
+    ] as const) {
+      if (search[key]) params.set(key, search[key]);
+    }
+    const { from, to } = timeRange(search, Date.now());
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (search.sort === "RECENT") params.set("sort", "RECENT");
     const { data } = await backendGet<Record<string, unknown>>(
       `/api/posts?${params}`,
     );

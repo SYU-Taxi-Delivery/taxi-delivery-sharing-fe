@@ -7,6 +7,7 @@ import {
   PostFormError,
   toSeoulParts,
   type EditablePost,
+  type InitialPlaces,
   type PostFormOperations,
   type PostRequest,
 } from "@/features/posts/form/postDraft";
@@ -154,10 +155,12 @@ export function PostFormPreview({
   initialMode = "create",
   initialType = "TAXI",
   postId,
+  initialPlaces,
 }: {
   initialMode?: Mode;
   initialType?: "TAXI" | "DELIVERY";
   postId?: string;
+  initialPlaces?: InitialPlaces;
 }) {
   const [editId, setEditId] = useState(postId);
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -270,6 +273,7 @@ export function PostFormPreview({
         key={version}
         mode={mode}
         initialType={initialType}
+        initialPlaces={initialPlaces}
         postId={editId ?? DEFAULT_EDIT_ID}
         listPath="/posts-preview"
         operations={operations}

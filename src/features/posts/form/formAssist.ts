@@ -15,18 +15,6 @@ import {
   type PostDraft,
 } from "./postDraft";
 
-/** Spots students pick most; names follow the existing post data. */
-export const TAXI_PLACES = [
-  "삼육대학교 정문",
-  "삼육대학교 후문",
-  "기숙사",
-  "석계역 1번 출구",
-  "태릉입구역 7번 출구",
-  "화랑대역 2번 출구",
-] as const;
-
-export const PICKUP_PLACES = ["정문", "후문", "기숙사", "학생회관"] as const;
-
 const RECENT_LIMIT = 5;
 const recentKey = (type: PostType) => `doyupot:recent-places:${type}`;
 

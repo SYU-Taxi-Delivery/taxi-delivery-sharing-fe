@@ -409,3 +409,31 @@ export type PostFormOperations = {
   load: (id: string) => Promise<EditablePost>;
   update: (id: string, request: Partial<PostRequest>) => Promise<void>;
 };
+
+/** Places a new post can start with, e.g. from the list's search. */
+export type InitialPlaces = {
+  departure?: string;
+  destination?: string;
+  restaurantName?: string;
+  pickupLocation?: string;
+};
+
+/** Reads `?departure=&destination=&restaurant=&pickup=` (100 chars each). */
+export function parseInitialPlaces(
+  params: Record<string, string | string[] | undefined>,
+): InitialPlaces {
+  const read = (key: string) => {
+    const raw = params[key];
+    const value = (Array.isArray(raw) ? raw[0] : raw)?.trim().slice(0, 100);
+    return value || undefined;
+  };
+  const places: InitialPlaces = {
+    departure: read("departure"),
+    destination: read("destination"),
+    restaurantName: read("restaurant"),
+    pickupLocation: read("pickup"),
+  };
+  return Object.fromEntries(
+    Object.entries(places).filter(([, value]) => value),
+  ) as InitialPlaces;
+}
