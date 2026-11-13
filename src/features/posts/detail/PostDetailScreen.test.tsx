@@ -6,6 +6,7 @@ import {
   CommentsError,
   type CommentsOperations,
 } from "@/features/comments/comments";
+import { postQueryHref } from "../posts";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
 import { PostDetailScreen } from "./PostDetailScreen";
 
@@ -145,7 +146,7 @@ describe("상세 댓글 영역", () => {
       operations,
     );
     expect(operations.list).not.toHaveBeenCalled();
-    expect(screen.queryByRole("heading", { name: "댓글" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "모집 문의" })).toBeNull();
     expect(screen.queryByText("댓글 내용 표시 확인")).toBeNull();
   });
 
@@ -177,9 +178,16 @@ describe("상세 조회", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "석계역 1번 출구",
     );
-    expect(screen.getByText("정원").nextSibling).toHaveTextContent(
-      "3 / 4명 · 작성자 포함",
-    );
+    expect(
+      screen.getByRole("region", { name: "1자리 남았어요" }),
+    ).toHaveTextContent("현재 3 / 4명 · 작성자 포함");
+    // The summary names both times: the schedule and the join/cancel cutoff.
+    const facts = screen
+      .getByRole("article")
+      .querySelector("header dl")! as HTMLElement;
+    expect(within(facts).getByText("출발")).toBeVisible();
+    expect(within(facts).getByText("신청·취소 마감")).toBeVisible();
+    expect(within(facts).getByText("1시간 50분 남음")).toBeVisible();
     expect(screen.getByText(/정문 앞에서 만나요/)).toBeVisible();
     expect(screen.getByText("모집 중")).toBeVisible();
     expect(within(members()).queryByText("이서연")).not.toBeInTheDocument();
@@ -212,7 +220,8 @@ describe("상세 조회", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "정문 김밥",
     );
-    for (const term of ["음식점", "수령 장소", "주문 마감", "주문 안내"]) {
+    expect(screen.getByText("수령 장소 · 학생회관 앞")).toBeVisible();
+    for (const term of ["주문 마감", "참여·취소 마감", "주문 안내"]) {
       expect(screen.getByText(term)).toBeVisible();
     }
     expect(screen.getByText("메뉴는 각자 골라요")).toBeVisible();
@@ -248,7 +257,7 @@ describe("상세 조회", () => {
 
       await act(async () => vi.advanceTimersByTime(1));
       expect(article).toHaveAttribute("data-closed", "true");
-      expect(status).toHaveTextContent("참여 마감");
+      expect(status).toHaveTextContent("신청 마감");
       expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
       expect(operations.load).toHaveBeenCalledTimes(1);
     },
@@ -517,6 +526,131 @@ describe("상세 조회", () => {
   });
 });
 
+describe("상세 요약·참여자 안내·더보기", () => {
+  const load = (patch: Record<string, unknown>) =>
+    ops({ load: vi.fn(async () => post(patch)) });
+
+  it("참여 중이면 상태 옆에 참여 완료를 표시하고 만나는 곳·소통 링크를 요약 바로 아래에 둔다", async () => {
+    await setup(load({ relation: "JOINED" }));
+    const header = screen.getByRole("article").querySelector("header")!;
+    expect(within(header).getByText("모집 중")).toBeVisible();
+    expect(within(header).getByText("참여 완료")).toBeVisible();
+    const info = screen.getByRole("region", { name: "참여자 안내" });
+    expect(info).toHaveTextContent("만나는 곳삼육대학교 정문");
+    expect(
+      within(info).getByRole("link", { name: /소통 링크 열기/ }),
+    ).toHaveAttribute("href", "https://open.kakao.com/o/abc");
+    // Right after the summary, before the participation panel.
+    expect(header.nextElementSibling).toBe(info);
+  });
+
+  it("비참여자에게는 참여자 안내를 보여 주지 않는다", async () => {
+    await setup(ops());
+    expect(
+      screen.queryByRole("region", { name: "참여자 안내" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("참여 완료")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["정원 마감", { status: "FULL", currentMemberCount: 4, joinable: false }],
+    ["작성자 마감", { status: "CLOSED", joinable: false }],
+  ])(
+    "%s이면 같은 유형의 참여 가능한 모집 목록으로 안내한다",
+    async (label, patch) => {
+      await setup(load(patch));
+      expect(
+        screen.getByRole("article").querySelector("header [data-history]"),
+      ).toHaveTextContent(label);
+      expect(
+        screen.getByRole("link", { name: "비슷한 택시 모집 보기" }),
+      ).toHaveAttribute(
+        "href",
+        postQueryHref("/posts", { type: "TAXI", joinableOnly: true, page: 0 }),
+      );
+    },
+  );
+
+  it("모집 중이거나 이미 참여 중이면 비슷한 모집 링크를 두지 않는다", async () => {
+    await setup(load({ relation: "JOINED", status: "FULL", joinable: false }));
+    expect(
+      screen.queryByRole("link", { name: /비슷한 .* 모집 보기/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("모집 취소·일정 종료를 구분해 표시한다", async () => {
+    await setup(load({ status: "CANCELLED" }));
+    expect(
+      screen.getByRole("article").querySelector("header [data-history]"),
+    ).toHaveTextContent("모집 취소");
+  });
+
+  it("더보기 메뉴는 Escape로 닫히고 버튼으로 포커스를 돌린다", async () => {
+    await setup(ops());
+    const more = screen.getByRole("button", { name: "더보기" });
+    expect(more).toHaveAttribute("aria-haspopup", "menu");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    const menu = screen.getByRole("menu");
+    expect(
+      within(menu).getByRole("menuitem", { name: "링크 복사" }),
+    ).toHaveFocus();
+    expect(
+      within(menu).getByRole("menuitem", { name: "신고하기" }),
+    ).toBeEnabled();
+    fireEvent.keyDown(menu, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
+  });
+
+  it("더보기의 신고하기는 기존 신고 창을 열고 닫으면 더보기로 포커스를 돌린다", async () => {
+    await setup(ops());
+    const more = screen.getByRole("button", { name: "더보기" });
+    fireEvent.click(more);
+    fireEvent.click(screen.getByRole("menuitem", { name: "신고하기" }));
+    const dialog = screen.getByRole("dialog", { name: "모집글 신고" });
+    expect(within(dialog).getByLabelText("부적절한 내용")).toHaveFocus();
+    fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    expect(more).toHaveFocus();
+  });
+
+  it("링크 복사는 현재 주소를 복사하고 결과를 알린다", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    await setup(ops());
+    fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("menuitem", { name: "링크 복사" }));
+    });
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(screen.getByRole("status")).toHaveTextContent("링크를 복사했어요");
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  it("작성자 메뉴에는 신고하기가 없고, 이미 신고한 모집은 비활성화한다", async () => {
+    await setup(load({ relation: "AUTHOR" }));
+    fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+    expect(
+      screen.queryByRole("menuitem", { name: /신고/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("이미 신고한 모집은 메뉴의 신고 항목을 비활성화한다", async () => {
+    await setup(load({ reported: true }));
+    fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+    expect(screen.getByRole("menuitem", { name: "신고 완료" })).toBeDisabled();
+  });
+
+  it("공개 댓글은 모집 문의로 표시한다", async () => {
+    await setup(ops());
+    const heading = screen.getByRole("heading", { name: "모집 문의" });
+    expect(heading.parentElement).toHaveTextContent("모집 문의공개");
+  });
+});
+
 describe("작성자 관리", () => {
   const author = (patch: Record<string, unknown> = {}) =>
     ops({ load: vi.fn(async () => post({ relation: "AUTHOR", ...patch })) });
@@ -541,6 +675,15 @@ describe("작성자 관리", () => {
     expect(
       screen.queryByRole("button", { name: /삭제/ }),
     ).not.toBeInTheDocument();
+    // Each action names its result before the confirmation.
+    const panel = screen.getByRole("region", { name: "내 모집글 관리" });
+    expect(panel).toHaveTextContent(
+      "지금 3명으로 확정하고 새 참여를 막아요. 일정과 소통 링크는 그대로예요.",
+    );
+    expect(panel).toHaveTextContent(
+      "모임이 없어지고 참여자에게는 '모집 취소'로 보여요. 되돌릴 수 없어요.",
+    );
+    expect(panel).toHaveTextContent("현재 3 / 4명 · 작성자 포함");
   });
 
   it("서버에 마감·취소 API가 없으면 버튼을 비활성화하고 준비 중으로 안내한다", async () => {
@@ -598,7 +741,7 @@ describe("작성자 관리", () => {
     // Closed stays closed even after a member leaves.
     expect(
       document.querySelector("article header [data-history]"),
-    ).toHaveTextContent("모집 마감");
+    ).toHaveTextContent("작성자 마감");
     expect(
       screen.queryByRole("button", { name: "모집 마감하기" }),
     ).not.toBeInTheDocument();

@@ -225,7 +225,7 @@ describe("participation panel", () => {
       viewerRelation: "NONE",
       serverTime: "2026-10-13T17:50:00+09:00",
     });
-    expect(screen.getByRole("heading", { name: "참여 마감" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "신청 마감" })).toBeVisible();
     expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
   });
 
@@ -239,7 +239,7 @@ describe("participation panel", () => {
         serverTime: "2026-10-13T18:00:00+09:00",
         currentMemberCount: status === "FULL" ? 4 : 2,
       });
-      expect(screen.getByRole("heading", { name: "모집 완료" })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "일정 종료" })).toBeVisible();
       expect(screen.getAllByText("완료된 모집입니다.")[0]).toBeVisible();
       expect(screen.queryByRole("button", { name: "참여하기" })).toBeNull();
       expect(screen.queryByText(/참여 신청·취소는/)).toBeNull();
@@ -255,7 +255,7 @@ describe("participation panel", () => {
         serverTime: "2026-10-13T18:00:00.001+09:00",
         currentMemberCount: status === "FULL" ? 4 : 2,
       });
-      expect(screen.getByRole("heading", { name: "모집 완료" })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "일정 종료" })).toBeVisible();
       expect(screen.getAllByText("완료된 모집입니다.")[0]).toBeVisible();
       expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
       expect(screen.queryByText(/참여 신청·취소는/)).toBeNull();
@@ -268,7 +268,7 @@ describe("participation panel", () => {
       status: "FINISHED",
       serverTime: "2026-10-13T18:00:00+09:00",
     });
-    expect(screen.getByRole("heading", { name: "모집 완료" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "일정 종료" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "참여 중이에요" })).toBeNull();
     expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
   });
@@ -282,6 +282,33 @@ describe("participation panel", () => {
     expect(screen.getByText(/18:00 주문 마감/)).toBeVisible();
     expect(screen.getByText(/17:50 이전까지/)).toBeVisible();
     expect(screen.getByText(/주문 마감 10분 전부터/)).toBeVisible();
+  });
+
+  it("without the schedule (post detail summary shows it) keeps only seats and the action", () => {
+    const operations: ParticipationOperations = {
+      join: vi.fn(async () => {}),
+      cancel: vi.fn(async () => {}),
+      refresh: vi.fn(async () => initial),
+    };
+    function Host() {
+      const participation = useParticipation(
+        { ...initial, viewerRelation: "NONE" },
+        operations,
+      );
+      return (
+        <ParticipationPanel participation={participation} schedule={false} />
+      );
+    }
+    render(<Host />);
+    expect(
+      screen.getByRole("heading", { name: "2자리 남았어요" }),
+    ).toBeVisible();
+    expect(screen.getByText(/현재 2 \/ 4명 · 작성자 포함/)).toBeVisible();
+    expect(screen.queryByText(/18:00 출발/)).toBeNull();
+    expect(screen.queryByText(/이전까지/)).toBeNull();
+    // The phone bar still names both times next to the button.
+    expect(screen.getByText("신청·취소 마감 17:50")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
   });
 
   it("today prefix uses the same Seoul date across UTC midnight", () => {

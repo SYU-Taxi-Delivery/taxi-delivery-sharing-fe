@@ -336,14 +336,17 @@ function Comments({
       aria-labelledby={`${id}-title`}
       aria-busy={pending}
     >
-      <h2
-        id={`${id}-title`}
-        ref={heading}
-        tabIndex={-1}
-        className={common.sectionTitle}
-      >
-        댓글
-      </h2>
+      <div className={styles.titleRow}>
+        <h2
+          id={`${id}-title`}
+          ref={heading}
+          tabIndex={-1}
+          className={common.sectionTitle}
+        >
+          모집 문의
+        </h2>
+        <span className={styles.publicTag}>공개</span>
+      </div>
       {notConnected ? (
         <p className={common.help}>
           댓글 연동을 준비하고 있어요. 잠시 후 다시 이용해 주세요.
@@ -427,6 +430,7 @@ function Comments({
                       ref={input}
                       id={`${id}-content`}
                       name="comment"
+                      data-comment-input="true"
                       rows={1}
                       className={styles.input}
                       placeholder="댓글을 입력해 주세요"

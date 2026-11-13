@@ -18,8 +18,14 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
 
 export function ParticipationPanel({
   participation,
+  schedule = true,
 }: {
   participation: ParticipationController;
+  /**
+   * Show the time box and the cutoff rule. The post detail passes false: its
+   * summary already shows both times, so the panel keeps only the seats.
+   */
+  schedule?: boolean;
 }) {
   const { snapshot, availability, nowMs, busy, needsRefresh, feedback } =
     participation;
@@ -59,14 +65,16 @@ export function ParticipationPanel({
     : snapshot.viewerRelation === "CANCELLED"
       ? "다시 참여하기"
       : "참여하기";
+  const deadlineTerm =
+    snapshot.type === "TAXI" ? "신청·취소 마감" : "참여·취소 마감";
   const status = timeFinished
-    ? "모집 완료"
+    ? "일정 종료"
     : {
-        OPEN: timeClosed ? "참여 마감" : "모집 중",
+        OPEN: timeClosed ? "신청 마감" : "모집 중",
         FULL: "정원 마감",
-        CLOSED: "모집 마감",
+        CLOSED: "작성자 마감",
         CANCELLED: "모집 취소",
-        FINISHED: "모집 완료",
+        FINISHED: "일정 종료",
         REMOVED: "삭제된 모집",
       }[snapshot.status];
 
@@ -129,16 +137,18 @@ export function ParticipationPanel({
           정원이 차면 자동으로 마감돼요.
         </p>
       </div>
-      <div className={styles.schedule}>
-        <ClockIcon className={styles.scheduleIcon} />
-        <p>
-          {today ? "오늘 " : ""}
-          {hasTime ? timeFormat.format(referenceTime) : "시각 확인 필요"}{" "}
-          {snapshot.type === "TAXI" ? "출발" : "주문 마감"}
-          <br />
-          {hasTime ? formatDate(referenceTime) : "다시 조회해 주세요."}
-        </p>
-      </div>
+      {schedule && (
+        <div className={styles.schedule}>
+          <ClockIcon className={styles.scheduleIcon} />
+          <p>
+            {today ? "오늘 " : ""}
+            {hasTime ? timeFormat.format(referenceTime) : "시각 확인 필요"}{" "}
+            {snapshot.type === "TAXI" ? "출발" : "주문 마감"}
+            <br />
+            {hasTime ? formatDate(referenceTime) : "다시 조회해 주세요."}
+          </p>
+        </div>
+      )}
       {availability.reason && <p id={reasonId}>{availability.reason}</p>}
       {active &&
         !timeFinished &&
@@ -149,7 +159,7 @@ export function ParticipationPanel({
               /* Phones only: the two times, named apart, beside the button */
               <p className={styles.actionHint} data-bottom-hint="true">
                 <span>
-                  {`신청·취소 기한 ${timeFormat.format(availability.deadline)}`}
+                  {`${deadlineTerm} ${timeFormat.format(availability.deadline)}`}
                 </span>
                 <span>
                   {`${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${timeFormat.format(referenceTime)}`}
@@ -174,15 +184,18 @@ export function ParticipationPanel({
             </button>
           </div>
         )}
-      {active && !timeFinished && Number.isFinite(availability.deadline) && (
-        <p className={styles.help}>
-          참여 신청·취소는 {timeFormat.format(availability.deadline)} 이전까지
-          가능해요.
-          <br />
-          {snapshot.type === "TAXI" ? "출발" : "주문 마감"}{" "}
-          {cutoffMinutes(snapshot)}분 전부터 마감돼요.
-        </p>
-      )}
+      {schedule &&
+        active &&
+        !timeFinished &&
+        Number.isFinite(availability.deadline) && (
+          <p className={styles.help}>
+            참여 신청·취소는 {timeFormat.format(availability.deadline)} 이전까지
+            가능해요.
+            <br />
+            {snapshot.type === "TAXI" ? "출발" : "주문 마감"}{" "}
+            {cutoffMinutes(snapshot)}분 전부터 마감돼요.
+          </p>
+        )}
       {busy && <p role="status">참여 상태를 확인하고 있어요.</p>}
       {feedback && (
         <p

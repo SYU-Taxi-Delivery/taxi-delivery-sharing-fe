@@ -1,5 +1,6 @@
 import {
   hideUnavailableDetails,
+  participationDeadlineMs,
   type ParticipationSnapshot,
 } from "@/features/participation/participation";
 import type { PostStatus } from "../posts";
@@ -249,6 +250,75 @@ export function effectiveStatus(
   return active && nowMs >= Date.parse(detail.referenceTime)
     ? "FINISHED"
     : detail.status;
+}
+
+/**
+ * Status words for the detail header. More specific than the list label:
+ * who closed it, and whether only the participation cutoff has passed.
+ */
+export type DetailStatusLabel =
+  | "모집 중"
+  | "정원 마감"
+  | "작성자 마감"
+  | "신청 마감"
+  | "모집 취소"
+  | "일정 종료"
+  | "삭제된 모집";
+
+export function detailStatus(
+  detail: Pick<
+    PostDetail,
+    | "status"
+    | "referenceTime"
+    | "participationDeadline"
+    | "joinable"
+    | "currentMemberCount"
+    | "capacity"
+    | "relation"
+  >,
+  nowMs: number,
+): { label: DetailStatusLabel; history: boolean; joined: boolean } {
+  const status = effectiveStatus(detail, nowMs);
+  const joined =
+    detail.relation === "JOINED" &&
+    status !== "CANCELLED" &&
+    status !== "REMOVED";
+  const label: DetailStatusLabel = (() => {
+    switch (status) {
+      case "CANCELLED":
+        return "모집 취소";
+      case "FINISHED":
+        return "일정 종료";
+      case "REMOVED":
+        return "삭제된 모집";
+      case "FULL":
+        return "정원 마감";
+      case "CLOSED":
+        return "작성자 마감";
+      case "OPEN":
+        if (detail.currentMemberCount >= detail.capacity) return "정원 마감";
+        return nowMs >= participationDeadlineMs(detail) || !detail.joinable
+          ? "신청 마감"
+          : "모집 중";
+    }
+  })();
+  return {
+    label,
+    history: label === "모집 취소" || label === "일정 종료",
+    joined,
+  };
+}
+
+/** "1시간 38분 남음", "12분 남음", "2일 남음"; null once the time has passed. */
+export function remainingLabel(targetMs: number, nowMs: number): string | null {
+  const left = targetMs - nowMs;
+  if (!Number.isFinite(left) || left <= 0) return null;
+  const minutes = Math.ceil(left / 60_000);
+  if (minutes < 60) return `${minutes}분 남음`;
+  const hours = Math.floor(minutes / 60);
+  if (hours >= 24) return `${Math.floor(hours / 24)}일 남음`;
+  const rest = minutes % 60;
+  return rest ? `${hours}시간 ${rest}분 남음` : `${hours}시간 남음`;
 }
 
 export type AuthorActions = {

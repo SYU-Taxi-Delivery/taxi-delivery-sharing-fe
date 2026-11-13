@@ -204,7 +204,8 @@ describe("댓글 조회", () => {
 
   it("API 미연동 화면은 빈 댓글이나 작성 성공으로 가장하지 않는다", async () => {
     await setup(undefined, { operations: undefined });
-    expect(screen.getByRole("heading", { name: "댓글" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "모집 문의" })).toBeVisible();
+    expect(screen.getByText("공개")).toBeVisible();
     expect(screen.getByText(/댓글.*연동.*준비/)).toBeVisible();
     expect(screen.queryByLabelText("댓글 내용")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -234,6 +235,8 @@ describe("댓글 작성", () => {
       expect(api.create).toHaveBeenCalledWith("p1", "조금 먼저 도착할게요.");
       expect(screen.getByText("조금 먼저 도착할게요.")).toBeVisible();
       expect(input()).toHaveValue("");
+      // Marks the field so the phone action bar hides while it has focus.
+      expect(input()).toHaveAttribute("data-comment-input", "true");
       expect(api.list).toHaveBeenCalledTimes(2);
     },
   );
@@ -420,7 +423,7 @@ describe("댓글 삭제와 접근 변경", () => {
             within(dialog).getByRole("button", { name: "돌아가기" }),
           );
       });
-      expect(screen.getByRole("heading", { name: "댓글" })).toHaveFocus();
+      expect(screen.getByRole("heading", { name: "모집 문의" })).toHaveFocus();
       expect(remove).toHaveBeenCalledTimes(1);
       await act(async () => pending.resolve());
     },
