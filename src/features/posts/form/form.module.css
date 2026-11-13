@@ -93,18 +93,161 @@
   font-size: var(--type-label);
 }
 
-legend.label {
+legend.label,
+legend.labelGroup {
   margin-bottom: var(--space-2);
+  padding: 0;
 }
 
-/* Group heading: a small green tab, then space instead of divider lines */
+/* Numbered group: a round step badge, then space instead of divider lines */
+.section {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.section + .section {
+  margin-top: var(--space-4);
+}
+
 .sectionTitle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-4);
   font-size: var(--type-subhead);
   letter-spacing: var(--tracking-heading);
+  /* Clear of the sticky app bar when a progress step jumps here */
+  scroll-margin-top: 5rem;
+}
+
+.sectionTitle:focus {
+  outline: none;
+}
+
+.sectionTitle:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 4px;
+  border-radius: var(--round-chip);
+}
+
+.stepBadge {
+  display: inline-grid;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: var(--round-pill);
+  background: var(--text);
+  color: var(--canvas);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Progress: four steps; a finished one turns green with a check */
+.progress {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.progressCount {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressSteps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.progressStep {
+  display: grid;
+  width: 100%;
+  min-height: var(--touch-target);
+  justify-items: center;
+  align-content: center;
+  gap: 0.125rem;
+  padding: var(--space-1);
+  border-radius: var(--round-chip);
+  border-top: 3px solid var(--closed);
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+  transition:
+    border-color var(--motion-fast) var(--curve-standard),
+    color var(--motion-fast) var(--curve-standard);
+}
+
+.progressStep .stepBadge {
+  background: var(--closed);
+  color: var(--posts-muted);
+}
+
+.progressStep[data-done="true"] {
+  border-top-color: var(--primary);
+  color: var(--posts-text);
+}
+
+.progressStep[data-done="true"] .stepBadge {
+  background: var(--primary);
+  color: var(--text);
+}
+
+.progressStep:hover {
+  background: var(--primary-tint);
+}
+
+.progressStep:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.progressLabel {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 필수 / 선택 legend and tags */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+}
+
+.labelGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--round-chip);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.tag[data-kind="required"] {
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+}
+
+.tag[data-kind="optional"] {
+  background: var(--soft);
+  color: var(--posts-muted);
 }
 
 .labelRow {
@@ -127,11 +270,6 @@ legend.label {
 .counter[data-over="true"] {
   color: var(--posts-danger);
   font-weight: 700;
-}
-
-/* Help that belongs to the group right above it (date + time) */
-.pullUp {
-  margin-top: calc(var(--space-2) - var(--space-4));
 }
 
 .dialogText {
@@ -802,4 +940,186 @@ input.input:read-only,
     opacity: 1;
     transform: none;
   }
+}
+
+/* Chips: tap to fill a field; the picked one reads by fill and edge */
+.chipRows {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chipCaption {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-pill);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 600;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard);
+}
+
+/* 36px visual, 44px touch target */
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--primary-tint);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--text);
+  background: var(--primary-soft);
+}
+
+.chip:disabled {
+  color: var(--disabled);
+  cursor: not-allowed;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.chipMeta {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Swap 출발지 ↔ 도착지, sitting between the two fields */
+.swap {
+  composes: base secondary sm from "../../ui/button.module.css";
+  justify-self: center;
+  margin-block: calc(var(--space-2) * -1);
+}
+
+/* The cutoff that comes with the chosen time */
+.deadline {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+.deadline[data-past="true"] {
+  background: var(--danger-soft);
+  color: var(--posts-danger);
+}
+
+.stepperText {
+  display: grid;
+  justify-items: center;
+}
+
+.stepperMeta {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}
+
+/* "목록에 이렇게 보여요": the list card's order, not a link */
+.preview {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.previewHeading {
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+.previewCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1.5px dashed var(--input-border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
+}
+
+.previewSticker {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 0.875rem;
+  background: var(--primary-soft);
+}
+
+.preview[data-type="delivery"] .previewSticker {
+  background: var(--delivery-tint);
+}
+
+.previewSticker svg {
+  width: 2.5rem;
+  height: auto;
+}
+
+.previewBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.previewRoute {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  font-size: var(--type-body);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.previewWhen {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-2);
+  font-size: var(--type-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.previewSeats {
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.previewMeta {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 500;
+}
+
+.previewEmpty {
+  color: var(--posts-muted);
+  font-weight: 500;
 }

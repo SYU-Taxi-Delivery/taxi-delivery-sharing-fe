@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -110,9 +117,9 @@ describe("작성 폼", () => {
     ]) {
       expect(screen.getByLabelText(label)).toBeVisible();
     }
-    expect(
-      screen.getByText(/작성자 포함 전체 정원 2~4명 · 등록 시 1 \/ 4명/),
-    ).toBeVisible();
+    expect(screen.getByText("나 포함 총 4명")).toBeVisible();
+    expect(screen.getByText("3명 모집")).toBeVisible();
+    expect(screen.getByText(/정원은 나 포함 2~4명/)).toBeVisible();
     expect(screen.queryByLabelText(/음식 종류/)).not.toBeInTheDocument();
   });
 
@@ -123,7 +130,7 @@ describe("작성 폼", () => {
       "수령 장소",
       "주문 마감 날짜",
       "주문 마감 시간",
-      "주문 안내 (선택)",
+      "주문 안내",
     ]) {
       expect(screen.getByLabelText(label)).toBeVisible();
     }
@@ -139,13 +146,13 @@ describe("작성 폼", () => {
     for (let i = 0; i < 6; i += 1) {
       fireEvent.click(screen.getByRole("button", { name: "정원 1명 늘리기" }));
     }
-    expect(screen.getByText("10명")).toBeVisible();
+    expect(screen.getByText("나 포함 총 10명")).toBeVisible();
     expect(screen.getByLabelText("제목")).toHaveValue("공통 제목");
     fireEvent.click(screen.getByLabelText("택시"));
     expect(screen.getByLabelText("출발지")).toHaveValue("석계역");
-    expect(screen.getByText("4명")).toBeVisible();
+    expect(screen.getByText("나 포함 총 4명")).toBeVisible();
     fireEvent.click(screen.getByLabelText("배달"));
-    expect(screen.getByText("10명")).toBeVisible();
+    expect(screen.getByText("나 포함 총 10명")).toBeVisible();
   });
 
   it("AC-UI-FORM-03~04: 정원 버튼은 범위 끝에서 비활성이다", async () => {
@@ -155,9 +162,9 @@ describe("작성 폼", () => {
     expect(more).toBeDisabled();
     fireEvent.click(less);
     fireEvent.click(less);
-    expect(screen.getByText("2명")).toBeVisible();
+    expect(screen.getByText("나 포함 총 2명")).toBeVisible();
+    expect(screen.getByText("1명 모집")).toBeVisible();
     expect(less).toBeDisabled();
-    expect(screen.getByText(/등록 시 1 \/ 2명/)).toBeVisible();
   });
 
   it("AC-NFR-SEC-02-01: 입력 중 길이 초과를 바로 알리고 글자 수를 보여 준다", async () => {
@@ -174,11 +181,11 @@ describe("작성 폼", () => {
     const operations = ops();
     await setup(operations);
     fillTaxi();
-    type("외부 소통 링크 (선택)", "http://example.com");
+    type("외부 소통 링크", "http://example.com");
     await submit();
     expect(operations.findSimilar).not.toHaveBeenCalled();
     expect(operations.create).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("외부 소통 링크 (선택)")).toHaveFocus();
+    expect(screen.getByLabelText("외부 소통 링크")).toHaveFocus();
   });
 
   it("빈 폼 제출은 요청 없이 첫 오류 칸으로 포커스를 옮긴다", async () => {
@@ -186,8 +193,15 @@ describe("작성 폼", () => {
     await setup(operations);
     await submit();
     expect(operations.create).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("제목")).toHaveFocus();
-    expect(screen.getByText("출발지를 입력해 주세요.")).toBeVisible();
+    // Focus follows the section order: 장소 comes first.
+    expect(screen.getByLabelText("출발지")).toHaveFocus();
+    expect(screen.getByLabelText("출발지")).toHaveAccessibleDescription(
+      /출발지를 입력해 주세요/,
+    );
+    expect(screen.getByLabelText("제목")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     expect(screen.getByText("전할 말을 입력해 주세요.")).toBeVisible();
   });
 
@@ -322,8 +336,11 @@ describe("작성 폼", () => {
     await setup(operations);
     fillTaxi();
     await submit();
+    expect(screen.getByRole("region", { name: /비슷한 모집이/ })).toBeVisible();
     type("도착지", "화랑대역");
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: /비슷한 모집이/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("AC-DISC-005-13: 유사 조회 실패는 다시 확인 또는 확인 없이 등록을 제공한다", async () => {
@@ -486,6 +503,125 @@ describe("작성 폼", () => {
     fillTaxi();
     await submit();
     expect(screen.getByRole("alert")).toHaveTextContent("로그인이 만료됐어요");
+  });
+});
+
+describe("작성 도우미", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  const chip = (group: string, name: string | RegExp) =>
+    within(screen.getByRole("group", { name: group })).getByRole("button", {
+      name,
+    });
+
+  it("단계 표시와 필수/선택 안내를 보여 준다", async () => {
+    await setup(ops());
+    const steps = screen.getByRole("navigation", { name: "작성 단계" });
+    expect(within(steps).getByText("1/4 완료")).toBeVisible();
+    expect(
+      within(steps).getByRole("button", { name: "유형 선택, 완료" }),
+    ).toBeVisible();
+    expect(screen.getByText(/꼭 입력해요/)).toBeVisible();
+    expect(screen.getByLabelText("출발지")).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(screen.getByLabelText("외부 소통 링크")).not.toHaveAttribute(
+      "aria-required",
+    );
+    fillTaxi();
+    expect(within(steps).getByText("4/4 완료")).toBeVisible();
+  });
+
+  it("장소 칩은 입력을 채우고 직접 입력도 그대로 된다", async () => {
+    await setup(ops());
+    const gate = chip("출발지 추천 장소", "삼육대학교 정문");
+    fireEvent.click(gate);
+    expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    expect(gate).toHaveAttribute("aria-pressed", "true");
+    type("출발지", "직접 쓴 곳");
+    expect(gate).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(chip("도착지 추천 장소", "화랑대역 2번 출구"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "출발지와 도착지 바꾸기" }),
+    );
+    expect(screen.getByLabelText("출발지")).toHaveValue("화랑대역 2번 출구");
+    expect(screen.getByLabelText("도착지")).toHaveValue("직접 쓴 곳");
+  });
+
+  it("배달 수령 장소 칩을 보여 준다", async () => {
+    await setup(ops(), { initialType: "DELIVERY" });
+    fireEvent.click(chip("수령 장소 추천 장소", "학생회관"));
+    expect(screen.getByLabelText("수령 장소")).toHaveValue("학생회관");
+    type("음식점명", "정문 김밥");
+    expect(screen.getByLabelText("제목")).toHaveValue(
+      "정문 김밥 같이 주문해요",
+    );
+  });
+
+  it("제목은 경로를 따라 채우다가 직접 고치면 멈춘다", async () => {
+    await setup(ops());
+    fireEvent.click(chip("출발지 추천 장소", "삼육대학교 정문"));
+    fireEvent.click(chip("도착지 추천 장소", "화랑대역 2번 출구"));
+    expect(screen.getByLabelText("제목")).toHaveValue(
+      "삼육대학교 정문 → 화랑대역 2번 출구 택시",
+    );
+    fireEvent.click(chip("도착지 추천 장소", "석계역 1번 출구"));
+    expect(screen.getByLabelText("제목")).toHaveValue(
+      "삼육대학교 정문 → 석계역 1번 출구 택시",
+    );
+    type("제목", "같이 타요");
+    fireEvent.click(chip("도착지 추천 장소", "기숙사"));
+    expect(screen.getByLabelText("제목")).toHaveValue("같이 타요");
+  });
+
+  it("빠른 시간 칩은 5분 단위로 올림하고 마감 시각을 미리 알려 준다", async () => {
+    await setup(ops());
+    fireEvent.click(chip("출발 시간 빠르게 고르기", /30분 뒤/));
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("18:00");
+    expect(
+      screen.getByText("신청·취소 마감 17:50이 함께 정해져요 (출발 10분 전)"),
+    ).toBeVisible();
+    expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
+      /신청·취소 마감 17:50/,
+    );
+    fireEvent.click(chip("출발 날짜 빠르게 고르기", "내일"));
+    expect(screen.getByLabelText("출발 날짜")).toHaveTextContent("10/6");
+  });
+
+  it("자정을 넘기는 빠른 시간은 날짜도 다음 날로 정한다", async () => {
+    vi.setSystemTime(new Date("2026-10-05T23:42:00+09:00"));
+    const operations = ops();
+    await setup(operations);
+    fillTaxi();
+    fireEvent.click(chip("출발 시간 빠르게 고르기", /30분 뒤/));
+    expect(screen.getByLabelText("출발 시간")).toHaveTextContent("00:15");
+    await submit();
+    expect(operations.create).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceTime: "2026-10-06T00:15:00+09:00" }),
+    );
+  });
+
+  it("목록 카드 미리보기를 같은 순서로 보여 준다", async () => {
+    await setup(ops());
+    fillTaxi();
+    const preview = screen.getByRole("region", {
+      name: "목록에 이렇게 보여요",
+    });
+    expect(preview).toHaveTextContent(
+      /삼육대학교 정문→에서석계역 1번 출구.*오늘 18:00 출발.*3자리 남음.*택시 · 모집 중 · 김하늘/,
+    );
+  });
+
+  it("등록에 성공하면 쓴 장소를 최근 장소로 보여 준다", async () => {
+    await setup(ops());
+    fillTaxi();
+    type("출발지", "체육관 앞");
+    await submit();
+    expect(router.push).toHaveBeenCalledWith("/posts/new-1");
+    cleanup();
+    await setup(ops());
+    expect(chip("출발지 최근 장소", "체육관 앞")).toBeVisible();
   });
 });
 
