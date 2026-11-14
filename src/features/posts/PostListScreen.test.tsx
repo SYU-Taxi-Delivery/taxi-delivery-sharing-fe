@@ -301,6 +301,48 @@ describe("PostListScreen", () => {
     expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
   });
 
+  it("서울 자정을 지날 때 카드와 날짜 제목을 다음 날 기준으로 갱신한다", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date("2026-11-13T23:59:59+09:00"));
+    const { view } = await setup(async () =>
+      pageOf([
+        { ...taxi, id: "a", referenceTime: "2026-11-14T09:00:00+09:00" },
+        { ...taxi, id: "b", referenceTime: "2026-11-15T09:00:00+09:00" },
+      ]),
+    );
+    expect(cards()[0]).toHaveTextContent("내일 09:00 출발");
+
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(cards()[0]).toHaveTextContent("오늘 09:00 출발");
+    expect(cards()[1]).toHaveTextContent("내일 09:00 출발");
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["오늘 · 11/14 (토)", "내일 · 11/15 (일)"]);
+
+    await act(async () => vi.advanceTimersByTime(86_400_000));
+    expect(cards()[1]).toHaveTextContent("오늘 09:00 출발");
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each(["focus", "visibilitychange"])(
+    "%s로 화면에 돌아오면 지연된 자정 타이머를 기다리지 않고 날짜를 갱신한다",
+    async (event) => {
+      vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+      vi.setSystemTime(new Date("2026-11-13T23:59:00+09:00"));
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+      await setup(async () =>
+        pageOf([{ ...taxi, referenceTime: "2026-11-14T09:00:00+09:00" }]),
+      );
+      expect(cards()[0]).toHaveTextContent("내일 09:00 출발");
+      vi.setSystemTime(new Date("2026-11-14T00:01:00+09:00"));
+      await act(async () => {
+        fireEvent(event === "focus" ? window : document, new Event(event));
+      });
+      expect(cards()[0]).toHaveTextContent("오늘 09:00 출발");
+    },
+  );
+
   it("상세에서 돌아오면 저장한 스크롤 위치로 돌아간다", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     const first = await setup(async () => pageOf([taxi]));

@@ -46,6 +46,53 @@ describe("suggestTitle / withSuggestedTitle", () => {
     );
     expect(own.common.title).toBe("내 제목");
   });
+
+  it("경로를 지웠다 다시 입력해도 자동 제목은 새 경로를 따른다", () => {
+    const filled = withSuggestedTitle(taxi("정문", ""), taxi("정문", "후문"));
+    const cleared = withSuggestedTitle(
+      filled,
+      taxi("정문", "", filled.common.title),
+    );
+    const replaced = withSuggestedTitle(
+      cleared,
+      taxi("정문", "기숙사", cleared.common.title),
+    );
+    expect(replaced.common.title).toBe("정문 → 기숙사 택시");
+
+    const own = taxi("정문", "후문", "내 제목");
+    const ownCleared = withSuggestedTitle(own, taxi("정문", "", "내 제목"));
+    const ownReplaced = withSuggestedTitle(
+      ownCleared,
+      taxi("정문", "기숙사", ownCleared.common.title),
+    );
+    expect(ownReplaced.common.title).toBe("내 제목");
+  });
+
+  it("빈 배달 초안으로 바꾼 뒤 음식점을 입력하면 택시 제목을 교체한다", () => {
+    const filled = withSuggestedTitle(taxi("정문", ""), taxi("정문", "후문"));
+    const switched = withSuggestedTitle(filled, {
+      ...filled,
+      type: "DELIVERY",
+    });
+    const delivery = withSuggestedTitle(switched, {
+      ...switched,
+      delivery: { ...switched.delivery, restaurantName: "학교 김밥" },
+    });
+    expect(delivery.common.title).toBe("학교 김밥 같이 주문해요");
+
+    const cleared = withSuggestedTitle(delivery, {
+      ...delivery,
+      delivery: { ...delivery.delivery, restaurantName: "" },
+    });
+    const renamed = withSuggestedTitle(cleared, {
+      ...cleared,
+      delivery: { ...cleared.delivery, restaurantName: "정문 피자" },
+    });
+    expect(renamed.common.title).toBe("정문 피자 같이 주문해요");
+    expect(
+      withSuggestedTitle(renamed, { ...renamed, type: "TAXI" }).common.title,
+    ).toBe("정문 → 후문 택시");
+  });
 });
 
 describe("quickTime", () => {
