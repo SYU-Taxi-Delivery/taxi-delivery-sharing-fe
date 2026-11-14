@@ -1012,41 +1012,23 @@
 }
 
 /* Two cards per row once the board itself is wide enough (≥50rem, about
-   800px), so a 1024px window with the sidebar keeps one column. Each card
-   takes three rows of the list grid (title, time · seats, meta) through
-   subgrid, so the cards in one row line up their lines: a two-line title
-   pushes its neighbour's time line down only in that row, and one-line rows
-   stay tight. */
+   800px), so a 1024px window with the sidebar keeps one column. Cards in
+   one row stretch to the same outer height, but each card's lines simply
+   follow its own content: a delivery card's 수령 line never leaves an empty
+   row under a taxi card's route next to it. */
 @container board (min-width: 50rem) {
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
   }
 
+  .list > li {
+    display: grid;
+  }
+
   .list .card,
   .list .skeleton {
     padding: 1.125rem var(--space-5);
-  }
-
-  .list .skeleton {
-    grid-row: span 3;
-  }
-
-  .list > li,
-  .list .card,
-  .list .cardBody {
-    display: grid;
-    grid-row: span 3;
-    grid-template-rows: subgrid;
-    row-gap: 0;
-  }
-
-  .list .sticker {
-    grid-row: 1 / span 3;
-  }
-
-  .list .cardBody {
-    grid-column: 2;
   }
 }
 
