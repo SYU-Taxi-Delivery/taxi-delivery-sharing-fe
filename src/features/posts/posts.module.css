@@ -1403,14 +1403,15 @@
   font-weight: 700;
 }
 
-/* The input the suggestion chips fill: primary label and border. */
+/* The input the suggestion chips fill: primary label and an even 2px
+   border on every side (1px border + 1px inner ring, so nothing moves). */
 .routeField[data-target="true"] .routeLabel {
   color: var(--posts-primary-text);
 }
 
 .routeField[data-target="true"] .searchInput {
   border-color: var(--posts-primary-text);
-  box-shadow: inset 3px 0 0 var(--posts-primary-text);
+  box-shadow: inset 0 0 0 1px var(--posts-primary-text);
 }
 
 .swap {
