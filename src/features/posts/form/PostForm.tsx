@@ -1308,7 +1308,7 @@ function PlaceChips({
         </div>
       )}
       <div
-        className={styles.chips}
+        className={`${styles.chips} ${styles.chipGrid}`}
         role="group"
         aria-label={`${label} 추천 장소`}
       >
