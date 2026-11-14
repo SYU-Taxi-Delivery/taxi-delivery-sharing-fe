@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ApiError } from "@/lib/api";
-import { participationDeadlineMs } from "@/features/participation/participation";
+import {
+  participationDeadlineMs,
+  type LatestPublicState,
+} from "@/features/participation/participation";
 import {
   toMyHistory,
   type MyHistory,
@@ -151,6 +154,37 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
   const refresh = useCallback(() => read(false), [read]);
   const recheck = useCallback(() => void read(true).catch(() => {}), [read]);
 
+  const applyLatest = useCallback(
+    (id: string, latest: LatestPublicState) => {
+      if (activeScope.current !== scope) return;
+      sequence.current += 1;
+      const changes = Object.fromEntries(
+        Object.entries(latest).filter(([, value]) => value !== undefined),
+      ) as LatestPublicState;
+      setResult((previous) => {
+        if (previous?.scope !== scope || !previous.history) return previous;
+        return {
+          ...previous,
+          history: {
+            ...previous.history,
+            content: previous.history.content.map((item) => {
+              if (item.id !== id || item.status === "REMOVED") return item;
+              const status = changes.status ?? item.status;
+              if (status === "REMOVED")
+                return { id, status, relation: item.relation };
+              const next = { ...item, ...changes, status };
+              if (next.currentMemberCount > next.capacity) return item;
+              if (next.status === "CANCELLED" || next.status === "FINISHED")
+                delete next.communicationUrl;
+              return next;
+            }),
+          },
+        };
+      });
+    },
+    [scope],
+  );
+
   return {
     history,
     loading: current === null,
@@ -163,5 +197,6 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
     refresh,
     recheck,
     markCancelled,
+    applyLatest,
   };
 }
