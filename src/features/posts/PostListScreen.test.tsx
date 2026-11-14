@@ -124,6 +124,22 @@ describe("PostListScreen", () => {
     );
   });
 
+  it.each([25, 60])(
+    "기기 시계가 서버보다 %s분 빨라도 서버의 모집 중 판정을 유지한다",
+    async (minutes) => {
+      const evaluatedAt = Date.parse(taxi.referenceTime) - 30 * 60_000;
+      vi.spyOn(Date, "now").mockReturnValue(evaluatedAt + minutes * 60_000);
+      await setup(async () =>
+        pageOf([{ ...taxi, recruitmentStatus: "RECRUITING" }]),
+      );
+
+      const card = cards()[0];
+      expect(card).toHaveAttribute("data-available", "true");
+      expect(within(card).getByText("모집 중")).toBeVisible();
+      expect(card).not.toHaveTextContent("모집 완료");
+    },
+  );
+
   it("AC-DELIVERY-003-01, AC-DISC-003-04: 배달 카드는 음식점·수령 장소·주문 마감과 참여 마감을 보여 준다", async () => {
     await setup(async () => pageOf([delivery]));
     const card = cards()[0];

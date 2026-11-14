@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { ParticipationRejected } from "@/features/participation/participation";
 import { useParticipation } from "@/features/participation/useParticipation";
 import { ConfirmDialog } from "@/features/posts/detail/ConfirmDialog";
 import {
@@ -57,6 +58,10 @@ export function ParticipationCancellation({
             error.status === 401
           )
             handleUnauthorized();
+          // The parent owns the displayed cards and links. Keep the reason,
+          // but use the hook's refresh path to update that owner as well.
+          if (error instanceof ParticipationRejected)
+            throw new ParticipationRejected(error.code);
           throw error;
         }
         if (mounted.current) onCancelled(item.id);
