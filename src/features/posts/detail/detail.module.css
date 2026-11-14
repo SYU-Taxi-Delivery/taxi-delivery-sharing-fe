@@ -202,12 +202,18 @@
 
 .joinedInfo {
   --button-round: var(--round-control);
+  scroll-margin-top: calc(3.5rem + var(--space-4)); /* below the app bar */
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border: 1.5px solid var(--posts-primary-text);
   border-radius: 1.25rem;
   background: var(--canvas);
+}
+
+.joinedInfo:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
 }
 
 .place {
@@ -553,6 +559,13 @@ p.stop::before {
   composes: base primary from "../../ui/button.module.css";
 }
 
+/* The fixed bar's one primary action while joined (오픈채팅 열기 or
+   모임 장소 보기): 52px, filling the space beside the helper text. */
+.barPrimary {
+  composes: base primary lg from "../../ui/button.module.css";
+  width: 100%;
+}
+
 .secondary {
   composes: base secondary from "../../ui/button.module.css";
 }
@@ -655,6 +668,7 @@ p.stop::before {
 
 .success {
   background: var(--primary-soft);
+  text-align: center;
   color: var(--posts-primary-text);
   animation: doo-pop var(--motion-standard) cubic-bezier(0.34, 1.36, 0.64, 1);
 }
@@ -784,6 +798,18 @@ p.stop::before {
 .dialogBody {
   margin-top: var(--space-2);
   color: var(--posts-muted);
+}
+
+/* A simple confirm (ConfirmDialog): short title and message centred; the
+   title is padded by the close button's width so it sits truly centred. */
+.dialog[data-simple="true"] .dialogHeading > h2 {
+  flex: 1;
+  padding-left: 2.75rem;
+  text-align: center;
+}
+
+.dialog[data-simple="true"] .dialogBody {
+  text-align: center;
 }
 
 /* Footer actions: secondary + primary side by side (Aceternity modal footer) */

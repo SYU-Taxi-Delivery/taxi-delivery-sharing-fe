@@ -44,7 +44,6 @@ import {
 import styles from "./form.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
-import { dayLabel } from "@/lib/dateFormat";
 import {
   deadlinePreview,
   quickTime,
@@ -83,6 +82,18 @@ export type PostFormProps = {
 
 const typeLabels = { TAXI: "택시", DELIVERY: "배달" } as const;
 
+/** Step 1 holds what the list card shows; step 2 the guide and preview. */
+const STEP_ONE: readonly FieldName[] = [
+  "departure",
+  "destination",
+  "restaurantName",
+  "pickupLocation",
+  "date",
+  "time",
+  "capacity",
+];
+const STEPS = ["유형·장소·일정 및 정원", "안내·미리보기"] as const;
+
 export function PostForm({
   mode,
   initialDraft,
@@ -105,6 +116,10 @@ export function PostForm({
     {},
   );
   const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  // Where focus goes once the step on screen has rendered.
+  const pendingFocus = useRef<FieldName | "step" | null>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   const [phase, setPhase] = useState<Phase>(() =>
     initialMessage
@@ -240,6 +255,49 @@ export function PostForm({
     target.scrollIntoView?.({ block: "center" });
   }
 
+  useEffect(() => {
+    const target = pendingFocus.current;
+    if (!target) return;
+    pendingFocus.current = null;
+    if (target === "step") {
+      const heading = document.getElementById(id("step-heading"));
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView?.({ block: "start" });
+    } else focusField(target);
+    // focusField reads the DOM of the step that just rendered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest]);
+
+  /** Shows the step and puts focus on its heading or a field in it. */
+  function goTo(next: 1 | 2, focus: FieldName | "step" = "step") {
+    setStep(next);
+    pendingFocus.current = focus;
+    setFocusRequest((value) => value + 1);
+  }
+
+  function next() {
+    if (locked.current) return;
+    const now = Date.now();
+    setNowMs(now);
+    const current = validateDraft(draft, {
+      nowMs: now,
+      coreLocked,
+      originalReferenceTime,
+    });
+    setTouched((value) => ({
+      ...value,
+      ...Object.fromEntries(STEP_ONE.map((field) => [field, true])),
+    }));
+    const first = FIELD_ORDER.find(
+      (field) => STEP_ONE.includes(field) && current[field],
+    );
+    if (first) {
+      focusField(first);
+      return;
+    }
+    goTo(2);
+  }
+
   function failWith(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
       handleUnauthorized();
@@ -279,7 +337,7 @@ export function PostForm({
       setServerErrors(fieldErrors);
       setPhase({ kind: "error", message });
       const first = FIELD_ORDER.find((field) => fieldErrors[field]);
-      if (first) focusField(first);
+      if (first) goTo(STEP_ONE.includes(first) ? 1 : 2, first);
       return;
     }
     // A lost or broken response does not prove the write failed (AC-POST-002-11).
@@ -354,6 +412,11 @@ export function PostForm({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked.current) return;
+    // Enter in a step-1 field means 다음, never an early submit.
+    if (step === 1) {
+      next();
+      return;
+    }
     const now = Date.now();
     setNowMs(now);
     setSubmitted(true);
@@ -365,7 +428,8 @@ export function PostForm({
     const first = FIELD_ORDER.find((field) => current[field]);
     if (first) {
       setPhase({ kind: "idle" });
-      focusField(first);
+      // e.g. the time ran out while writing the guide: back to step 1.
+      goTo(STEP_ONE.includes(first) ? 1 : 2, first);
       return;
     }
     if (mode === "create") void checkSimilar();
@@ -386,24 +450,6 @@ export function PostForm({
     if (!blockLeave(trigger, leaveTarget)) router.push(path(leaveTarget));
   }
 
-  const placesDone = taxi
-    ? !errors.departure && !errors.destination
-    : !errors.restaurantName && !errors.pickupLocation;
-  const scheduleDone =
-    active.time !== "" && !errors.date && !errors.time && !errors.capacity;
-  const guideDone =
-    !errors.title &&
-    !errors.description &&
-    !errors.communicationUrl &&
-    !errors.orderGuide;
-  const sections = [
-    { key: "type", label: "유형 선택", done: true },
-    { key: "place", label: "장소", done: placesDone },
-    { key: "schedule", label: "날짜·시간·정원", done: scheduleDone },
-    { key: "guide", label: "안내", done: guideDone },
-  ] as const;
-  const doneCount = sections.filter((section) => section.done).length;
-
   const deadline = deadlinePreview(draft.type, active.date, active.time, nowMs);
   const soon30 = quickTime(nowMs, 30);
   const soon60 = quickTime(nowMs, 60);
@@ -412,12 +458,31 @@ export function PostForm({
   const titleIsSuggested =
     suggestedTitle !== "" && draft.common.title === suggestedTitle;
   const members = mode === "edit" ? currentMemberCount : 1;
-
-  function goToSection(key: string) {
-    const heading = document.getElementById(id(`section-${key}`));
-    heading?.focus({ preventScroll: true });
-    heading?.scrollIntoView?.({ block: "start" });
-  }
+  const previewReference = toReferenceTime(active.date, active.time);
+  // The real list card, filled with what the list will show right after
+  // saving: day + time, places, seats left (capacity − 1 for a new post).
+  const previewPost: PostSummary | null = previewReference
+    ? {
+        id: postId ?? "preview",
+        status: "OPEN",
+        referenceTime: previewReference,
+        capacity: active.capacity,
+        currentMemberCount: Math.min(members, active.capacity),
+        joinable: members < active.capacity,
+        ...(user?.displayName ? { authorName: user.displayName } : {}),
+        ...(taxi
+          ? {
+              type: "TAXI" as const,
+              departure: draft.taxi.departure.trim(),
+              destination: draft.taxi.destination.trim(),
+            }
+          : {
+              type: "DELIVERY" as const,
+              restaurantName: draft.delivery.restaurantName.trim(),
+              pickupLocation: draft.delivery.pickupLocation.trim(),
+            }),
+      }
+    : null;
 
   const placeChips = (
     field: "departure" | "destination" | "pickupLocation",
@@ -475,31 +540,34 @@ export function PostForm({
         </div>
       </div>
 
-      <nav className={styles.progress} aria-label="작성 단계">
+      <div className={styles.progress}>
         <p className={styles.progressCount}>
-          {doneCount}/{sections.length} 완료
+          {step}/{STEPS.length} 단계
         </p>
-        <ol className={styles.progressSteps}>
-          {sections.map((section, index) => (
-            <li key={section.key}>
-              <button
-                type="button"
-                className={styles.progressStep}
-                data-done={section.done}
-                onClick={() => goToSection(section.key)}
-              >
-                <span className={styles.stepBadge} aria-hidden="true">
-                  {section.done ? "✓" : index + 1}
-                </span>
-                <span className={styles.progressLabel}>{section.label}</span>
-                <span className="sr-only">
-                  {section.done ? ", 완료" : ", 입력 전"}
-                </span>
-              </button>
+        <ol className={styles.progressSteps} aria-label="작성 단계">
+          {STEPS.map((label, index) => (
+            <li
+              key={label}
+              className={styles.progressStep}
+              data-done={index + 1 < step}
+              data-current={index + 1 === step}
+              aria-current={index + 1 === step ? "step" : undefined}
+            >
+              <span className={styles.stepBadge} aria-hidden="true">
+                {index + 1 < step ? "✓" : index + 1}
+              </span>
+              <span className={styles.progressLabel}>{label}</span>
+              <span className="sr-only">
+                {index + 1 < step
+                  ? ", 완료"
+                  : index + 1 === step
+                    ? ", 지금 단계"
+                    : ", 다음 단계"}
+              </span>
             </li>
           ))}
         </ol>
-      </nav>
+      </div>
 
       <form
         ref={form}
@@ -514,475 +582,456 @@ export function PostForm({
           </p>
         )}
 
+        <h2
+          id={id("step-heading")}
+          tabIndex={-1}
+          className={styles.stepHeading}
+        >
+          {step}단계 · {STEPS[step - 1]}
+        </h2>
+
         <p className={styles.legend}>
           <Tag kind="required" visible /> 꼭 입력해요 ·{" "}
           <Tag kind="optional" visible /> 비워도 돼요
         </p>
 
-        <Section id={id("section-type")} step={1} title="유형 선택">
-          <fieldset className={styles.field}>
-            <legend className={styles.labelGroup}>
-              <span className={styles.label}>카테고리</span>
-              <Tag kind="required" />
-            </legend>
-            <div className={styles.categories}>
-              {(["TAXI", "DELIVERY"] as const).map((type) => (
-                <label key={type} className={styles.category}>
-                  <input
-                    type="radio"
-                    name="type"
-                    value={type}
-                    checked={draft.type === type}
-                    disabled={mode === "edit" || busy}
-                    onChange={() => edit((d) => ({ ...d, type }), [])}
-                  />
-                  <span className={styles.categoryArt} data-type={type}>
-                    {type === "TAXI" ? <TaxiArt /> : <BagArt />}
-                  </span>
-                  {typeLabels[type]}
-                </label>
-              ))}
-            </div>
-            {mode === "edit" && (
-              <p className={styles.help}>
-                등록한 뒤에는 유형을 바꿀 수 없어요.
-              </p>
-            )}
-          </fieldset>
-        </Section>
-
-        <Section id={id("section-place")} step={2} title="장소">
-          {taxi ? (
-            <>
-              <TextField
-                id={id("departure")}
-                name="departure"
-                label="출발지"
-                required
-                value={draft.taxi.departure}
-                max={LIMITS.place}
-                placeholder="직접 입력하거나 아래에서 골라요"
-                readOnly={coreLocked}
-                describedBy={coreLocked ? id("lock") : undefined}
-                error={shown("departure")}
-                onChange={(value) => setTaxi("departure", value)}
-                onBlur={() => touch("departure")}
-              >
-                {placeChips("departure", "출발지", draft.taxi.departure, (v) =>
-                  setTaxi("departure", v),
-                )}
-              </TextField>
-              {!coreLocked && (
-                <button
-                  type="button"
-                  className={styles.swap}
-                  aria-label="출발지와 도착지 바꾸기"
-                  disabled={busy}
-                  onClick={() =>
-                    edit(
-                      (d) => ({
-                        ...d,
-                        taxi: {
-                          ...d.taxi,
-                          departure: d.taxi.destination,
-                          destination: d.taxi.departure,
-                        },
-                      }),
-                      ["departure", "destination"],
-                    )
-                  }
-                >
-                  <SwapIcon />
-                  <span aria-hidden="true">바꾸기</span>
-                </button>
-              )}
-              <TextField
-                id={id("destination")}
-                name="destination"
-                label="도착지"
-                required
-                value={draft.taxi.destination}
-                max={LIMITS.place}
-                placeholder="직접 입력하거나 아래에서 골라요"
-                readOnly={coreLocked}
-                describedBy={coreLocked ? id("lock") : undefined}
-                error={shown("destination")}
-                onChange={(value) => setTaxi("destination", value)}
-                onBlur={() => touch("destination")}
-              >
-                {placeChips(
-                  "destination",
-                  "도착지",
-                  draft.taxi.destination,
-                  (v) => setTaxi("destination", v),
-                )}
-              </TextField>
-            </>
-          ) : (
-            <>
-              <TextField
-                id={id("restaurantName")}
-                name="restaurantName"
-                label="음식점명"
-                required
-                value={draft.delivery.restaurantName}
-                max={LIMITS.place}
-                placeholder="예: 정문 김밥"
-                readOnly={coreLocked}
-                describedBy={coreLocked ? id("lock") : undefined}
-                error={shown("restaurantName")}
-                onChange={(value) => setDelivery("restaurantName", value)}
-                onBlur={() => touch("restaurantName")}
-              />
-              <TextField
-                id={id("pickupLocation")}
-                name="pickupLocation"
-                label="수령 장소"
-                required
-                value={draft.delivery.pickupLocation}
-                max={LIMITS.place}
-                placeholder="직접 입력하거나 아래에서 골라요"
-                readOnly={coreLocked}
-                describedBy={coreLocked ? id("lock") : undefined}
-                error={shown("pickupLocation")}
-                onChange={(value) => setDelivery("pickupLocation", value)}
-                onBlur={() => touch("pickupLocation")}
-              >
-                {placeChips(
-                  "pickupLocation",
-                  "수령 장소",
-                  draft.delivery.pickupLocation,
-                  (v) => setDelivery("pickupLocation", v),
-                )}
-              </TextField>
-            </>
-          )}
-        </Section>
-
-        <Section
-          id={id("section-schedule")}
-          step={3}
-          title={taxi ? "날짜·시간·정원" : "주문 마감·정원"}
-        >
-          <div className={styles.datetime}>
-            <Field
-              id={id("date")}
-              label={`${timeLabel} 날짜`}
-              required
-              error={shown("date")}
-            >
-              <DatePicker
-                id={id("date")}
-                name="date"
-                label={`${timeLabel} 날짜`}
-                value={active.date}
-                min={today}
-                readOnly={coreLocked}
-                invalid={!!shown("date")}
-                describedBy={describe(id, "date", shown("date"), coreLocked)}
-                onChange={(value) => setActive("date", value)}
-                onBlur={() => touch("date")}
-              />
-              {!coreLocked && (
-                <div
-                  className={styles.chips}
-                  role="group"
-                  aria-label={`${timeLabel} 날짜 빠르게 고르기`}
-                >
-                  {[
-                    { label: "오늘", date: today },
-                    { label: "내일", date: tomorrow },
-                  ].map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      className={styles.chip}
-                      aria-pressed={active.date === chip.date}
-                      disabled={busy}
-                      onClick={() => {
-                        setActive("date", chip.date);
-                        touch("date");
-                      }}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </Field>
-            <Field
-              id={id("time")}
-              label={`${timeLabel} 시간`}
-              required
-              error={shown("time")}
-            >
-              <TimePicker
-                id={id("time")}
-                name="time"
-                label={`${timeLabel} 시간`}
-                value={active.time}
-                step={MINUTE_STEP}
-                readOnly={coreLocked}
-                invalid={!!shown("time")}
-                describedBy={describe(
-                  id,
-                  "time",
-                  shown("time"),
-                  coreLocked,
-                  id("time-help"),
-                  ...(deadline ? [id("deadline")] : []),
-                )}
-                isDisabled={(time) => {
-                  const reference = toReferenceTime(active.date, time);
-                  if (!reference) return false;
-                  if (reference === originalReferenceTime) return false;
-                  return Date.parse(reference) - nowMs <= MIN_LEAD_MS;
-                }}
-                onChange={(value) => setActive("time", value)}
-                onBlur={() => touch("time")}
-              />
-              {!coreLocked && (
-                <div
-                  className={styles.chips}
-                  role="group"
-                  aria-label={`${timeLabel} 시간 빠르게 고르기`}
-                >
-                  {[
-                    { label: "30분 뒤", at: soon30 },
-                    { label: "1시간 뒤", at: soon60 },
-                  ].map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      className={styles.chip}
-                      aria-pressed={
-                        active.date === chip.at.date &&
-                        active.time === chip.at.time
-                      }
-                      disabled={busy}
-                      onClick={() => {
-                        setSchedule(chip.at.date, chip.at.time);
-                        touch("time");
-                      }}
-                    >
-                      {chip.label}
-                      <span className={styles.chipMeta}>{chip.at.time}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </Field>
-          </div>
-          <p id={id("time-help")} className={styles.help}>
-            서울 시간 기준, 5분 단위로 정해요. 지금부터 10분이 넘게 남은 시각만
-            정할 수 있어요.
-          </p>
-          {deadline && (
-            <p
-              id={id("deadline")}
-              className={styles.deadline}
-              data-past={deadline.past}
-              aria-live="polite"
-            >
-              {deadline.text}
-            </p>
-          )}
-
-          <fieldset className={styles.field}>
-            <legend className={styles.labelGroup}>
-              <span className={styles.label}>정원</span>
-              <Tag kind="required" />
-            </legend>
-            <div className={styles.stepper}>
-              <button
-                type="button"
-                data-field="capacity"
-                aria-label="정원 1명 줄이기"
-                aria-describedby={
-                  shown("capacity") ? id("capacity-error") : undefined
-                }
-                disabled={coreLocked || busy || active.capacity <= min}
-                onClick={() => setActive("capacity", active.capacity - 1)}
-              >
-                −
-              </button>
-              <span className={styles.stepperValue}>
-                <SeatSlots
-                  className={styles.stepperSeats}
-                  total={active.capacity}
-                  filled={Math.min(members, active.capacity)}
-                />
-                <span className={styles.stepperText}>
-                  <output aria-live="polite" id={id("capacity")}>
-                    나 포함 총 {active.capacity}명
-                  </output>
-                  <span className={styles.stepperMeta}>
-                    {active.capacity - 1}명 모집
-                  </span>
-                </span>
-              </span>
-              <button
-                type="button"
-                aria-label="정원 1명 늘리기"
-                aria-describedby={
-                  shown("capacity") ? id("capacity-error") : undefined
-                }
-                disabled={coreLocked || busy || active.capacity >= max}
-                onClick={() => setActive("capacity", active.capacity + 1)}
-              >
-                +
-              </button>
-            </div>
-            {shown("capacity") && (
-              <p id={id("capacity-error")} className={styles.error}>
-                {shown("capacity")}
-              </p>
-            )}
-            <p className={styles.help}>
-              정원은 나 포함 {min}~{max}명으로 정해요
-              {mode === "edit"
-                ? ` · 현재 ${currentMemberCount} / ${active.capacity}명`
-                : ""}
-            </p>
-          </fieldset>
-        </Section>
-
-        <Section id={id("section-guide")} step={4} title="안내">
-          <TextField
-            id={id("title")}
-            name="title"
-            label="제목"
-            required
-            value={draft.common.title}
-            max={LIMITS.title}
-            placeholder="장소를 고르면 자동으로 채워져요"
-            help={
-              titleIsSuggested
-                ? "장소를 보고 채웠어요. 원하는 대로 고쳐 써도 돼요."
-                : undefined
-            }
-            error={shown("title")}
-            onChange={(value) => setCommon("title", value)}
-            onBlur={() => touch("title")}
-          />
-
-          {!taxi && (
-            <TextField
-              id={id("orderGuide")}
-              name="orderGuide"
-              label="주문 안내"
-              value={draft.delivery.orderGuide}
-              max={LIMITS.orderGuide}
-              placeholder="메뉴 고르는 방법, 정산 방식 등"
-              multiline
-              error={shown("orderGuide")}
-              onChange={(value) => setDelivery("orderGuide", value)}
-              onBlur={() => touch("orderGuide")}
-            />
-          )}
-
-          <TextField
-            id={id("description")}
-            name="description"
-            label="함께할 학생에게 전할 말"
-            required
-            value={draft.common.description}
-            max={LIMITS.description}
-            placeholder={
-              taxi
-                ? "만날 장소, 요청사항 등을 적어 주세요"
-                : "수령 방법, 요청사항 등을 적어 주세요"
-            }
-            multiline
-            error={shown("description")}
-            onChange={(value) => setCommon("description", value)}
-            onBlur={() => touch("description")}
-          />
-
-          <TextField
-            id={id("communicationUrl")}
-            name="communicationUrl"
-            label="외부 소통 링크"
-            value={draft.common.communicationUrl}
-            max={LIMITS.communicationUrl}
-            placeholder="https://"
-            type="url"
-            help="참여한 학생에게만 보여요. https:// 링크만 쓸 수 있어요."
-            error={shown("communicationUrl")}
-            onChange={(value) => setCommon("communicationUrl", value)}
-            onBlur={() => touch("communicationUrl")}
-          />
-        </Section>
-
-        <section
-          className={styles.preview}
-          aria-labelledby={id("preview")}
-          data-type={taxi ? "taxi" : "delivery"}
-        >
-          <h2 id={id("preview")} className={styles.previewHeading}>
-            목록에 이렇게 보여요
-          </h2>
-          <div className={styles.previewCard}>
-            <span className={styles.previewSticker} aria-hidden="true">
-              {taxi ? <TaxiArt /> : <BagArt />}
-            </span>
-            <div className={styles.previewBody}>
-              <p className={styles.previewRoute}>
-                {taxi ? (
-                  <>
-                    <Placeholder value={draft.taxi.departure} empty="출발지" />
-                    <span aria-hidden="true">→</span>
-                    <span className="sr-only">에서</span>
-                    <Placeholder
-                      value={draft.taxi.destination}
-                      empty="도착지"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Placeholder
-                      value={draft.delivery.restaurantName}
-                      empty="음식점"
-                    />
-                    <span className={styles.previewMeta}>
-                      · 수령{" "}
-                      <Placeholder
-                        value={draft.delivery.pickupLocation}
-                        empty="장소"
+        {step === 1 && (
+          <>
+            <Section id={id("section-type")} title="유형 선택">
+              <fieldset className={styles.field}>
+                <legend className={styles.labelGroup}>
+                  <span className={styles.label}>카테고리</span>
+                  <Tag kind="required" />
+                </legend>
+                <div className={styles.categories}>
+                  {(["TAXI", "DELIVERY"] as const).map((type) => (
+                    <label key={type} className={styles.category}>
+                      <input
+                        type="radio"
+                        name="type"
+                        value={type}
+                        checked={draft.type === type}
+                        disabled={mode === "edit" || busy}
+                        onChange={() => edit((d) => ({ ...d, type }), [])}
                       />
-                    </span>
-                  </>
-                )}
-              </p>
-              <p className={styles.previewWhen}>
-                <span>
-                  {(() => {
-                    const reference = toReferenceTime(active.date, active.time);
-                    return reference ? (
-                      `${dayLabel(Date.parse(reference), nowMs)} ${active.time} ${timeLabel}`
-                    ) : (
-                      <span className={styles.previewEmpty}>
-                        {timeLabel} 시간을 정하면 보여요
+                      <span className={styles.categoryArt} data-type={type}>
+                        {type === "TAXI" ? <TaxiArt /> : <BagArt />}
                       </span>
-                    );
-                  })()}
-                </span>
-                <span className={styles.previewSeats}>
-                  {Math.max(active.capacity - members, 0)}자리 남음
-                </span>
+                      {typeLabels[type]}
+                    </label>
+                  ))}
+                </div>
+                {mode === "edit" && (
+                  <p className={styles.help}>
+                    등록한 뒤에는 유형을 바꿀 수 없어요.
+                  </p>
+                )}
+              </fieldset>
+            </Section>
+
+            <Section id={id("section-place")} title="장소">
+              {taxi ? (
+                <>
+                  <TextField
+                    id={id("departure")}
+                    name="departure"
+                    label="출발지"
+                    required
+                    value={draft.taxi.departure}
+                    max={LIMITS.place}
+                    placeholder="직접 입력하거나 아래에서 골라요"
+                    readOnly={coreLocked}
+                    describedBy={coreLocked ? id("lock") : undefined}
+                    error={shown("departure")}
+                    onChange={(value) => setTaxi("departure", value)}
+                    onBlur={() => touch("departure")}
+                  >
+                    {placeChips(
+                      "departure",
+                      "출발지",
+                      draft.taxi.departure,
+                      (v) => setTaxi("departure", v),
+                    )}
+                  </TextField>
+                  {!coreLocked && (
+                    <button
+                      type="button"
+                      className={styles.swap}
+                      aria-label="출발지와 도착지 바꾸기"
+                      disabled={busy}
+                      onClick={() =>
+                        edit(
+                          (d) => ({
+                            ...d,
+                            taxi: {
+                              ...d.taxi,
+                              departure: d.taxi.destination,
+                              destination: d.taxi.departure,
+                            },
+                          }),
+                          ["departure", "destination"],
+                        )
+                      }
+                    >
+                      <SwapIcon />
+                      <span aria-hidden="true">바꾸기</span>
+                    </button>
+                  )}
+                  <TextField
+                    id={id("destination")}
+                    name="destination"
+                    label="도착지"
+                    required
+                    value={draft.taxi.destination}
+                    max={LIMITS.place}
+                    placeholder="직접 입력하거나 아래에서 골라요"
+                    readOnly={coreLocked}
+                    describedBy={coreLocked ? id("lock") : undefined}
+                    error={shown("destination")}
+                    onChange={(value) => setTaxi("destination", value)}
+                    onBlur={() => touch("destination")}
+                  >
+                    {placeChips(
+                      "destination",
+                      "도착지",
+                      draft.taxi.destination,
+                      (v) => setTaxi("destination", v),
+                    )}
+                  </TextField>
+                </>
+              ) : (
+                <>
+                  <TextField
+                    id={id("restaurantName")}
+                    name="restaurantName"
+                    label="음식점명"
+                    required
+                    value={draft.delivery.restaurantName}
+                    max={LIMITS.place}
+                    placeholder="예: 정문 김밥"
+                    readOnly={coreLocked}
+                    describedBy={coreLocked ? id("lock") : undefined}
+                    error={shown("restaurantName")}
+                    onChange={(value) => setDelivery("restaurantName", value)}
+                    onBlur={() => touch("restaurantName")}
+                  />
+                  <TextField
+                    id={id("pickupLocation")}
+                    name="pickupLocation"
+                    label="수령 장소"
+                    required
+                    value={draft.delivery.pickupLocation}
+                    max={LIMITS.place}
+                    placeholder="직접 입력하거나 아래에서 골라요"
+                    readOnly={coreLocked}
+                    describedBy={coreLocked ? id("lock") : undefined}
+                    error={shown("pickupLocation")}
+                    onChange={(value) => setDelivery("pickupLocation", value)}
+                    onBlur={() => touch("pickupLocation")}
+                  >
+                    {placeChips(
+                      "pickupLocation",
+                      "수령 장소",
+                      draft.delivery.pickupLocation,
+                      (v) => setDelivery("pickupLocation", v),
+                    )}
+                  </TextField>
+                </>
+              )}
+            </Section>
+
+            <Section
+              id={id("section-schedule")}
+              title={taxi ? "날짜·시간·정원" : "주문 마감·정원"}
+            >
+              <div className={styles.datetime}>
+                <Field
+                  id={id("date")}
+                  label={`${timeLabel} 날짜`}
+                  required
+                  error={shown("date")}
+                >
+                  <DatePicker
+                    id={id("date")}
+                    name="date"
+                    label={`${timeLabel} 날짜`}
+                    value={active.date}
+                    min={today}
+                    readOnly={coreLocked}
+                    invalid={!!shown("date")}
+                    describedBy={describe(
+                      id,
+                      "date",
+                      shown("date"),
+                      coreLocked,
+                    )}
+                    onChange={(value) => setActive("date", value)}
+                    onBlur={() => touch("date")}
+                  />
+                  {!coreLocked && (
+                    <div
+                      className={styles.chips}
+                      role="group"
+                      aria-label={`${timeLabel} 날짜 빠르게 고르기`}
+                    >
+                      {[
+                        { label: "오늘", date: today },
+                        { label: "내일", date: tomorrow },
+                      ].map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          className={styles.chip}
+                          aria-pressed={active.date === chip.date}
+                          disabled={busy}
+                          onClick={() => {
+                            setActive("date", chip.date);
+                            touch("date");
+                          }}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </Field>
+                <Field
+                  id={id("time")}
+                  label={`${timeLabel} 시간`}
+                  required
+                  error={shown("time")}
+                >
+                  <TimePicker
+                    id={id("time")}
+                    name="time"
+                    label={`${timeLabel} 시간`}
+                    value={active.time}
+                    step={MINUTE_STEP}
+                    readOnly={coreLocked}
+                    invalid={!!shown("time")}
+                    describedBy={describe(
+                      id,
+                      "time",
+                      shown("time"),
+                      coreLocked,
+                      id("time-help"),
+                      ...(deadline ? [id("deadline")] : []),
+                    )}
+                    isDisabled={(time) => {
+                      const reference = toReferenceTime(active.date, time);
+                      if (!reference) return false;
+                      if (reference === originalReferenceTime) return false;
+                      return Date.parse(reference) - nowMs <= MIN_LEAD_MS;
+                    }}
+                    onChange={(value) => setActive("time", value)}
+                    onBlur={() => touch("time")}
+                  />
+                  {!coreLocked && (
+                    <div
+                      className={styles.chips}
+                      role="group"
+                      aria-label={`${timeLabel} 시간 빠르게 고르기`}
+                    >
+                      {[
+                        { label: "30분 뒤", at: soon30 },
+                        { label: "1시간 뒤", at: soon60 },
+                      ].map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          className={styles.chip}
+                          aria-pressed={
+                            active.date === chip.at.date &&
+                            active.time === chip.at.time
+                          }
+                          disabled={busy}
+                          onClick={() => {
+                            setSchedule(chip.at.date, chip.at.time);
+                            touch("time");
+                          }}
+                        >
+                          {chip.label}
+                          <span className={styles.chipMeta}>
+                            {chip.at.time}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </Field>
+              </div>
+              <p id={id("time-help")} className={styles.help}>
+                서울 시간 기준, 5분 단위로 정해요. 지금부터 10분이 넘게 남은
+                시각만 정할 수 있어요.
               </p>
-              <p className={styles.previewMeta}>
-                {[
-                  typeLabels[draft.type],
-                  mode === "create" ? "모집 중" : null,
-                  user?.displayName ?? null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </div>
-          </div>
-        </section>
+              {deadline && (
+                <p
+                  id={id("deadline")}
+                  className={styles.deadline}
+                  data-past={deadline.past}
+                  aria-live="polite"
+                >
+                  {deadline.text}
+                </p>
+              )}
+
+              <fieldset className={styles.field}>
+                <legend className={styles.labelGroup}>
+                  <span className={styles.label}>정원</span>
+                  <Tag kind="required" />
+                </legend>
+                <div className={styles.stepper}>
+                  <button
+                    type="button"
+                    data-field="capacity"
+                    aria-label="정원 1명 줄이기"
+                    aria-describedby={
+                      shown("capacity") ? id("capacity-error") : undefined
+                    }
+                    disabled={coreLocked || busy || active.capacity <= min}
+                    onClick={() => setActive("capacity", active.capacity - 1)}
+                  >
+                    −
+                  </button>
+                  <span className={styles.stepperValue}>
+                    <SeatSlots
+                      className={styles.stepperSeats}
+                      total={active.capacity}
+                      filled={Math.min(members, active.capacity)}
+                    />
+                    <span className={styles.stepperText}>
+                      <output aria-live="polite" id={id("capacity")}>
+                        나 포함 총 {active.capacity}명
+                      </output>
+                      <span className={styles.stepperMeta}>
+                        {active.capacity - 1}명 모집
+                      </span>
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="정원 1명 늘리기"
+                    aria-describedby={
+                      shown("capacity") ? id("capacity-error") : undefined
+                    }
+                    disabled={coreLocked || busy || active.capacity >= max}
+                    onClick={() => setActive("capacity", active.capacity + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+                {shown("capacity") && (
+                  <p id={id("capacity-error")} className={styles.error}>
+                    {shown("capacity")}
+                  </p>
+                )}
+                <p className={styles.help}>
+                  정원은 나 포함 {min}~{max}명으로 정해요
+                  {mode === "edit"
+                    ? ` · 현재 ${currentMemberCount} / ${active.capacity}명`
+                    : ""}
+                </p>
+              </fieldset>
+            </Section>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <Section id={id("section-guide")} title="안내">
+              <TextField
+                id={id("title")}
+                name="title"
+                label="제목"
+                required
+                value={draft.common.title}
+                max={LIMITS.title}
+                placeholder="장소를 고르면 자동으로 채워져요"
+                help={
+                  titleIsSuggested
+                    ? "장소를 보고 채웠어요. 원하는 대로 고쳐 써도 돼요."
+                    : undefined
+                }
+                error={shown("title")}
+                onChange={(value) => setCommon("title", value)}
+                onBlur={() => touch("title")}
+              />
+
+              {!taxi && (
+                <TextField
+                  id={id("orderGuide")}
+                  name="orderGuide"
+                  label="주문 안내"
+                  value={draft.delivery.orderGuide}
+                  max={LIMITS.orderGuide}
+                  placeholder="메뉴 고르는 방법, 정산 방식 등"
+                  multiline
+                  error={shown("orderGuide")}
+                  onChange={(value) => setDelivery("orderGuide", value)}
+                  onBlur={() => touch("orderGuide")}
+                />
+              )}
+
+              <TextField
+                id={id("description")}
+                name="description"
+                label="함께할 학생에게 전할 말"
+                required
+                value={draft.common.description}
+                max={LIMITS.description}
+                placeholder={
+                  taxi
+                    ? "만날 장소, 요청사항 등을 적어 주세요"
+                    : "수령 방법, 요청사항 등을 적어 주세요"
+                }
+                multiline
+                error={shown("description")}
+                onChange={(value) => setCommon("description", value)}
+                onBlur={() => touch("description")}
+              />
+
+              <TextField
+                id={id("communicationUrl")}
+                name="communicationUrl"
+                label="외부 소통 링크"
+                value={draft.common.communicationUrl}
+                max={LIMITS.communicationUrl}
+                placeholder="https://"
+                type="url"
+                help="참여한 학생에게만 보여요. https:// 링크만 쓸 수 있어요."
+                error={shown("communicationUrl")}
+                onChange={(value) => setCommon("communicationUrl", value)}
+                onBlur={() => touch("communicationUrl")}
+              />
+            </Section>
+
+            <section className={styles.preview} aria-labelledby={id("preview")}>
+              <h2 id={id("preview")} className={styles.previewHeading}>
+                {mode === "edit"
+                  ? "저장하면 목록에 이렇게 보여요"
+                  : "등록하면 목록에 이렇게 보여요"}
+              </h2>
+              {previewPost && (
+                <div className={styles.previewFrame}>
+                  <PostCard
+                    post={previewPost}
+                    now={nowMs}
+                    preview
+                    hideStatus={mode === "edit"}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={busy}
+                onClick={() => goTo(1)}
+              >
+                장소·일정·정원 고치기
+              </button>
+            </section>
+          </>
+        )}
 
         {phase.kind === "similar" && (
           <section className={styles.similar} aria-labelledby={id("similar")}>
@@ -1074,25 +1123,42 @@ export function PostForm({
             : "등록하면 모집글 목록에 바로 공개돼요."}
         </p>
         <div className={styles.actions} data-bottom-action="true">
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={(event) => leave(event.currentTarget)}
-            disabled={busy}
-          >
-            취소
-          </button>
-          <button type="submit" className={styles.primary} disabled={busy}>
-            {phase.kind === "checking"
-              ? "확인 중…"
-              : phase.kind === "submitting"
-                ? mode === "edit"
-                  ? "저장 중…"
-                  : "등록 중…"
-                : mode === "edit"
-                  ? "저장하기"
-                  : "등록하기"}
-          </button>
+          {step === 1 ? (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={(event) => leave(event.currentTarget)}
+              disabled={busy}
+            >
+              취소
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => goTo(1)}
+              disabled={busy}
+            >
+              이전
+            </button>
+          )}
+          {step === 1 ? (
+            <button type="submit" className={styles.primary} disabled={busy}>
+              다음
+            </button>
+          ) : (
+            <button type="submit" className={styles.primary} disabled={busy}>
+              {phase.kind === "checking"
+                ? "확인 중…"
+                : phase.kind === "submitting"
+                  ? mode === "edit"
+                    ? "저장 중…"
+                    : "등록 중…"
+                  : mode === "edit"
+                    ? "저장하기"
+                    : "등록하기"}
+            </button>
+          )}
         </div>
       </form>
 
@@ -1178,34 +1244,20 @@ function Tag({
 
 function Section({
   id,
-  step,
   title,
   children,
 }: {
   id: string;
-  step: number;
   title: string;
   children: ReactNode;
 }) {
   return (
     <section className={styles.section} aria-labelledby={id}>
-      <h2 id={id} tabIndex={-1} className={styles.sectionTitle}>
-        <span className={styles.stepBadge} aria-hidden="true">
-          {step}
-        </span>
+      <h3 id={id} tabIndex={-1} className={styles.sectionTitle}>
         {title}
-      </h2>
+      </h3>
       {children}
     </section>
-  );
-}
-
-function Placeholder({ value, empty }: { value: string; empty: string }) {
-  const text = value.trim();
-  return text ? (
-    <span>{text}</span>
-  ) : (
-    <span className={styles.previewEmpty}>{empty}</span>
   );
 }
 

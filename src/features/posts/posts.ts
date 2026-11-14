@@ -25,6 +25,11 @@ type PostBase = {
   /** Server public status; preferred over the local derivation when present. */
   recruitmentStatus?: RecruitmentStatus;
   authorName?: string;
+  /**
+   * True only when the list response says the viewer is a current member
+   * (demo records do; a real list item may not carry it at all).
+   */
+  viewerJoined?: boolean;
 };
 
 /** Screen model for a list card. Not a server DTO; the adapter maps into it. */
@@ -163,6 +168,11 @@ function toPostSummary(value: unknown): PostSummary {
       ? { recruitmentStatus: toRecruitmentStatus(raw.recruitmentStatus) }
       : {}),
     ...(text(raw.authorName) ? { authorName: text(raw.authorName)! } : {}),
+    ...(raw.viewerJoined === true ||
+    raw.viewerRelation === "JOINED" ||
+    raw.myParticipationStatus === "JOINED"
+      ? { viewerJoined: true }
+      : {}),
   };
   if (type === "TAXI") {
     const departure = text(raw.departure);

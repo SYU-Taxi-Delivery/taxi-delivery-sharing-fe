@@ -463,7 +463,11 @@ export function listDemoPosts(query: PostQuery, now: number) {
         : Date.parse(a.referenceTime) - Date.parse(b.referenceTime) ||
           a.id.localeCompare(b.id, "en", { numeric: true }),
     )
-    .map((post) => demoSummary(post, now));
+    .map((post) => ({
+      ...demoSummary(post, now),
+      // The demo knows the viewer's relation, so the card can say 참여 중.
+      ...(post.relation === "JOINED" ? { viewerJoined: true } : {}),
+    }));
 }
 
 export function demoHistory(tab: "participated" | "created") {

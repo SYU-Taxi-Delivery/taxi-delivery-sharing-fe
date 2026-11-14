@@ -270,7 +270,7 @@ describe("상세 조회", () => {
     expect(list.getAllByText("작성자")).toHaveLength(1);
     expect(list.getByText("이서연")).toBeVisible();
     expect(list.getByText("빈자리")).toBeVisible();
-    const link = screen.getByRole("link", { name: /소통 링크 열기/ });
+    const link = screen.getByRole("link", { name: /오픈채팅 열기/ });
     expect(link).toHaveAttribute("href", "https://open.kakao.com/o/abc");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
@@ -406,9 +406,7 @@ describe("상세 조회", () => {
         load.mockRejectedValueOnce(new ApiError(500, "offline"));
       await setup(ops({ load }));
       expect(screen.getByText("이서연")).toBeVisible();
-      expect(
-        screen.getByRole("link", { name: /소통 링크 열기/ }),
-      ).toBeVisible();
+      expect(screen.getByRole("link", { name: /오픈채팅 열기/ })).toBeVisible();
       await act(async () => window.dispatchEvent(new Event("focus")));
       if (trigger === "manual") {
         await act(async () => {
@@ -507,7 +505,7 @@ describe("상세 조회", () => {
     );
     const { rerender } = render(view("p1"));
     await act(async () => {});
-    expect(screen.getByRole("link", { name: /소통 링크 열기/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /오픈채팅 열기/ })).toBeVisible();
 
     rerender(view("p2"));
     expect(screen.queryByRole("article")).not.toBeInTheDocument();
@@ -518,7 +516,7 @@ describe("상세 조회", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "새 출발지",
     );
-    expect(screen.queryByRole("link", { name: /소통 링크 열기/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /오픈채팅 열기/ })).toBeNull();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
     });
@@ -530,18 +528,29 @@ describe("상세 요약·참여자 안내·더보기", () => {
   const load = (patch: Record<string, unknown>) =>
     ops({ load: vi.fn(async () => post(patch)) });
 
-  it("참여 중이면 상태 옆에 참여 완료를 표시하고 만나는 곳·소통 링크를 요약 바로 아래에 둔다", async () => {
+  it("참여 중이면 상태 옆에 참여 중을 표시하고 만나는 곳을 요약 바로 아래에 둔다", async () => {
     await setup(load({ relation: "JOINED" }));
     const header = screen.getByRole("article").querySelector("header")!;
     expect(within(header).getByText("모집 중")).toBeVisible();
-    expect(within(header).getByText("참여 완료")).toBeVisible();
+    expect(within(header).getByText("참여 중")).toBeVisible();
     const info = screen.getByRole("region", { name: "참여자 안내" });
     expect(info).toHaveTextContent("만나는 곳삼육대학교 정문");
-    expect(
-      within(info).getByRole("link", { name: /소통 링크 열기/ }),
-    ).toHaveAttribute("href", "https://open.kakao.com/o/abc");
     // Right after the summary, before the participation panel.
     expect(header.nextElementSibling).toBe(info);
+  });
+
+  it("정원 마감에 참여 중이면 모집 상태와 참여 중을 함께 보여 준다", async () => {
+    await setup(
+      load({
+        relation: "JOINED",
+        status: "FULL",
+        currentMemberCount: 4,
+        joinable: false,
+      }),
+    );
+    const header = screen.getByRole("article").querySelector("header")!;
+    expect(within(header).getByText("정원 마감")).toBeVisible();
+    expect(within(header).getByText("참여 중")).toBeVisible();
   });
 
   it("비참여자에게는 참여자 안내를 보여 주지 않는다", async () => {
@@ -549,27 +558,23 @@ describe("상세 요약·참여자 안내·더보기", () => {
     expect(
       screen.queryByRole("region", { name: "참여자 안내" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("참여 완료")).not.toBeInTheDocument();
+    expect(screen.queryByText("참여 중")).not.toBeInTheDocument();
   });
 
-  it.each([
-    ["정원 마감", { status: "FULL", currentMemberCount: 4, joinable: false }],
-    ["작성자 마감", { status: "CLOSED", joinable: false }],
-  ])(
-    "%s이면 같은 유형의 참여 가능한 모집 목록으로 안내한다",
-    async (label, patch) => {
-      await setup(load(patch));
-      expect(
-        screen.getByRole("article").querySelector("header [data-history]"),
-      ).toHaveTextContent(label);
-      expect(
-        screen.getByRole("link", { name: "비슷한 택시 모집 보기" }),
-      ).toHaveAttribute(
-        "href",
-        postQueryHref("/posts", { type: "TAXI", joinableOnly: true, page: 0 }),
-      );
-    },
-  );
+  it("정원 마감이면 같은 유형의 참여 가능한 모집 목록으로 안내한다", async () => {
+    await setup(
+      load({ status: "FULL", currentMemberCount: 4, joinable: false }),
+    );
+    expect(
+      screen.getByRole("article").querySelector("header [data-history]"),
+    ).toHaveTextContent("정원 마감");
+    expect(
+      screen.getByRole("link", { name: "비슷한 택시 모집 보기" }),
+    ).toHaveAttribute(
+      "href",
+      postQueryHref("/posts", { type: "TAXI", joinableOnly: true, page: 0 }),
+    );
+  });
 
   it("모집 중이거나 이미 참여 중이면 비슷한 모집 링크를 두지 않는다", async () => {
     await setup(load({ relation: "JOINED", status: "FULL", joinable: false }));
@@ -1043,5 +1048,203 @@ describe("신고", () => {
       screen.queryByRole("button", { name: "이 모집글 신고하기" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("이미 신고한 모집이에요.")).toBeVisible();
+  });
+});
+
+describe("상세 하단 고정 바·참여자 안내", () => {
+  const load = (patch: Record<string, unknown>) =>
+    ops({ load: vi.fn(async () => post(patch)) });
+  const bar = () =>
+    document.querySelector<HTMLElement>('[data-bottom-action="true"]');
+
+  it("자정 무렵에는 출발·마감 모두 내일로 표시하고, 참여 전 바는 남은 자리와 신청 마감을 안내한다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T23:30:00+09:00"));
+    await setup(
+      load({
+        referenceTime: "2026-11-14T01:18:00+09:00",
+        participationDeadline: "2026-11-14T01:08:00+09:00",
+        serverTime: "2026-11-13T23:30:00+09:00",
+      }),
+    );
+    const header = screen.getByRole("article").querySelector("header")!;
+    expect(header).toHaveTextContent("출발내일 01:18");
+    expect(header).toHaveTextContent("신청·취소 마감내일 01:08");
+    const action = bar()!;
+    expect(
+      within(action).getByRole("button", { name: "참여하기" }),
+    ).toBeEnabled();
+    expect(action).toHaveTextContent("1자리 남음");
+    expect(action).toHaveTextContent("내일 01:08까지 신청");
+  });
+
+  it("배달은 참여·취소 마감과 주문 마감에 오늘·내일을 붙인다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T23:30:00+09:00"));
+    await setup(
+      load({
+        type: "DELIVERY",
+        departure: undefined,
+        destination: undefined,
+        restaurantName: "정문 김밥",
+        pickupLocation: "정문",
+        referenceTime: "2026-11-14T00:04:00+09:00",
+        participationDeadline: "2026-11-13T23:49:00+09:00",
+        serverTime: "2026-11-13T23:30:00+09:00",
+      }),
+    );
+    const header = screen.getByRole("article").querySelector("header")!;
+    expect(header).toHaveTextContent("주문 마감내일 00:04");
+    expect(header).toHaveTextContent("참여·취소 마감오늘 23:49");
+    expect(document.body).not.toHaveTextContent("메뉴 제출");
+  });
+
+  it("참여 중이고 소통 링크가 있으면 바의 주 버튼은 새 창 오픈채팅이다", async () => {
+    await setup(load({ relation: "JOINED" }));
+    const action = bar()!;
+    const link = within(action).getByRole("link", { name: /오픈채팅 열기/ });
+    expect(link).toHaveAttribute("href", "https://open.kakao.com/o/abc");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(
+      within(action).queryByRole("button", { name: "참여 취소" }),
+    ).toBeNull();
+  });
+
+  it("참여 중인데 소통 링크가 없으면 모임 장소 보기가 참여자 안내로 포커스를 옮긴다", async () => {
+    await setup(load({ relation: "JOINED", communicationUrl: undefined }));
+    const action = bar()!;
+    fireEvent.click(
+      within(action).getByRole("button", { name: "모임 장소 보기" }),
+    );
+    expect(screen.getByRole("region", { name: "참여자 안내" })).toHaveFocus();
+  });
+
+  it("참여 취소는 참여자 안내 안에 취소 마감과 함께 있고 확인창을 거친다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T23:30:00+09:00"));
+    const operations = load({
+      relation: "JOINED",
+      referenceTime: "2026-11-14T01:18:00+09:00",
+      participationDeadline: "2026-11-14T01:08:00+09:00",
+      serverTime: "2026-11-13T23:30:00+09:00",
+    });
+    await setup(operations);
+    const info = screen.getByRole("region", { name: "참여자 안내" });
+    const cancel = within(info).getByRole("button", { name: "참여 취소" });
+    expect(cancel).toHaveAccessibleDescription("내일 01:08까지 가능");
+    fireEvent.click(cancel);
+    const dialog = screen.getByRole("dialog", {
+      name: "내 참여를 취소할까요?",
+    });
+    expect(operations.leave).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
+    expect(cancel).toHaveFocus();
+  });
+
+  it("참여 취소 완료로 안내가 사라져도 상세 제목에 포커스를 유지한다", async () => {
+    const operations = ops({
+      load: vi
+        .fn()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockResolvedValue(
+          post({ relation: "CANCELLED", currentMemberCount: 2 }),
+        ),
+    });
+    await setup(operations);
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    });
+    expect(operations.leave).toHaveBeenCalledWith("p1");
+    expect(screen.queryByRole("region", { name: "참여자 안내" })).toBeNull();
+    expect(screen.getByRole("button", { name: "다시 참여하기" })).toBeEnabled();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  });
+
+  it("느린 참여 취소 응답은 사용자가 옮긴 포커스를 되돌리지 않는다", async () => {
+    let complete!: () => void;
+    const operations = ops({
+      load: vi
+        .fn()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockResolvedValue(
+          post({ relation: "CANCELLED", currentMemberCount: 2 }),
+        ),
+      leave: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    });
+    await setup(operations);
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    const other = screen.getByRole("link", { name: "모집글 목록" });
+    other.focus();
+    await act(async () => complete());
+    expect(screen.getByRole("button", { name: "다시 참여하기" })).toBeEnabled();
+    expect(other).toHaveFocus();
+  });
+
+  it.each(["JOINED", "NONE"])(
+    "%s: 서울 자정에 하단 일정과 취소 마감 날짜를 서버 시각으로 갱신한다",
+    async (relation) => {
+      vi.useFakeTimers();
+      // An unrelated device clock must not change the server's day labels.
+      vi.setSystemTime(new Date("2020-01-01T00:00:00Z"));
+      const operations = load({
+        relation,
+        serverTime: "2026-11-14T23:59:59.999+09:00",
+        referenceTime: "2026-11-15T08:00:00+09:00",
+        participationDeadline: "2026-11-15T07:50:00+09:00",
+      });
+      await setup(operations);
+      const action = bar()!;
+      expect(action).toHaveTextContent(
+        relation === "JOINED" ? "내일 08:00 출발" : "내일 07:50까지 신청",
+      );
+      act(() => vi.advanceTimersByTime(1));
+      expect(action).toHaveTextContent(
+        relation === "JOINED" ? "오늘 08:00 출발" : "오늘 07:50까지 신청",
+      );
+      if (relation === "JOINED") {
+        expect(
+          screen.getByRole("button", { name: "참여 취소" }),
+        ).toHaveAccessibleDescription("오늘 07:50까지 가능");
+      }
+      expect(operations.load).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ["작성자 마감", { status: "CLOSED", joinable: false }],
+    ["모집 취소", { status: "CANCELLED", joinable: false }],
+  ])(
+    "%s이면 하단 바 없이 상태 설명 아래 다른 모집 보기를 둔다",
+    async (_, patch) => {
+      await setup(load(patch));
+      expect(bar()).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "다른 모집 보기" }),
+      ).toHaveAttribute(
+        "href",
+        postQueryHref("/posts", { type: "TAXI", joinableOnly: true, page: 0 }),
+      );
+    },
+  );
+
+  it("일정이 끝난 모집에는 하단 바가 없다", async () => {
+    await setup(
+      load({
+        status: "FINISHED",
+        joinable: false,
+        referenceTime: new Date(Date.now() - 3_600_000).toISOString(),
+      }),
+    );
+    expect(bar()).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /참여하기|참여 취소/ }),
+    ).toBeNull();
   });
 });

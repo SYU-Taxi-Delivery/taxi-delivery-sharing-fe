@@ -189,7 +189,6 @@ describe("적용된 조건 칩과 글쓰기 연결", () => {
       "출발 석계역",
       "학교행",
       "오늘 밤",
-      "마감 포함",
       "최근 등록 순",
     ]);
     expect(chips.find((chip) => chip.key === "time")?.clear).toEqual({

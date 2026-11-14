@@ -173,16 +173,6 @@ function PostList({
     />
   );
 
-  const showClosed = query.joinableOnly && (
-    <button
-      type="button"
-      className={styles.textButton}
-      onClick={() => go({ joinableOnly: false })}
-    >
-      마감된 모집도 보기
-    </button>
-  );
-
   return (
     <div className={styles.searchLayout} data-sidebar={desktop}>
       {desktop && (
@@ -218,7 +208,7 @@ function PostList({
               onClick={() => go({ joinableOnly: !query.joinableOnly })}
             >
               <span className={styles.toggleMark} aria-hidden="true" />
-              참여 가능
+              참여 가능만
             </button>
             {!desktop && (
               <button
@@ -243,16 +233,14 @@ function PostList({
                 )}
               </button>
             )}
-            {filtered && (
+            {searching && (
               <button
                 type="button"
                 className={styles.textButton}
                 onClick={() =>
                   router.push(
-                    path(postQueryHref(basePath, DEFAULT_POST_QUERY)),
-                    {
-                      scroll: false,
-                    },
+                    path(postQueryHref(basePath, clearedSearch(query))),
+                    { scroll: false },
                   )
                 }
               >
@@ -366,7 +354,6 @@ function PostList({
                   );
                 })}
               </div>
-              {showClosed && <p className={styles.listEnd}>{showClosed}</p>}
             </>
           ) : page && page.totalPages > 0 && page.number >= page.totalPages ? (
             <div className={styles.state}>
@@ -477,9 +464,13 @@ function PostList({
   );
 }
 
-/** Keeps the type tab, drops every search condition (참여 가능 back on). */
+/** Keeps the type tab and the 참여 가능만 toggle, drops every search condition. */
 function clearedSearch(query: PostQuery): PostQuery {
-  return { ...DEFAULT_POST_QUERY, type: query.type };
+  return {
+    ...DEFAULT_POST_QUERY,
+    type: query.type,
+    joinableOnly: query.joinableOnly,
+  };
 }
 
 function FilterIcon() {

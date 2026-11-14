@@ -115,23 +115,33 @@ describe("quickTime", () => {
 describe("deadlinePreview", () => {
   it("택시는 출발 10분 전 신청·취소 마감을 알려 준다", () => {
     expect(deadlinePreview("TAXI", "2026-10-05", "18:00", NOW)).toEqual({
-      text: "신청·취소 마감 17:50이 함께 정해져요 (출발 10분 전)",
+      text: "신청·취소 마감 오늘 17:50이 함께 정해져요 (출발 10분 전)",
       past: false,
     });
     expect(deadlinePreview("TAXI", "2026-10-05", "18:15", NOW)?.text).toBe(
-      "신청·취소 마감 18:05가 함께 정해져요 (출발 10분 전)",
+      "신청·취소 마감 오늘 18:05가 함께 정해져요 (출발 10분 전)",
     );
   });
 
   it("배달은 주문 마감 기준으로 알려 준다", () => {
     expect(deadlinePreview("DELIVERY", "2026-10-05", "19:00", NOW)?.text).toBe(
-      "참여·취소 마감 18:50 (주문 마감 10분 전)",
+      "참여·취소 마감 오늘 18:50 (주문 마감 10분 전)",
+    );
+  });
+
+  it("자정 무렵에는 마감에도 내일을 붙인다", () => {
+    const late = Date.parse("2026-10-05T23:30:00+09:00");
+    expect(deadlinePreview("TAXI", "2026-10-06", "01:18", late)?.text).toBe(
+      "신청·취소 마감 내일 01:08이 함께 정해져요 (출발 10분 전)",
+    );
+    expect(deadlinePreview("DELIVERY", "2026-10-06", "00:04", late)?.text).toBe(
+      "참여·취소 마감 오늘 23:54 (주문 마감 10분 전)",
     );
   });
 
   it("이미 지난 마감은 지났다고 알려 주고, 시간이 없으면 보여 주지 않는다", () => {
     expect(deadlinePreview("TAXI", "2026-10-05", "17:35", NOW)).toEqual({
-      text: "신청·취소 마감 17:25가 이미 지났어요 (출발 10분 전)",
+      text: "신청·취소 마감 오늘 17:25가 이미 지났어요 (출발 10분 전)",
       past: true,
     });
     expect(deadlinePreview("TAXI", "2026-10-05", "", NOW)).toBeNull();

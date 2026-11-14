@@ -390,3 +390,6 @@ export function reportDetailError(value: string): string | undefined {
     ? `상세 내용은 ${REPORT_DETAIL_MAX}자 이하로 입력해 주세요.`
     : undefined;
 }
+
+/** The detail's 참여자 안내 section; 내 활동 links here for 모임 장소 보기. */
+export const GUIDE_ID = "participant-guide";

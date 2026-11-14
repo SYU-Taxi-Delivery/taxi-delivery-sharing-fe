@@ -442,6 +442,9 @@ function Comments({
                         setDraft(event.target.value);
                         setFieldError(null);
                       }}
+                      onFocus={(event) =>
+                        keepComposerInView(event.currentTarget)
+                      }
                     />
                     <button
                       type="submit"
@@ -657,4 +660,21 @@ function MineMenu({
       )}
     </div>
   );
+}
+
+/**
+ * Phones: once the soft keyboard has opened (it resizes the visual viewport
+ * a moment after focus), bring the whole composer — input and 등록 — above
+ * it. CSS keeps it pinned to the bottom while focused.
+ */
+function keepComposerInView(field: HTMLElement) {
+  const composer = field.closest("form") ?? field;
+  const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  window.setTimeout(() => {
+    if (document.activeElement !== field) return;
+    composer.scrollIntoView?.({
+      block: "end",
+      behavior: still ? "auto" : "smooth",
+    });
+  }, 300);
 }

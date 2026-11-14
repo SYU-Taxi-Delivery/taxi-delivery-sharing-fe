@@ -50,6 +50,7 @@ export function ConfirmDialog({
     <dialog
       ref={dialog}
       className={styles.dialog}
+      data-simple="true"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
       onCancel={(event) => {

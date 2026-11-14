@@ -164,7 +164,10 @@ export type SearchChip = {
   clear: Partial<PostQuery>;
 };
 
-/** The active conditions, in the panel's order, as removable chips. */
+/**
+ * The active search conditions, in the panel's order, as removable chips.
+ * 참여 가능만 is not one: its toggle above the list already shows it.
+ */
 export function searchChips(query: PostQuery): SearchChip[] {
   const clean = cleanSearch(query);
   const chips: SearchChip[] = [];
@@ -193,12 +196,6 @@ export function searchChips(query: PostQuery): SearchChip[] {
           ? customRangeLabel(clean.from, clean.to)
           : TIME_LABELS[clean.time],
       clear: { time: undefined, from: undefined, to: undefined },
-    });
-  if (!clean.joinableOnly)
-    chips.push({
-      key: "joinable",
-      label: "마감 포함",
-      clear: { joinableOnly: true },
     });
   if (clean.sort === "RECENT")
     chips.push({

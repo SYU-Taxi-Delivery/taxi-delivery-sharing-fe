@@ -271,6 +271,21 @@
   gap: var(--space-2);
 }
 
+/* Phones, while writing: the fixed bar and nav step away, and the composer
+   stays pinned to the bottom so the field and 등록 never sit under the
+   keyboard. */
+@media (max-width: 47.99rem) {
+  .composer:focus-within {
+    position: sticky;
+    bottom: 0;
+    z-index: 25;
+    margin: 0 calc(var(--page-gutter) * -1);
+    padding: var(--space-2) var(--page-gutter);
+    border-top: 1px solid var(--border);
+    background: var(--canvas);
+  }
+}
+
 .inputRow {
   display: flex;
   align-items: flex-end;
