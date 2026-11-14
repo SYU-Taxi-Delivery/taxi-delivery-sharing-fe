@@ -14,6 +14,9 @@ import {
   type MyTab,
 } from "./myHistory";
 
+const DAY_MS = 86_400_000;
+const SEOUL_OFFSET_MS = 9 * 3_600_000;
+
 type Scope = {
   tab: MyTab;
   operations: MyHistoryOperations;
@@ -113,7 +116,10 @@ export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {
 
   useEffect(() => {
     if (!history) return;
-    let boundary = Infinity;
+    // The card's relative dates also change at midnight on the server clock.
+    let boundary =
+      (Math.floor((nowMs + SEOUL_OFFSET_MS) / DAY_MS) + 1) * DAY_MS -
+      SEOUL_OFFSET_MS;
     for (const item of history.content) {
       if (item.status === "REMOVED") continue;
       const referenceMs = Date.parse(item.referenceTime);
