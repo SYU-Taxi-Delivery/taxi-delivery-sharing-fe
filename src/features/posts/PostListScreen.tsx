@@ -94,10 +94,8 @@ export function PostListScreen({
     <AppShell current="posts" postsPath={basePath} wide>
       <div className={styles.listHeading}>
         <BeanArt className={styles.headingBean} wave />
-        <div className={styles.headingText}>
-          <p className={styles.eyebrow}>두유팟</p>
-          <h1 className={styles.listTitle}>택시·배달 모집</h1>
-        </div>
+        {/* The app bar already says 두유팟; the bean and the title are one group. */}
+        <h1 className={styles.listTitle}>택시·배달 모집</h1>
         <Link
           href={path(
             query.type === "DELIVERY"
@@ -145,7 +143,14 @@ function PostList({
     router.push(href(next), { scroll: false });
   const filtered = isFilteredQuery(query);
   const posts = page?.content.filter((post) => post.status !== "REMOVED") ?? [];
-  const groups = groupPostsByDay(posts);
+  // Day headings follow the schedule order only. 최근 등록 순 keeps the
+  // server's order as one run, never regrouped back into schedule order.
+  const groups =
+    query.sort === "RECENT"
+      ? posts.length > 0
+        ? [{ key: "recent", time: 0, posts }]
+        : []
+      : groupPostsByDay(posts);
   const scrollKey = path(postQueryHref(basePath, query));
   const loaded = !loading && page !== null;
 
@@ -162,7 +167,7 @@ function PostList({
       scroll: false,
     });
   };
-  const panel = (heading: ReactNode) => (
+  const panel = (heading: ReactNode, mode: "sidebar" | "sheet") => (
     <SearchPanel
       // Applying or removing a chip changes the URL; the draft starts over.
       key={postQueryHref("", query)}
@@ -171,6 +176,7 @@ function PostList({
       onApply={apply}
       heading={heading}
       appliedTotal={page?.totalElements ?? null}
+      mode={mode}
     />
   );
 
@@ -182,6 +188,7 @@ function PostList({
             <h2 id={sidebarTitleId} className={styles.panelTitle}>
               검색 조건
             </h2>,
+            "sidebar",
           )}
         </aside>
       )}
@@ -362,7 +369,11 @@ function PostList({
                           {day === date ? date : `${day} · ${date}`}
                         </h3>
                       )}
-                      <ul className={styles.list}>
+                      {/* A day with one pod: one full-width card, no empty column. */}
+                      <ul
+                        className={styles.list}
+                        data-single={group.posts.length === 1 || undefined}
+                      >
                         {group.posts.map((post) => (
                           <li key={post.id}>
                             <PostCard post={post} now={now} />
@@ -482,6 +493,7 @@ function PostList({
                 ×
               </button>
             </div>,
+            "sheet",
           )}
         </SearchSheet>
       )}

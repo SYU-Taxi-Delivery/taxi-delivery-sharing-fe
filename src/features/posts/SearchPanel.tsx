@@ -59,6 +59,10 @@ const ROUTE_LABELS: Record<RouteKey, string> = {
  * desktop sidebar. Changes stay in a draft until applied; while the draft
  * differs from the list's conditions the footer says so and the button reads
  * "조건 적용하기 · 결과 N개", counting the draft's results first.
+ *
+ * The sidebar sits next to the results, so with nothing changed its button
+ * stays "조건 적용하기" and is off (the list already shows that count). The
+ * sheet covers the list, so its button closes it: "결과 N개 보기".
  */
 export function SearchPanel({
   query,
@@ -66,6 +70,7 @@ export function SearchPanel({
   onApply,
   heading,
   appliedTotal,
+  mode = "sheet",
 }: {
   query: PostQuery;
   operations: PostListOperations;
@@ -74,6 +79,8 @@ export function SearchPanel({
   heading: ReactNode;
   /** Result count of the applied conditions, from the list itself. */
   appliedTotal: number | null;
+  /** Desktop sidebar beside the list, or the phone's sheet over it. */
+  mode?: "sidebar" | "sheet";
 }) {
   const [draft, setDraft] = useState<PostQuery>(() =>
     cleanSearch({ ...query, page: 0 }),
@@ -88,6 +95,11 @@ export function SearchPanel({
     postQueryHref("", draft) === postQueryHref("", { ...query, page: 0 });
   const drafted = usePostCount(draft, operations, !unchanged && !invalid);
   const count = unchanged ? appliedTotal : drafted;
+  const sidebar = mode === "sidebar";
+  // 초기화 only does something while the draft has a search condition.
+  const atDefault =
+    postQueryHref("", draft) === postQueryHref("", resetDraft(draft));
+  const applyOff = invalid || (sidebar && unchanged);
   const set = (patch: Partial<PostQuery>) =>
     setDraft((current) => ({ ...current, ...patch }));
   const id = useId();
@@ -110,7 +122,7 @@ export function SearchPanel({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (invalid) return;
+    if (invalid || (sidebar && unchanged)) return;
     onApply(cleanSearch({ ...draft, page: 0 }));
   }
 
@@ -331,6 +343,7 @@ export function SearchPanel({
         <button
           type="button"
           className={styles.secondary}
+          disabled={atDefault}
           onClick={() => {
             setDraft(resetDraft(draft));
             setPicked(null);
@@ -341,15 +354,19 @@ export function SearchPanel({
         <button
           type="submit"
           className={styles.applyButton}
-          aria-disabled={invalid || undefined}
+          aria-disabled={applyOff || undefined}
         >
-          {unchanged
-            ? count === null
-              ? "결과 보기"
-              : `결과 ${count}개 보기`
-            : count === null
+          {sidebar
+            ? unchanged || count === null
               ? "조건 적용하기"
-              : `조건 적용하기 · 결과 ${count}개`}
+              : `조건 적용하기 · 결과 ${count}개`
+            : count === null
+              ? unchanged
+                ? "결과 보기"
+                : "적용하고 결과 보기"
+              : unchanged
+                ? `결과 ${count}개 보기`
+                : `적용하고 결과 ${count}개 보기`}
         </button>
       </div>
     </form>

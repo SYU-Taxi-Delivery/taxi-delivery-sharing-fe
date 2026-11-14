@@ -192,7 +192,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       }),
     );
     fireEvent.click(
-      sheet.getByRole("button", { name: "조건 적용하기 · 결과 1개" }),
+      sheet.getByRole("button", { name: "적용하고 결과 1개 보기" }),
     );
     expect(router.push).toHaveBeenCalledWith(
       "/posts?type=TAXI&departure=%EC%84%9D%EA%B3%84&destination=%EC%82%BC%EC%9C%A1%EB%8C%80%ED%95%99%EA%B5%90+%EC%A0%95%EB%AC%B8&direction=TO_SCHOOL&time=tonight&sort=RECENT",
@@ -233,9 +233,10 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     );
     const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
     expect(sidebar.queryByText("적용 안 됨")).not.toBeInTheDocument();
+    // Nothing to apply yet: the list beside it already shows these results.
     expect(
-      sidebar.getByRole("button", { name: "결과 1개 보기" }),
-    ).toBeVisible();
+      sidebar.getByRole("button", { name: "조건 적용하기" }),
+    ).toHaveAttribute("aria-disabled", "true");
 
     fireEvent.change(sidebar.getByLabelText("도착지"), {
       target: { value: "태릉" },
@@ -282,7 +283,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.getByRole("alert")).toHaveTextContent(
       "끝나는 시각을 시작 시각보다 뒤로",
     );
-    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /적용하고 결과/ }));
     expect(router.push).not.toHaveBeenCalled();
 
     fireEvent.click(sheet.getByRole("button", { name: "초기화" }));
@@ -345,7 +346,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     ).not.toBeInTheDocument();
     expect(toTime).toHaveFocus();
 
-    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /적용하고 결과/ }));
     expect(router.push).toHaveBeenCalledWith(
       "/posts?type=TAXI&time=custom&from=2026-11-14T21%3A00&to=2026-11-15T02%3A00",
       { scroll: false },
@@ -442,10 +443,12 @@ describe("모집 검색 (데스크톱: 왼쪽 조건)", () => {
     expect(
       screen.queryByRole("button", { name: /^필터/ }),
     ).not.toBeInTheDocument();
-    // Unchanged conditions reuse the list's own total.
+    // Unchanged conditions reuse the list's own total, shown above the
+    // list; the sidebar button only applies changes, so it starts off.
     expect(
-      within(sidebar).getByRole("button", { name: "결과 1개 보기" }),
-    ).toBeVisible();
+      within(sidebar).getByRole("button", { name: "조건 적용하기" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("택시 참여 가능 1개")).toBeVisible();
     expect(operations.list).toHaveBeenCalledTimes(1);
   });
 });

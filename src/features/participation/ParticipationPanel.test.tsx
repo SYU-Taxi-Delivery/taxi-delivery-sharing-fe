@@ -336,7 +336,9 @@ describe("participation panel", () => {
     expect(screen.queryByText(/이전까지/)).toBeNull();
     // The phone bar: seats left and the sign-up cutoff with its day word.
     expect(screen.getByText("2자리 남음")).toBeInTheDocument();
-    expect(screen.getByText("오늘 17:50까지 신청")).toBeInTheDocument();
+    // The same cutoff sits right above the button on wide screens (CSS
+    // shows one of the two).
+    expect(screen.getAllByText("오늘 17:50까지 신청")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
   });
 

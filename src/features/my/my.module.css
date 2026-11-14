@@ -31,7 +31,7 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: var(--space-5) 0 var(--space-4);
+  margin-top: var(--space-5);
   padding: 0.25rem;
   border: 1.5px solid var(--input-border);
   border-radius: 0.875rem;
@@ -42,7 +42,7 @@
   position: relative;
   z-index: 1;
   display: inline-flex;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 0.625rem;
@@ -80,6 +80,19 @@
 
 .tabs:has(.tab:nth-child(2)[aria-current="page"]) .tabThumb {
   transform: translateX(100%);
+}
+
+/* Wide screens: the two short labels sit together on the left instead of
+   at both ends of the page; phones keep the full-width switch. */
+@media (min-width: 48rem) {
+  .tabs {
+    justify-self: start;
+    grid-template-columns: repeat(2, 8.5rem);
+  }
+
+  .tab {
+    min-height: 2.5rem;
+  }
 }
 
 .list {
@@ -279,6 +292,29 @@ p.meta {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-2);
+}
+
+/* Wide screens: the primary action is as wide as its words, 참여 취소 and
+   its cutoff stay one pair on the same line, so the schedule and the place
+   above read first instead of a full-width green bar. */
+@media (min-width: 48rem) {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .actions .primaryAction {
+    width: auto;
+    min-width: 8.5rem;
+    padding-inline: var(--space-5);
+  }
+
+  .cancelRow {
+    flex-wrap: nowrap;
+  }
 }
 
 /* The title is the link to the detail; the whole heading stays readable. */

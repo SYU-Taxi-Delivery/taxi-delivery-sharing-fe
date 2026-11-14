@@ -240,7 +240,10 @@ describe("my history screen", () => {
       "created",
     );
     expect(upcoming()[0]).toHaveTextContent("참여자 취소 마감됨");
-    expect(upcoming()[0]).toHaveTextContent("작성한 글");
+    // Every card in this tab is mine: no repeated 작성한 글 tag, only the
+    // post's own state.
+    expect(upcoming()[0]).not.toHaveTextContent("작성한 글");
+    expect(upcoming()[0]).toHaveTextContent("참여 마감");
   });
 
   it("참여 카드: 제목은 상세 링크, 주 버튼은 오픈채팅, 참여 취소는 마감 시각과 함께 아래 줄에 둔다", async () => {

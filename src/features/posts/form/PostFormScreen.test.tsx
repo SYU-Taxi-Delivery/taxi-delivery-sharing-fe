@@ -580,12 +580,12 @@ describe("작성 도우미", () => {
   it("단계 표시는 지금 단계와 다음 단계를 한 번씩 보여 주고 필수/선택 안내를 보여 준다", async () => {
     await setup(ops());
     expect(
-      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정" }),
+      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정·정원" }),
     ).toBeVisible();
     expect(screen.getByText("다음: 안내·미리보기")).toBeVisible();
-    expect(screen.getAllByText(/유형·장소·일정/)).toHaveLength(1);
+    expect(screen.getAllByText(/유형·장소·일정·정원/)).toHaveLength(1);
     expect(screen.getByRole("group", { name: "유형" })).toBeVisible();
-    expect(screen.getByText(/꼭 입력해요/)).toBeVisible();
+    expect(screen.queryByText(/꼭 입력해요/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("출발지")).toHaveAttribute(
       "aria-required",
       "true",
@@ -709,7 +709,7 @@ describe("작성 도우미", () => {
       screen.getByRole("button", { name: "장소·일정·정원 고치기" }),
     );
     expect(
-      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정" }),
+      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정·정원" }),
     ).toHaveFocus();
     expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
     fireEvent.click(screen.getByRole("button", { name: "정원 1명 줄이기" }));
