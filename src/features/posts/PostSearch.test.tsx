@@ -291,6 +291,27 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.queryByLabelText("부터 날짜")).not.toBeInTheDocument();
   });
 
+  it("시간 지정만 누르고 날짜를 비워 둬도 초기화로 되돌릴 수 있다", async () => {
+    await setup({ ...taxiQuery, time: "tonight" });
+    fireEvent.click(screen.getByRole("button", { name: /^필터/ }));
+    const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    const reset = sheet.getByRole("button", { name: "초기화" });
+    expect(reset).toBeEnabled();
+    fireEvent.click(sheet.getByRole("button", { name: "시간 지정" }));
+    expect(sheet.getByRole("button", { name: "시간 지정" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(reset).toBeEnabled();
+    fireEvent.click(reset);
+    expect(sheet.getByRole("button", { name: "시간 지정" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(sheet.queryByLabelText("부터 날짜")).not.toBeInTheDocument();
+    expect(reset).toBeDisabled();
+  });
+
   it("시간 지정은 한국어 날짜·시간 선택기로 고르고, 자정을 넘으면 오늘·내일로 보여 준다", async () => {
     vi.setSystemTime(new Date("2026-11-14T12:00:00+09:00"));
     await setup(taxiQuery);

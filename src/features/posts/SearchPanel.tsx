@@ -47,6 +47,7 @@ const resetDraft = (query: PostQuery): PostQuery => ({
   joinableOnly: query.joinableOnly,
   page: 0,
 });
+const KEPT_ON_RESET = { type: true, joinableOnly: true, page: true };
 
 type RouteKey = "departure" | "destination";
 const ROUTE_LABELS: Record<RouteKey, string> = {
@@ -96,9 +97,13 @@ export function SearchPanel({
   const drafted = usePostCount(draft, operations, !unchanged && !invalid);
   const count = unchanged ? appliedTotal : drafted;
   const sidebar = mode === "sidebar";
-  // 초기화 only does something while the draft has a search condition.
-  const atDefault =
-    postQueryHref("", draft) === postQueryHref("", resetDraft(draft));
+  // 초기화 only does something while the draft has a search condition. The
+  // raw draft counts, not its cleaned URL: 시간 지정 pressed with no dates yet
+  // drops out of the URL but is still a choice on screen to clear.
+  const atDefault = Object.entries(draft).every(
+    ([key, value]) =>
+      key in KEPT_ON_RESET || value === undefined || value === "",
+  );
   const applyOff = invalid || (sidebar && unchanged);
   const set = (patch: Partial<PostQuery>) =>
     setDraft((current) => ({ ...current, ...patch }));
