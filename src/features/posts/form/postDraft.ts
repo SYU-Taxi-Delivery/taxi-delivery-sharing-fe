@@ -64,9 +64,8 @@ export type FieldName =
 
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
-/** Order used to focus the first invalid field. */
+/** Order used to focus the first invalid field; matches the form sections. */
 export const FIELD_ORDER: FieldName[] = [
-  "title",
   "departure",
   "destination",
   "restaurantName",
@@ -74,6 +73,7 @@ export const FIELD_ORDER: FieldName[] = [
   "date",
   "time",
   "capacity",
+  "title",
   "orderGuide",
   "description",
   "communicationUrl",

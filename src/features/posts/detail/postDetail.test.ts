@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   authorActions,
   canReport,
+  detailStatus,
   effectiveStatus,
   normalizeReportDetail,
+  remainingLabel,
   reportDetailError,
   toPostDetail,
   visibleDetails,
@@ -171,6 +173,56 @@ describe("상태와 작성자 관리", () => {
       close: false,
       cancel: false,
     });
+  });
+});
+
+describe("상세 상태 표시", () => {
+  it.each([
+    ["모집 중", { relation: "NONE" }, at("17:30:00")],
+    ["신청 마감", { relation: "NONE" }, at("17:50:00")],
+    ["신청 마감", { relation: "NONE", joinable: false }, at("17:30:00")],
+    ["정원 마감", { status: "FULL", currentMemberCount: 4 }, at("17:30:00")],
+    ["정원 마감", { currentMemberCount: 4, joinable: false }, at("17:30:00")],
+    ["작성자 마감", { status: "CLOSED" }, at("17:30:00")],
+    ["모집 취소", { status: "CANCELLED" }, at("17:30:00")],
+    ["일정 종료", { status: "FINISHED" }, at("17:30:00")],
+    ["일정 종료", { status: "CLOSED" }, T],
+  ] as const)("%s", (label, patch, now) => {
+    expect(detailStatus(detail(patch), now).label).toBe(label);
+  });
+
+  it("서버 마감 시각이 있으면 그 시각을 신청 마감 기준으로 쓴다", () => {
+    const post = detail({
+      relation: "NONE",
+      participationDeadline: "2026-10-05T17:30:00+09:00",
+    });
+    expect(detailStatus(post, at("17:29:59")).label).toBe("모집 중");
+    expect(detailStatus(post, at("17:30:00")).label).toBe("신청 마감");
+  });
+
+  it("참여 중이면 모집 상태와 함께 참여 완료를 표시하고, 취소된 모집에서는 표시하지 않는다", () => {
+    expect(detailStatus(detail({ status: "FULL" }), at("17:30:00"))).toEqual({
+      label: "정원 마감",
+      history: false,
+      joined: true,
+    });
+    expect(
+      detailStatus(detail({ status: "CANCELLED" }), at("17:30:00")).joined,
+    ).toBe(false);
+    expect(
+      detailStatus(detail({ relation: "NONE" }), at("17:30:00")).joined,
+    ).toBe(false);
+  });
+
+  it.each([
+    ["16:11:30", at("16:11:30"), "1시간 39분 남음"],
+    ["16:12:00", at("16:12:00"), "1시간 38분 남음"],
+    ["16:50:00", at("16:50:00"), "1시간 남음"],
+    ["17:49:30", at("17:49:30"), "1분 남음"],
+    ["17:50:00", at("17:50:00"), null],
+    ["사흘 전", at("17:50:00") - 3 * 86_400_000, "3일 남음"],
+  ])("남은 시간 %s → %s", (_, now, text) => {
+    expect(remainingLabel(at("17:50:00"), now)).toBe(text);
   });
 });
 

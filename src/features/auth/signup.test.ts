@@ -104,8 +104,29 @@ describe("오류 메시지", () => {
   it("AC-AUTH-001-11, AC-AUTH-001-12: 불일치·만료는 같은 안내, 실패 초과는 새 번호를 요구한다", () => {
     expect(verifyCodeErrorMessage(new ApiError(400, ""))).toContain("만료");
     expect(verifyCodeErrorMessage(new ApiError(429, ""))).toContain(
-      "새 인증번호",
+      "새 번호를 받아",
     );
+  });
+
+  it("발송 후 5분 경과 여부로 틀린 번호와 만료를 나눠 안내한다", () => {
+    expect(
+      verifyCodeErrorMessage(new ApiError(400, ""), { expired: false }),
+    ).toContain("맞지 않아요");
+    expect(
+      verifyCodeErrorMessage(new ApiError(400, ""), { expired: true }),
+    ).toContain("만료됐어요");
+  });
+
+  it.each([
+    ["VERIFICATION_CODE_EXPIRED", false, "만료됐어요"],
+    ["VERIFICATION_CODE_MISMATCH", true, "맞지 않아요"],
+  ])("%s는 브라우저의 경과 시간보다 우선한다", (code, expired, message) => {
+    expect(
+      verifyCodeErrorMessage(
+        new ApiError(400, JSON.stringify({ error: { code } })),
+        { expired },
+      ),
+    ).toContain(message);
   });
 
   it("AC-AUTH-001-22: 차단 목록 비밀번호 거절을 안내한다", () => {

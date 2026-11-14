@@ -3,7 +3,7 @@ import { ForgotPasswordScreen } from "@/features/auth/ForgotPasswordScreen";
 import { safeNextPath } from "@/features/auth/auth";
 
 export const metadata: Metadata = {
-  title: "비밀번호 재설정 | SYU 택시·배달 공유",
+  title: "비밀번호 재설정 | 두유팟",
   robots: { index: false, follow: false },
 };
 

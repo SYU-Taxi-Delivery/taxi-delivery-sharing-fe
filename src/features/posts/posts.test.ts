@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_POST_QUERY,
+  isFilteredQuery,
   parsePostQuery,
   postQueryHref,
   postStatusLabel,
@@ -121,32 +123,52 @@ describe("parsePostQuery / postQueryHref", () => {
   });
 
   it.each([
-    [{}, { type: "ALL", joinableOnly: false, page: 0 }],
+    [{}, { type: "ALL", joinableOnly: true, page: 0 }],
     [
       { type: "taxi", joinable: "1", page: "0" },
-      { type: "ALL", joinableOnly: false, page: 0 },
+      { type: "ALL", joinableOnly: true, page: 0 },
     ],
     [
       { type: ["DELIVERY", "TAXI"], page: "-1" },
-      { type: "DELIVERY", joinableOnly: false, page: 0 },
+      { type: "DELIVERY", joinableOnly: true, page: 0 },
     ],
-    [{ page: "1.5" }, { type: "ALL", joinableOnly: false, page: 0 }],
-    [{ page: "abc" }, { type: "ALL", joinableOnly: false, page: 0 }],
+    [{ page: "1.5" }, { type: "ALL", joinableOnly: true, page: 0 }],
+    [{ page: "abc" }, { type: "ALL", joinableOnly: true, page: 0 }],
   ])("AC-DISC-002-05: 잘못된 값 %j는 기본값으로 읽는다", (params, expected) => {
     expect(parsePostQuery(params)).toEqual(expected);
   });
 
+  it("참여 가능은 기본으로 켜져 있고 joinable=false일 때만 꺼진다", () => {
+    expect(parsePostQuery({ joinable: "false" }).joinableOnly).toBe(false);
+    expect(parsePostQuery({ joinable: "true" }).joinableOnly).toBe(true);
+  });
+
   it("기본값은 주소에 쓰지 않는다", () => {
-    expect(
-      postQueryHref("/posts", { type: "ALL", joinableOnly: false, page: 0 }),
-    ).toBe("/posts");
+    expect(postQueryHref("/posts", DEFAULT_POST_QUERY)).toBe("/posts");
     expect(
       postQueryHref("/posts", {
         type: "DELIVERY",
-        joinableOnly: true,
+        joinableOnly: false,
         page: 2,
       }),
-    ).toBe("/posts?type=DELIVERY&joinable=true&page=3");
+    ).toBe("/posts?type=DELIVERY&joinable=false&page=3");
+  });
+
+  it("주소를 다시 읽으면 같은 조건이 된다", () => {
+    const query = { type: "TAXI", joinableOnly: false, page: 4 } as const;
+    const search = postQueryHref("/posts", query).split("?")[1];
+    expect(
+      parsePostQuery(Object.fromEntries(new URLSearchParams(search))),
+    ).toEqual(query);
+  });
+
+  it("기본 조건과 다르면 필터가 걸린 것으로 본다", () => {
+    expect(isFilteredQuery(DEFAULT_POST_QUERY)).toBe(false);
+    expect(isFilteredQuery({ ...DEFAULT_POST_QUERY, page: 3 })).toBe(false);
+    expect(isFilteredQuery({ ...DEFAULT_POST_QUERY, type: "TAXI" })).toBe(true);
+    expect(
+      isFilteredQuery({ ...DEFAULT_POST_QUERY, joinableOnly: false }),
+    ).toBe(true);
   });
 });
 

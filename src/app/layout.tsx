@@ -4,7 +4,7 @@ import { AppProviders } from "@/features/demo/AppProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SYU 택시·배달 공유",
+  title: "두유팟",
   description: "삼육대학교 택시·배달 공유 서비스",
 };
 

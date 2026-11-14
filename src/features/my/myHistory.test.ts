@@ -5,8 +5,12 @@ import { postDetailOperations } from "@/features/posts/detail/postDetailApi";
 import {
   InvalidMyHistoryData,
   parseMyTab,
+  pastReason,
+  pastReasonLabel,
+  splitMyHistory,
   toMyHistory,
   toMySnapshot,
+  type MyHistoryItem,
   type MyTab,
 } from "./myHistory";
 import {
@@ -219,4 +223,70 @@ it("작성 이력은 API가 없어 가장하지 않고, 참여 취소 adapter를
   await expect(myHistoryOperations.list("created")).rejects.toBeInstanceOf(
     MyHistoryNotConnectedError,
   );
+});
+
+describe("splitMyHistory", () => {
+  const now = Date.parse("2026-10-20T17:00:00+09:00");
+  const live = (
+    id: string,
+    hour: number,
+    patch: Record<string, unknown> = {},
+  ) =>
+    ({
+      id,
+      type: "TAXI",
+      status: "OPEN",
+      relation: "JOINED",
+      referenceTime: `2026-10-20T${String(hour).padStart(2, "0")}:00:00+09:00`,
+      capacity: 4,
+      currentMemberCount: 2,
+      joinable: true,
+      departure: "정문",
+      destination: "역",
+      ...patch,
+    }) as MyHistoryItem;
+
+  it("진행 중인 내 일정은 가까운 순, 나머지는 최신순·삭제 마지막으로 나눈다", () => {
+    const removed: MyHistoryItem = {
+      id: "gone",
+      status: "REMOVED",
+      relation: "JOINED",
+    };
+    const { upcoming, past } = splitMyHistory(
+      [
+        live("late", 20),
+        removed,
+        live("soon", 18, { status: "FULL" }),
+        live("passed", 16),
+        live("left", 19, { relation: "CANCELLED" }),
+        live("cancelled", 21, { status: "CANCELLED" }),
+        live("finished", 15, { status: "FINISHED" }),
+      ],
+      now,
+    );
+    expect(upcoming.map((item) => item.id)).toEqual(["soon", "late"]);
+    expect(past.map((item) => item.id)).toEqual([
+      "cancelled",
+      "left",
+      "passed",
+      "finished",
+      "gone",
+    ]);
+    expect(past.map((item) => pastReasonLabel[pastReason(item, now)!])).toEqual(
+      ["모집 취소", "참여 취소함", "일정 종료", "일정 종료", "삭제됨"],
+    );
+  });
+
+  it("삭제가 내 취소보다, 내 취소가 모집 취소보다 먼저 표시된다", () => {
+    expect(
+      pastReason({ id: "x", status: "REMOVED", relation: "CANCELLED" }, now),
+    ).toBe("REMOVED");
+    expect(
+      pastReason(
+        live("x", 18, { status: "CANCELLED", relation: "CANCELLED" }),
+        now,
+      ),
+    ).toBe("LEFT");
+    expect(pastReason(live("x", 18, { relation: "AUTHOR" }), now)).toBeNull();
+  });
 });

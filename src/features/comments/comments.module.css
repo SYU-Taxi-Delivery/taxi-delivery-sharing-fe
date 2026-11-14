@@ -6,6 +6,25 @@
  * ~78% of the row. The composer is one rounded input + send button.
  */
 
+/* "모집 문의" heading with a small tag saying anyone can read it */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.publicTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.375rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
+}
+
 .thread {
   display: grid;
   gap: var(--space-4);

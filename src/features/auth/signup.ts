@@ -1,3 +1,4 @@
+import { errorCode } from "@/lib/backend";
 import { SCHOOL_EMAIL_DOMAIN } from "./auth";
 
 export type SignupRequest = {
@@ -22,6 +23,8 @@ export const PASSWORD_MAX = 128;
 export const NAME_MAX = 50;
 export const STUDENT_NO_MAX = 20;
 export const RESEND_INTERVAL_MS = 60_000;
+/** Matches the backend EmailVerificationStore.CODE_TTL. */
+export const CODE_TTL_MS = 5 * 60_000;
 
 const codePoints = (value: string) => Array.from(value).length;
 
@@ -97,13 +100,27 @@ export function requestCodeErrorMessage(error: unknown): string {
   }
 }
 
-export function verifyCodeErrorMessage(error: unknown): string {
+/**
+ * The server reason takes precedence over the client's elapsed-time estimate.
+ */
+export function verifyCodeErrorMessage(
+  error: unknown,
+  { expired }: { expired?: boolean } = {},
+): string {
   if (notConnected(error)) return connectionMessage;
   switch (statusOf(error)) {
-    case 400:
+    case 400: {
+      const code = errorCode(error);
+      if (code === "VERIFICATION_CODE_EXPIRED") expired = true;
+      else if (code === "VERIFICATION_CODE_MISMATCH") expired = false;
+      if (expired === true)
+        return "인증번호가 만료됐어요. '인증번호 다시 받기'로 새 번호를 받아 주세요.";
+      if (expired === false)
+        return "인증번호가 맞지 않아요. 가장 최근에 받은 메일의 6자리 숫자를 확인해 주세요.";
       return "인증번호가 맞지 않거나 만료됐어요. 다시 확인하거나 새 인증번호를 받아 주세요.";
+    }
     case 429:
-      return "인증번호 입력 실패가 많아 이 번호를 더 쓸 수 없어요. 새 인증번호를 받아 주세요.";
+      return "입력 실패가 많아 이 인증번호는 더 쓸 수 없어요. '인증번호 다시 받기'로 새 번호를 받아 주세요.";
     default:
       return networkMessage;
   }

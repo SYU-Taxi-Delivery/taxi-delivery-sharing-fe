@@ -50,3 +50,31 @@ export function formatDate(
   if (time) text += ` ${parts.hour}:${parts.minute}`;
   return text;
 }
+
+const seoulDay = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Days between two instants by Seoul calendar date (0 = same day). */
+export function seoulDayDiff(value: number, now: number): number {
+  const day = (ms: number) => Date.parse(`${seoulDay.format(ms)}T00:00:00Z`);
+  return Math.round((day(value) - day(now)) / 86_400_000);
+}
+
+/**
+ * Relative day word for schedules: "오늘", "내일", "모레", else the slash
+ * date ("11/16 (월)"); past days ("어제") also fall back to the date. Times
+ * after midnight read as "내일 00:04", never as today.
+ */
+export function dayLabel(value: number, now: number): string {
+  if (!Number.isFinite(value) || !Number.isFinite(now))
+    return formatDate(value);
+  const diff = seoulDayDiff(value, now);
+  if (diff === 0) return "오늘";
+  if (diff === 1) return "내일";
+  if (diff === 2) return "모레";
+  return formatDate(value);
+}

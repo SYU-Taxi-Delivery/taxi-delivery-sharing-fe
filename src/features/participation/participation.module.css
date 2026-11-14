@@ -276,3 +276,10 @@
 .panel[data-closed="true"] > :not(.action, .dialog) {
   filter: grayscale(1);
 }
+
+/* Writing a comment on a phone: the soft keyboard needs the room, so the
+   fixed action bar steps away and only the comment field stays in view. */
+:global(:root:has([data-comment-input]:focus))
+  .action[data-bottom-action="true"] {
+  display: none;
+}

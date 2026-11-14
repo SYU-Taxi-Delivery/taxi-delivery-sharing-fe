@@ -102,30 +102,6 @@
   background: var(--canvas);
 }
 
-.card[data-muted="true"] {
-  background: var(--canvas);
-}
-
-/* Closed posts read black and white; the buttons keep their colours so a
-   still-possible "참여 취소" stays recognisable. */
-.card[data-closed="true"] > :not(.actions) {
-  filter: grayscale(1);
-}
-
-.card[data-muted="true"] .cardTitle,
-.card[data-muted="true"] .scheduleTime,
-.card[data-muted="true"] .scheduleIcon {
-  color: var(--posts-muted);
-}
-
-.cardHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -176,30 +152,9 @@
   color: var(--posts-primary-text);
 }
 
-.card[data-muted="true"] .relation {
-  background: var(--closed);
-  color: var(--posts-muted);
-}
-
-.card[data-muted="true"] .status {
-  border-color: var(--input-border);
-  color: var(--posts-muted);
-}
-
-.seatSlots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px;
-  margin: var(--space-2) 0 0.125rem;
-}
-
-.seatSlots svg {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
 .cardTitle {
   display: grid;
+  margin: 0;
   gap: 0.125rem;
   font-size: var(--type-subhead);
   font-weight: 700;
@@ -241,42 +196,10 @@
   background: var(--posts-primary);
 }
 
-.card[data-muted="true"] .stop::before,
-.card[data-muted="true"] .stop::after {
-  border-color: var(--disabled);
-}
-
-.card[data-muted="true"] .stop[data-end="true"]::before {
-  background: var(--disabled);
-}
-
-/* Schedule reads like the pass time strip */
-/* The time is a line of the card, not a box inside it. */
-/* Matches the post list card: clock · time · "date · 출발" */
-.schedule {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem;
-}
-
 .scheduleIcon {
   width: 1rem;
   height: 1rem;
   color: var(--posts-primary-text);
-}
-
-.scheduleTime {
-  color: var(--posts-primary-text);
-  font-size: var(--type-body);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.scheduleDate {
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
 }
 
 .meta,
@@ -324,7 +247,6 @@ p.meta {
 }
 
 .notice,
-.tombstone,
 .help {
   padding: var(--space-4);
   border: 1.5px solid var(--border);
@@ -340,12 +262,6 @@ p.meta {
 
 .notice .button {
   margin-top: var(--space-2);
-}
-
-.tombstone {
-  border-style: dashed;
-  border-color: var(--input-border);
-  text-align: center;
 }
 
 /*
@@ -403,6 +319,8 @@ p.meta {
 }
 
 .tab:focus-visible,
+.row:focus-visible,
+.groupEmpty a:focus-visible,
 .help a:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
@@ -438,7 +356,163 @@ p.meta {
   border-left: 1.5px solid var(--posts-primary-text);
 }
 
-.card[data-muted="true"] .stateTag,
-.card[data-muted="true"] .stateTag .status {
-  border-color: var(--input-border);
+/* 다가오는 일정 first, 지난 이력 below; each heading carries its count. */
+.group {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-subhead);
+  font-weight: 700;
+  letter-spacing: var(--tracking-heading);
+}
+
+.count {
+  display: inline-grid;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  place-items: center;
+  border-radius: var(--round-pill);
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.groupEmpty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1.5px dashed var(--input-border);
+  border-radius: var(--round-card);
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+}
+
+/* Upcoming card: the time is the first thing read. */
+.when {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--posts-primary-text);
+  font-size: var(--type-heading);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-heading);
+}
+
+.when .scheduleIcon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.place {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.cutoff {
+  justify-self: start;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--round-chip);
+  background: var(--primary-tint);
+  color: var(--posts-primary-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+.cutoff[data-closed="true"] {
+  background: var(--soft);
+  color: var(--posts-muted);
+}
+
+/* 지난 이력: compact rows, one tap target each */
+.rows {
+  display: grid;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
+}
+
+.rows > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.rows > li:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: -2px;
+}
+
+.row {
+  display: flex;
+  min-height: var(--touch-target);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--posts-text);
+}
+
+a.row:hover {
+  background: var(--primary-tint);
+}
+
+.row:focus-visible {
+  outline-offset: -2px;
+}
+
+.rowMain {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.rowTitle {
+  overflow: hidden;
+  font-size: var(--type-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row[data-removed="true"] .rowTitle {
+  color: var(--posts-muted);
+}
+
+.rowType {
+  margin-right: var(--space-1);
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
+}
+
+.rowDate {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  flex: none;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--round-chip);
+  background: var(--soft);
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 700;
+}
+
+.chip[data-reason="LEFT"],
+.chip[data-reason="CANCELLED"] {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
