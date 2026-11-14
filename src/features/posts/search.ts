@@ -205,6 +205,33 @@ export function customRangeText(
   return end ? `${end}까지` : null;
 }
 
+/**
+ * The empty list's first line, quoting the applied conditions:
+ * "‘후문 출발 · 오늘 밤’ 택시 모집이 아직 없어요.". Without any condition
+ * (only 참여 가능만): "지금 참여할 수 있는 택시 모집이 없어요.".
+ */
+export function noResultsText(query: PostQuery): string {
+  const clean = cleanSearch(query);
+  const parts: string[] = [];
+  if (clean.departure) parts.push(`${clean.departure} 출발`);
+  if (clean.destination) parts.push(`${clean.destination} 도착`);
+  if (clean.direction)
+    parts.push(clean.direction === "TO_SCHOOL" ? "학교행" : "학교발");
+  if (clean.restaurant) parts.push(clean.restaurant);
+  if (clean.pickup) parts.push(`${clean.pickup} 수령`);
+  if (clean.q) parts.push(clean.q);
+  if (clean.time)
+    parts.push(
+      clean.time === "custom"
+        ? customRangeLabel(clean.from, clean.to)
+        : TIME_LABELS[clean.time],
+    );
+  const type =
+    clean.type === "TAXI" ? "택시 " : clean.type === "DELIVERY" ? "배달 " : "";
+  if (parts.length === 0) return `지금 참여할 수 있는 ${type}모집이 없어요.`;
+  return `‘${parts.join(" · ")}’ ${type}모집이 아직 없어요.`;
+}
+
 export type SearchChip = {
   key: string;
   label: string;

@@ -13,6 +13,7 @@ import {
   invalidCustomRange,
   matchesSearch,
   newPostHref,
+  noResultsText,
   placeKey,
   presetRangeText,
   searchChips,
@@ -240,5 +241,47 @@ describe("적용된 조건 칩과 글쓰기 연결", () => {
       "/posts/new?type=DELIVERY&pickup=%ED%9B%84%EB%AC%B8",
     );
     expect(newPostHref(base)).toBe("/posts/new");
+  });
+});
+
+describe("noResultsText", () => {
+  const base: PostQuery = { type: "TAXI", joinableOnly: true, page: 0 };
+
+  it("적용한 조건을 ‘ ’로 묶고 유형을 붙인다", () => {
+    expect(noResultsText({ ...base, departure: "후문", time: "tonight" })).toBe(
+      "‘후문 출발 · 오늘 밤’ 택시 모집이 아직 없어요.",
+    );
+    expect(
+      noResultsText({
+        ...base,
+        destination: "석계",
+        direction: "FROM_SCHOOL",
+        q: "막차",
+      }),
+    ).toBe("‘석계 도착 · 학교발 · 막차’ 택시 모집이 아직 없어요.");
+    expect(
+      noResultsText({
+        type: "DELIVERY",
+        joinableOnly: false,
+        page: 0,
+        restaurant: "김밥",
+        pickup: "기숙사",
+        time: "custom",
+        from: "2026-11-14T21:00",
+        to: "2026-11-14T23:00",
+      }),
+    ).toBe(
+      "‘김밥 · 기숙사 수령 · 11/14 21:00 ~ 23:00’ 배달 모집이 아직 없어요.",
+    );
+    expect(noResultsText({ ...base, type: "ALL", q: "석계" })).toBe(
+      "‘석계’ 모집이 아직 없어요.",
+    );
+  });
+
+  it("조건이 없으면 참여할 수 있는 모집이 없다고 말한다", () => {
+    expect(noResultsText({ ...base, type: "ALL" })).toBe(
+      "지금 참여할 수 있는 모집이 없어요.",
+    );
+    expect(noResultsText(base)).toBe("지금 참여할 수 있는 택시 모집이 없어요.");
   });
 });

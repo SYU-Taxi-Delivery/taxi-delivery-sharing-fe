@@ -418,7 +418,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       async () => pageOf([]),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "조건에 맞는 모집글이 없어요.",
+      "조건에 맞는 모집이 없어요‘석계 출발 · 정문 도착’ 택시 모집이 아직 없어요.조건을 줄이거나 직접 모집해 보세요.",
     );
     expect(
       screen.getByRole("link", { name: "이 조건으로 모집글 쓰기" }),
