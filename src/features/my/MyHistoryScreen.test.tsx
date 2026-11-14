@@ -528,6 +528,47 @@ describe("my history screen", () => {
     ).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["POST_CANCELLED", "CANCELLED", "모집 취소", 1],
+    ["POST_FINISHED", "FINISHED", "일정 종료", 3],
+  ] as const)(
+    "%s의 최신 상태는 후속 조회 실패에도 링크와 다가오는 일정에서 제거한다",
+    async (code, status, label, count) => {
+      const list = vi
+        .fn<MyHistoryOperations["list"]>()
+        .mockResolvedValueOnce(
+          history([
+            post({ communicationUrl: "https://open.kakao.com/o/test" }),
+          ]),
+        )
+        .mockRejectedValueOnce(new Error("offline"));
+      const { operations } = await setup(list, async () => {
+        throw new ParticipationRejected(code, {
+          status,
+          recruitmentStatus: status,
+          currentMemberCount: count,
+          joinable: false,
+        });
+      });
+      await openCancel();
+      await confirmCancel();
+
+      expect(operations.leave).toHaveBeenCalledExactlyOnceWith("p1");
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(upcoming()).toHaveLength(0);
+      expect(past()[0]).toHaveTextContent(label);
+      expect(
+        screen.queryByRole("link", { name: /소통 링크/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "참여 취소" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "다시 조회하기" }),
+      ).toBeEnabled();
+    },
+  );
+
   it("창 복귀 재조회에서 취소 마감이 확인되면 요청을 보내지 않고 이유를 알린다", async () => {
     let complete!: (value: unknown) => void;
     const pending = new Promise<unknown>((resolve) => {

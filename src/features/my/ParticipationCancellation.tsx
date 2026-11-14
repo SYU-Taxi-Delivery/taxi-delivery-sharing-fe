@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { ParticipationRejected } from "@/features/participation/participation";
+import {
+  ParticipationRejected,
+  type LatestPublicState,
+} from "@/features/participation/participation";
 import { useParticipation } from "@/features/participation/useParticipation";
 import { ConfirmDialog } from "@/features/posts/detail/ConfirmDialog";
 import {
@@ -21,6 +24,7 @@ export function ParticipationCancellation({
   operations,
   refresh,
   onCancelled,
+  onLatest,
   onUnavailable,
   onBlockedChange,
   restoreFocus,
@@ -30,6 +34,7 @@ export function ParticipationCancellation({
   operations: MyHistoryOperations;
   refresh: () => Promise<MyHistory>;
   onCancelled: (id: string) => void;
+  onLatest: (id: string, latest: LatestPublicState) => void;
   onUnavailable: () => void;
   onBlockedChange: (blocked: boolean) => void;
   restoreFocus: () => void;
@@ -58,10 +63,13 @@ export function ParticipationCancellation({
             error.status === 401
           )
             handleUnauthorized();
-          // The parent owns the displayed cards and links. Keep the reason,
-          // but use the hook's refresh path to update that owner as well.
-          if (error instanceof ParticipationRejected)
+          // Preserve authoritative public state even if the full refresh fails.
+          // The refresh still checks the viewer's own relation and server clock.
+          if (error instanceof ParticipationRejected) {
+            if (mounted.current && error.latest)
+              onLatest(item.id, error.latest);
             throw new ParticipationRejected(error.code);
+          }
           throw error;
         }
         if (mounted.current) onCancelled(item.id);
@@ -81,6 +89,7 @@ export function ParticipationCancellation({
       item.id,
       refresh,
       onCancelled,
+      onLatest,
       onUnavailable,
       handleUnauthorized,
     ],
