@@ -195,7 +195,7 @@ export function SignupScreen({
       // Same notice for new and already registered addresses (AC-AUTH-001-09).
       setEmailMessage({
         tone: "info",
-        text: "입력한 학교 이메일로 인증번호를 보냈어요. 인증번호는 10분 동안 유효해요.",
+        text: `입력한 학교 이메일로 인증번호를 보냈어요. 인증번호는 발급 후 ${CODE_TTL_MS / 60_000}분 동안 유효해요.`,
       });
     } catch (failure) {
       // A failed resend keeps the code already typed for the same address.
@@ -510,7 +510,7 @@ export function SignupScreen({
                     <dl className={styles.timing}>
                       <div>
                         <dt>인증번호 유효 시간</dt>
-                        <dd>받은 때부터 10분</dd>
+                        <dd>발급 후 {CODE_TTL_MS / 60_000}분</dd>
                       </div>
                       <div>
                         <dt>다시 받기</dt>
