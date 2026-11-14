@@ -552,6 +552,14 @@ describe("상세 조회", () => {
     rerender(view("p2"));
     expect(screen.queryByRole("article")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("불러오고 있어요");
+    // Loading shows the detail's skeleton (title, facts, participation
+    // panel with its bottom bar), hidden from screen readers.
+    const skeleton = document.querySelector('[data-detail-loading="true"]');
+    expect(skeleton).toHaveAttribute("aria-busy", "true");
+    expect(skeleton?.querySelectorAll('[data-bone="title"]')).toHaveLength(2);
+    expect(
+      skeleton?.querySelector('[aria-hidden="true"] [data-bottom-action]'),
+    ).not.toBeNull();
     await act(async () =>
       resolveNext(post({ id: "p2", departure: "새 출발지" })),
     );
