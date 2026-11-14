@@ -229,7 +229,7 @@ export function ParticipationCancel({
 }: {
   participation: ParticipationController;
   variant?: "bar" | "inline";
-  /** Where focus goes when the trigger is gone or disabled after closing. */
+  /** Stable focus target for confirmation or a missing/disabled trigger. */
   onFocusFallback?: () => void;
 }) {
   const { snapshot, availability, nowMs, busy, needsRefresh } = participation;
@@ -239,12 +239,14 @@ export function ParticipationCancel({
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const returnButton = useRef<HTMLButtonElement>(null);
+  const restoreTriggerOnClose = useRef(true);
   const referenceTime = Date.parse(snapshot.referenceTime);
   const hasTime = Number.isFinite(referenceTime);
   const open =
     Number.isFinite(availability.deadline) && nowMs < availability.deadline;
 
   function returnFocus() {
+    if (!restoreTriggerOnClose.current) return;
     const target = trigger.current;
     if (target && !target.disabled) target.focus();
     else onFocusFallback?.();
@@ -259,6 +261,7 @@ export function ParticipationCancel({
       disabled={busy || needsRefresh || availability.action !== "cancel"}
       aria-describedby={variant === "inline" ? deadlineId : undefined}
       onClick={() => {
+        restoreTriggerOnClose.current = true;
         dialog.current?.showModal();
         returnButton.current?.focus();
       }}
@@ -340,7 +343,12 @@ export function ParticipationCancel({
             className={styles.primary}
             disabled={busy || needsRefresh || availability.action !== "cancel"}
             onClick={() => {
+              // Both the trigger and its section can disappear on success.
+              // Move focus before sending; a late close event or response must
+              // not steal it back after the student moves elsewhere.
+              restoreTriggerOnClose.current = false;
               dialog.current?.close();
+              onFocusFallback?.();
               void participation.cancel();
             }}
           >

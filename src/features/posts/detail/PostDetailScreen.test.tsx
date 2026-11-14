@@ -1220,6 +1220,82 @@ describe("상세 하단 고정 바·참여자 안내", () => {
     expect(cancel).toHaveFocus();
   });
 
+  it("참여 취소 완료로 안내가 사라져도 상세 제목에 포커스를 유지한다", async () => {
+    const operations = ops({
+      load: vi
+        .fn()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockResolvedValue(
+          post({ relation: "CANCELLED", currentMemberCount: 2 }),
+        ),
+    });
+    await setup(operations);
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    });
+    expect(operations.leave).toHaveBeenCalledWith("p1");
+    expect(screen.queryByRole("region", { name: "참여자 안내" })).toBeNull();
+    expect(screen.getByRole("button", { name: "다시 참여하기" })).toBeEnabled();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  });
+
+  it("느린 참여 취소 응답은 사용자가 옮긴 포커스를 되돌리지 않는다", async () => {
+    let complete!: () => void;
+    const operations = ops({
+      load: vi
+        .fn()
+        .mockResolvedValueOnce(post({ relation: "JOINED" }))
+        .mockResolvedValue(
+          post({ relation: "CANCELLED", currentMemberCount: 2 }),
+        ),
+      leave: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    });
+    await setup(operations);
+    fireEvent.click(screen.getByRole("button", { name: "참여 취소" }));
+    fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
+    const other = screen.getByRole("link", { name: "모집글 목록" });
+    other.focus();
+    await act(async () => complete());
+    expect(screen.getByRole("button", { name: "다시 참여하기" })).toBeEnabled();
+    expect(other).toHaveFocus();
+  });
+
+  it.each(["JOINED", "NONE"])(
+    "%s: 서울 자정에 하단 일정과 취소 마감 날짜를 서버 시각으로 갱신한다",
+    async (relation) => {
+      vi.useFakeTimers();
+      // An unrelated device clock must not change the server's day labels.
+      vi.setSystemTime(new Date("2020-01-01T00:00:00Z"));
+      const operations = load({
+        relation,
+        serverTime: "2026-11-14T23:59:59.999+09:00",
+        referenceTime: "2026-11-15T08:00:00+09:00",
+        participationDeadline: "2026-11-15T07:50:00+09:00",
+      });
+      await setup(operations);
+      const action = bar()!;
+      expect(action).toHaveTextContent(
+        relation === "JOINED" ? "내일 08:00 출발" : "내일 07:50까지 신청",
+      );
+      act(() => vi.advanceTimersByTime(1));
+      expect(action).toHaveTextContent(
+        relation === "JOINED" ? "오늘 08:00 출발" : "오늘 07:50까지 신청",
+      );
+      if (relation === "JOINED") {
+        expect(
+          screen.getByRole("button", { name: "참여 취소" }),
+        ).toHaveAccessibleDescription("오늘 07:50까지 가능");
+      }
+      expect(operations.load).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it.each([
     ["작성자 마감", { status: "CLOSED", joinable: false }],
     ["모집 취소", { status: "CANCELLED", joinable: false }],

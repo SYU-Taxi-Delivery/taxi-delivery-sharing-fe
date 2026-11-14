@@ -92,6 +92,7 @@ function History({
     refresh,
     recheck,
     markCancelled,
+    applyLatest,
   } = useMyHistory(tab, operations);
   const [selection, setSelection] = useState<{
     item: LiveHistoryItem;
@@ -145,6 +146,7 @@ function History({
           operations={operations}
           refresh={refresh}
           onCancelled={markCancelled}
+          onLatest={applyLatest}
           onUnavailable={clearSelection}
           onBlockedChange={setBlocked}
           restoreFocus={selected.restoreFocus}
