@@ -31,6 +31,11 @@ import styles from "./posts.module.css";
 
 const TIME_CHOICES: TimeWindow[] = ["hour", "tonight", "morning", "custom"];
 const SORTS: PostSort[] = ["TIME", "RECENT"];
+const DIRECTIONS: [Direction | undefined, string][] = [
+  [undefined, "전체"],
+  ["TO_SCHOOL", "학교행"],
+  ["FROM_SCHOOL", "학교발"],
+];
 
 /** Search conditions only; type, 참여 가능만 and page come from the list. */
 const resetDraft = (query: PostQuery): PostQuery => ({
@@ -104,7 +109,8 @@ export function SearchPanel({
   return (
     <form className={styles.panel} onSubmit={submit} noValidate>
       {heading}
-      <div className={styles.panelBody}>
+      {/* Only this part scrolls; the footer stays below it, never on top. */}
+      <div className={styles.panelBody} data-panel-scroll>
         {taxi && (
           <fieldset className={styles.panelSection}>
             {/* The inputs' own labels say it; read out, not shown. */}
@@ -143,38 +149,37 @@ export function SearchPanel({
                 <span aria-hidden="true">⇅</span>
               </button>
             </div>
+            {/* Route direction: one exclusive choice, drawn as a segmented
+                switch so it never reads as another place chip. */}
+            <div
+              className={styles.direction}
+              role="radiogroup"
+              aria-labelledby={`${id}-direction`}
+            >
+              <span id={`${id}-direction`} className={styles.directionLabel}>
+                방향
+              </span>
+              <span className={styles.segmented}>
+                {DIRECTIONS.map(([value, label]) => (
+                  <label key={label} className={styles.segment}>
+                    <input
+                      type="radio"
+                      name={`${id}-direction`}
+                      className={styles.segmentInput}
+                      checked={draft.direction === value}
+                      onChange={() => set({ direction: value })}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </span>
+            </div>
             <Suggestions
               places={TAXI_PLACES}
               target={ROUTE_LABELS[target]}
               value={draft[target] ?? ""}
               onPick={suggest}
             />
-            <div
-              className={styles.choiceRow}
-              role="group"
-              aria-label="학교 방향"
-            >
-              {(
-                [
-                  ["TO_SCHOOL", "학교행"],
-                  ["FROM_SCHOOL", "학교발"],
-                ] as [Direction, string][]
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={styles.choice}
-                  aria-pressed={draft.direction === value}
-                  onClick={() =>
-                    set({
-                      direction: draft.direction === value ? undefined : value,
-                    })
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </fieldset>
         )}
 

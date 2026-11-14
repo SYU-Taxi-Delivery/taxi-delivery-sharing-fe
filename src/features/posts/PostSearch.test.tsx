@@ -140,7 +140,23 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     );
     expect(sheet.getByLabelText("출발지")).toHaveValue("석계");
     expect(sheet.getByLabelText("도착지")).toHaveValue("삼육대학교 정문");
-    fireEvent.click(sheet.getByRole("button", { name: "학교행" }));
+    // 방향 is its own radio group, apart from the place suggestions.
+    const direction = sheet.getByRole("radiogroup", { name: "방향" });
+    expect(
+      within(direction)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual(["전체", "학교행", "학교발"]);
+    expect(
+      within(direction).getByRole("radio", { name: "전체" }),
+    ).toBeChecked();
+    expect(
+      within(suggestions()).queryByRole("button", { name: "학교행" }),
+    ).toBeNull();
+    fireEvent.click(within(direction).getByRole("radio", { name: "학교행" }));
+    expect(
+      within(direction).getByRole("radio", { name: "학교행" }),
+    ).toBeChecked();
     fireEvent.click(sheet.getByRole("button", { name: "오늘 밤" }));
     fireEvent.click(sheet.getByRole("radio", { name: "최근 등록 순" }));
 

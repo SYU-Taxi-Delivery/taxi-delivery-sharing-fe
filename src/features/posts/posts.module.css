@@ -1069,11 +1069,13 @@
   /* Ends at the window's bottom where the page starts (header + list
      heading, 10.5rem), so 적용 shows without scrolling the page first. */
   max-height: calc(100svh - 10.5rem);
-  overflow-y: auto;
+  /* The panel inside scrolls its own body; the box itself never does. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1.5px solid var(--posts-border);
   border-radius: var(--round-control);
   background: var(--canvas);
-  overscroll-behavior: contain;
 }
 
 .filterButton {
@@ -1178,13 +1180,19 @@
   border-radius: var(--round-sheet);
   background: var(--canvas);
   color: var(--posts-text);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+}
+
+/* Header, scrolling body and footer stacked; only the body scrolls. */
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 39.99rem) {
   .sheet[open] {
     padding-bottom: 0;
+    overflow: hidden;
   }
 }
 
@@ -1208,8 +1216,18 @@
   font-size: 1.375rem;
 }
 
+/* Title, scrolling body, footer: the footer sits below the scroll area,
+   so the last option can always scroll fully into view above it. */
 .panel {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel > .sheetHeader,
+.panel > .panelTitle {
+  flex: none;
 }
 
 .sidebar .panelTitle {
@@ -1224,8 +1242,13 @@
 
 .panelBody {
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: var(--space-4); /* between groups: places, search, time, sort */
-  padding: var(--space-2) var(--space-4) var(--space-3);
+  min-height: 0;
+  padding: var(--space-2) var(--space-4) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .panelSection {
@@ -1396,6 +1419,73 @@
   background: var(--primary-tint);
 }
 
+/* Route direction: a labelled segmented switch (전체 · 학교행 · 학교발),
+   a different shape from the place chips so it reads as a setting. */
+.direction {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.directionLabel {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0.1875rem;
+  border-radius: var(--round-chip);
+  background: var(--posts-soft);
+}
+
+.segment {
+  position: relative;
+  display: grid;
+  min-height: 2.375rem;
+  place-items: center;
+  border-radius: calc(var(--round-chip) - 0.1875rem);
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--curve-standard),
+    color var(--motion-fast) var(--curve-standard);
+}
+
+/* 38px face inside a 44px row: the hit area covers the track's padding */
+.segment::after {
+  content: "";
+  position: absolute;
+  inset: -0.1875rem 0;
+}
+
+.segment:hover {
+  color: var(--posts-text);
+}
+
+.segment:has(:checked) {
+  background: var(--canvas);
+  box-shadow: 0 0 0 1.5px var(--posts-primary-text);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.segment:has(:focus-visible) {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.segmentInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* One suggestion list for whichever input is the target. */
 .suggestions {
   display: grid;
@@ -1463,8 +1553,7 @@
 }
 
 .panelFooter {
-  position: sticky;
-  bottom: 0;
+  flex: none;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-2) var(--space-3);
