@@ -112,6 +112,29 @@ afterEach(() => {
 });
 
 describe("my history screen", () => {
+  it("서울 자정에 일정과 취소 기한의 날짜를 재조회 없이 갱신한다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2020-01-01T00:00:00Z"));
+    const { operations, unmount } = await setup(async () =>
+      history(
+        [post({ referenceTime: "2026-11-15T08:00:00+09:00" })],
+        Date.parse("2026-11-14T23:59:59.999+09:00"),
+      ),
+    );
+    const cancel = screen.getByRole("button", { name: "참여 취소" });
+    expect(upcoming()[0]).toHaveTextContent("내일 08:00 출발");
+    expect(cancel).toHaveAccessibleDescription("내일 07:50까지 가능");
+
+    act(() => vi.advanceTimersByTime(1));
+
+    expect(upcoming()[0]).toHaveTextContent("오늘 08:00 출발");
+    expect(cancel).toHaveAccessibleDescription("오늘 07:50까지 가능");
+    expect(operations.list).toHaveBeenCalledTimes(1);
+    expect(operations.leave).not.toHaveBeenCalled();
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("API가 없는 작성한 글 탭은 다시 불러오기 대신 모집글 목록으로 안내한다", async () => {
     const missing = new Error("adapter internals");
     missing.name = "MyHistoryNotConnectedError";
@@ -509,7 +532,7 @@ describe("my history screen", () => {
         joinable: false,
       });
     });
-    expect(screen.getByRole("link", { name: /소통 링크/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /오픈채팅/ })).toBeVisible();
 
     await openCancel();
     await confirmCancel();
@@ -519,7 +542,7 @@ describe("my history screen", () => {
     expect(upcoming()).toHaveLength(0);
     expect(past()[0]).toHaveTextContent("참여 취소함");
     expect(
-      screen.queryByRole("link", { name: /소통 링크/ }),
+      screen.queryByRole("link", { name: /오픈채팅/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "참여 취소" }),
@@ -581,6 +604,7 @@ describe("my history screen", () => {
           joinable: false,
         });
       });
+      expect(screen.getByRole("link", { name: /오픈채팅/ })).toBeVisible();
       await openCancel();
       await confirmCancel();
 
@@ -589,7 +613,7 @@ describe("my history screen", () => {
       expect(upcoming()).toHaveLength(0);
       expect(past()[0]).toHaveTextContent(label);
       expect(
-        screen.queryByRole("link", { name: /소통 링크/ }),
+        screen.queryByRole("link", { name: /오픈채팅/ }),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "참여 취소" }),
