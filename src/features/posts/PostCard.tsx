@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { postStatusLabel, type PostSummary } from "./posts";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
@@ -18,12 +18,34 @@ const timeFormat = new Intl.DateTimeFormat("ko-KR", {
 const noSubscribe = () => () => {};
 
 /**
- * The browser's clock, read once per mount. Server render and hydration get
- * null (so relative words like "오늘" never mismatch the server HTML); the
- * client re-renders with the real time right after.
+ * Refresh relative dates at Seoul midnight and when a suspended page resumes.
+ * Server render and hydration get null so words like "오늘" never mismatch.
  */
 export function useClientNow(): number | null {
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const schedule = () =>
+      window.setTimeout(
+        refresh,
+        86_400_000 - ((Date.now() + 9 * 3_600_000) % 86_400_000),
+      );
+    let timer = schedule();
+    function refresh() {
+      window.clearTimeout(timer);
+      setNow(Date.now());
+      timer = schedule();
+    }
+    function resume() {
+      if (document.visibilityState === "visible") refresh();
+    }
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, []);
   return useSyncExternalStore(
     noSubscribe,
     () => now,

@@ -211,6 +211,10 @@ describe("SignupScreen", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "입력한 학교 이메일로 인증번호를 보냈어요",
     );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "인증번호는 발급 후 5분 동안 유효해요",
+    );
+    expect(screen.getByText("발급 후 5분")).toBeVisible();
     expect(screen.getByText("인증번호를 보낸 주소")).toBeVisible();
     expect(screen.getByText("a@syuin.ac.kr")).toBeVisible();
     expect(screen.getByLabelText("인증번호")).toHaveFocus();
@@ -325,7 +329,62 @@ describe("SignupScreen", () => {
     expect(input).not.toHaveAttribute("aria-invalid");
   });
 
-  it("10분이 지난 인증번호 실패는 만료로, 시도 초과는 새 번호 받기로 안내한다", async () => {
+  it.each([
+    [299_999, "맞지 않아요"],
+    [300_000, "만료됐어요"],
+    [300_001, "만료됐어요"],
+    [420_000, "만료됐어요"],
+  ])("발송 후 %i ms의 인증 실패를 %s로 안내한다", async (elapsed, message) => {
+    await setup({
+      verifyCode: vi.fn(async () => Promise.reject(new ApiError(400, ""))),
+    });
+    type("학교 이메일", "a@syuin.ac.kr");
+    await click("인증번호 받기");
+    await act(async () => vi.advanceTimersByTime(elapsed));
+    type("인증번호", "123456");
+    await click("확인");
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByLabelText("인증번호")).toHaveAccessibleDescription(
+      new RegExp(message),
+    );
+    expect(screen.getByLabelText("인증번호")).toHaveFocus();
+  });
+
+  it("서버가 만료로 응답하면 화면에서 5분이 지나지 않아도 만료로 안내한다", async () => {
+    await setup({
+      verifyCode: vi.fn(async () =>
+        Promise.reject(
+          new ApiError(
+            400,
+            JSON.stringify({ error: { code: "VERIFICATION_CODE_EXPIRED" } }),
+          ),
+        ),
+      ),
+    });
+    await verifyEmail();
+    expect(screen.getByRole("alert")).toHaveTextContent("만료됐어요");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("맞지 않아요");
+  });
+
+  it("재발송에 성공하면 새 번호의 발송 시각부터 5분을 계산한다", async () => {
+    const operations = await setup({
+      verifyCode: vi.fn(async () => Promise.reject(new ApiError(400, ""))),
+    });
+    type("학교 이메일", "a@syuin.ac.kr");
+    await click("인증번호 받기");
+    await act(async () => vi.advanceTimersByTime(420_000));
+    await click("인증번호 다시 받기");
+    expect(operations.requestCode).toHaveBeenCalledTimes(2);
+    await act(async () => vi.advanceTimersByTime(299_999));
+    type("인증번호", "123456");
+    await click("확인");
+    expect(screen.getByRole("alert")).toHaveTextContent("맞지 않아요");
+    await act(async () => vi.advanceTimersByTime(1));
+    await click("확인");
+    expect(screen.getByRole("alert")).toHaveTextContent("만료됐어요");
+  });
+
+  it("5분이 지난 인증번호 실패는 만료로, 시도 초과는 새 번호 받기로 안내한다", async () => {
     const verifyCode = vi
       .fn<SignupOperations["verifyCode"]>()
       .mockRejectedValueOnce(new ApiError(400, ""))
@@ -333,7 +392,7 @@ describe("SignupScreen", () => {
     await setup({ verifyCode });
     type("학교 이메일", "a@syuin.ac.kr");
     await click("인증번호 받기");
-    await act(async () => vi.advanceTimersByTime(600_000));
+    await act(async () => vi.advanceTimersByTime(300_000));
     type("인증번호", "123456");
     await click("확인");
     expect(screen.getByRole("alert")).toHaveTextContent("만료됐어요");
