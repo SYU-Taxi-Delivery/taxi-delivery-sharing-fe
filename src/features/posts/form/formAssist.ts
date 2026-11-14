@@ -77,8 +77,9 @@ export function withSuggestedTitle(
   const before = suggestTitle(previous);
   const after = suggestTitle(next);
   const title = next.common.title;
-  if (!after || after === before || after === title) return next;
+  if (after === before || after === title) return next;
   if (title !== "" && title !== before) return next;
+  // Clearing an incomplete route's old suggestion keeps later edits automatic.
   return { ...next, common: { ...next.common, title: after } };
 }
 
