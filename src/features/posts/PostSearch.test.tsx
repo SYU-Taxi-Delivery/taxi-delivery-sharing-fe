@@ -192,7 +192,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       }),
     );
     fireEvent.click(
-      sheet.getByRole("button", { name: "조건 적용하기 · 결과 1개" }),
+      sheet.getByRole("button", { name: "적용하고 결과 1개 보기" }),
     );
     expect(router.push).toHaveBeenCalledWith(
       "/posts?type=TAXI&departure=%EC%84%9D%EA%B3%84&destination=%EC%82%BC%EC%9C%A1%EB%8C%80%ED%95%99%EA%B5%90+%EC%A0%95%EB%AC%B8&direction=TO_SCHOOL&time=tonight&sort=RECENT",
@@ -233,9 +233,10 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     );
     const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
     expect(sidebar.queryByText("적용 안 됨")).not.toBeInTheDocument();
+    // Nothing to apply yet: the list beside it already shows these results.
     expect(
-      sidebar.getByRole("button", { name: "결과 1개 보기" }),
-    ).toBeVisible();
+      sidebar.getByRole("button", { name: "조건 적용하기" }),
+    ).toHaveAttribute("aria-disabled", "true");
 
     fireEvent.change(sidebar.getByLabelText("도착지"), {
       target: { value: "태릉" },
@@ -282,12 +283,33 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.getByRole("alert")).toHaveTextContent(
       "끝나는 시각을 시작 시각보다 뒤로",
     );
-    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /적용하고 결과/ }));
     expect(router.push).not.toHaveBeenCalled();
 
     fireEvent.click(sheet.getByRole("button", { name: "초기화" }));
     expect(sheet.getByLabelText("음식점")).toHaveValue("");
     expect(sheet.queryByLabelText("부터 날짜")).not.toBeInTheDocument();
+  });
+
+  it("시간 지정만 누르고 날짜를 비워 둬도 초기화로 되돌릴 수 있다", async () => {
+    await setup({ ...taxiQuery, time: "tonight" });
+    fireEvent.click(screen.getByRole("button", { name: /^필터/ }));
+    const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    const reset = sheet.getByRole("button", { name: "초기화" });
+    expect(reset).toBeEnabled();
+    fireEvent.click(sheet.getByRole("button", { name: "시간 지정" }));
+    expect(sheet.getByRole("button", { name: "시간 지정" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(reset).toBeEnabled();
+    fireEvent.click(reset);
+    expect(sheet.getByRole("button", { name: "시간 지정" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(sheet.queryByLabelText("부터 날짜")).not.toBeInTheDocument();
+    expect(reset).toBeDisabled();
   });
 
   it("시간 지정은 한국어 날짜·시간 선택기로 고르고, 자정을 넘으면 오늘·내일로 보여 준다", async () => {
@@ -345,7 +367,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     ).not.toBeInTheDocument();
     expect(toTime).toHaveFocus();
 
-    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /적용하고 결과/ }));
     expect(router.push).toHaveBeenCalledWith(
       "/posts?type=TAXI&time=custom&from=2026-11-14T21%3A00&to=2026-11-15T02%3A00",
       { scroll: false },
@@ -410,6 +432,21 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
         .getAllByRole("button")
         .map((chip) => chip.getAttribute("aria-label")),
     ).toEqual([expect.stringMatching(/^1시간 이내 · /)]);
+    // Focus moves to the chip now in the removed one's place.
+    expect(document.activeElement).toHaveAccessibleName(/^1시간 이내 · /);
+
+    // Removing the last chip puts focus on the results heading.
+    fireEvent.click(screen.getByRole("button", { name: /^1시간 이내 · / }));
+    await rerenderWith(
+      parsePostQuery(
+        Object.fromEntries(
+          new URL(router.push.mock.calls[1][0], "http://x").searchParams,
+        ),
+      ),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "택시 모집글 목록" }),
+    );
   });
 
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {
@@ -442,10 +479,12 @@ describe("모집 검색 (데스크톱: 왼쪽 조건)", () => {
     expect(
       screen.queryByRole("button", { name: /^필터/ }),
     ).not.toBeInTheDocument();
-    // Unchanged conditions reuse the list's own total.
+    // Unchanged conditions reuse the list's own total, shown above the
+    // list; the sidebar button only applies changes, so it starts off.
     expect(
-      within(sidebar).getByRole("button", { name: "결과 1개 보기" }),
-    ).toBeVisible();
+      within(sidebar).getByRole("button", { name: "조건 적용하기" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("택시 참여 가능 1개")).toBeVisible();
     expect(operations.list).toHaveBeenCalledTimes(1);
   });
 });

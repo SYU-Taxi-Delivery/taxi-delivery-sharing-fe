@@ -81,20 +81,27 @@ export function MyHistoryCard({
           {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
           {item.type === "TAXI" ? "택시" : "배달"}
         </span>
-        {/* One compact tag, two states: mine (filled half) and the
-            post's (outlined half). Screen readers hear each name. */}
-        <span className={styles.stateTag}>
-          <span className={styles.relation}>
-            <span className={styles.srOnly}>
-              {author ? "내 글, " : "내 참여, "}
-            </span>
-            {author ? "작성한 글" : "참여 중"}
-          </span>
+        {/* Joined: one compact tag, two states that can hold together, mine
+            (filled half, 참여 중) and the post's (outlined half, e.g. 정원
+            마감). In 작성한 글 every card is mine, so only the post's own
+            state shows (모집 중 · 정원 마감 · 작성자 마감). */}
+        {author ? (
           <span className={styles.status}>
             <span className={styles.srOnly}>모집, </span>
             {label}
           </span>
-        </span>
+        ) : (
+          <span className={styles.stateTag}>
+            <span className={styles.relation}>
+              <span className={styles.srOnly}>내 참여, </span>
+              참여 중
+            </span>
+            <span className={styles.status}>
+              <span className={styles.srOnly}>모집, </span>
+              {label}
+            </span>
+          </span>
+        )}
       </div>
 
       <p className={styles.when}>

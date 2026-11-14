@@ -414,6 +414,14 @@ function DetailView({
     section.focus({ preventScroll: true });
   }
   const remaining = detail.capacity - detail.currentMemberCount;
+  // The author's own meeting line ("출발 5분 전, 정문 앞에서 만나요"), lifted
+  // out of 모임 안내 so it is easy to find. There is no separate field.
+  const meeting = taxi ? meetingLine(detail.description) : null;
+  // Members already see 만나는 곳 in 참여자 안내; the line goes there.
+  const meetingInGuide = !!meeting && guideShown;
+  const descriptionText =
+    meeting && !meetingInGuide ? meeting.rest : detail.description;
+  const rosterHidden = !visible.participantNames;
   // Shown only when it adds something to the route heading above.
   const subtitle = extraTitle(detail);
   const reportable = !author && canReport(latest) && !!report;
@@ -568,6 +576,7 @@ function DetailView({
                 <span className={styles.meta}>만나는 곳</span>
                 <strong>{detail.departure}</strong>
               </p>
+              {meeting && <p className={styles.meetingNote}>{meeting.line}</p>}
               <p className={styles.place}>
                 <span className={styles.meta}>{scheduleTerm}</span>
                 <strong>{dayTime(reference, clockMs)}</strong>
@@ -621,6 +630,11 @@ function DetailView({
           <ParticipationPanel
             participation={participation}
             schedule={false}
+            rosterNote={
+              rosterHidden
+                ? "참가자 이름은 작성자와 참여한 학생에게만 보여요."
+                : undefined
+            }
             joinedAction={
               visible.communicationUrl ? (
                 <a
@@ -702,42 +716,52 @@ function DetailView({
           <h2 id="post-description" className={styles.sectionTitle}>
             모임 안내
           </h2>
-          <p className={styles.description}>{detail.description}</p>
+          {meeting && !meetingInGuide && (
+            <p className={styles.meetingPoint}>
+              <PinIcon />
+              <span>
+                <span className={styles.meetingLabel}>만나는 곳</span>
+                <strong>{meeting.line}</strong>
+              </span>
+            </p>
+          )}
+          {descriptionText && (
+            <p className={styles.description}>{descriptionText}</p>
+          )}
         </section>
 
-        <section className={styles.section} aria-labelledby="post-members">
-          <h2 id="post-members" className={styles.sectionTitle}>
-            함께하는 학생
-          </h2>
-          {visible.participantNames ? (
-            <ul className={styles.members}>
-              {visible.participantNames.map((name, index) => (
-                <li key={`${name}-${index}`} className={styles.member}>
-                  <span className={styles.avatar} aria-hidden="true">
-                    {Array.from(name).slice(-2).join("")}
-                  </span>
-                  <span className="font-bold">{name}</span>
-                  <span className={styles.meta}>
-                    {index === 0 ? "작성자" : "참여자"}
-                  </span>
-                </li>
-              ))}
-              {!history &&
-                Array.from({ length: Math.max(0, remaining) }, (_, index) => (
-                  <li key={`seat-${index}`} className={styles.seat}>
-                    <span>빈자리</span>
+        {/* Hidden roster: its note sits under the headcount in the panel. */}
+        {!rosterHidden && (
+          <section className={styles.section} aria-labelledby="post-members">
+            <h2 id="post-members" className={styles.sectionTitle}>
+              함께하는 학생
+            </h2>
+            {visible.participantNames ? (
+              <ul className={styles.members}>
+                {visible.participantNames.map((name, index) => (
+                  <li key={`${name}-${index}`} className={styles.member}>
+                    <span className={styles.avatar} aria-hidden="true">
+                      {Array.from(name).slice(-2).join("")}
+                    </span>
+                    <span className="font-bold">{name}</span>
                     <span className={styles.meta}>
-                      {chip.label === "모집 중" ? "참여 가능" : "참여 마감"}
+                      {index === 0 ? "작성자" : "참여자"}
                     </span>
                   </li>
                 ))}
-            </ul>
-          ) : (
-            <p className={styles.help}>
-              참가자 이름은 작성자와 참여한 학생에게만 보여요.
-            </p>
-          )}
-        </section>
+                {!history &&
+                  Array.from({ length: Math.max(0, remaining) }, (_, index) => (
+                    <li key={`seat-${index}`} className={styles.seat}>
+                      <span>빈자리</span>
+                      <span className={styles.meta}>
+                        {chip.label === "모집 중" ? "참여 가능" : "참여 마감"}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : null}
+          </section>
+        )}
 
         <aside className={styles.guide} aria-labelledby="post-guide">
           <h2 id="post-guide" className={styles.label}>
@@ -1063,5 +1087,52 @@ function AuthorPanel({
         )}
       </ConfirmDialog>
     </section>
+  );
+}
+
+/**
+ * The line of the author's text that says where to meet ("…앞에서 만나요",
+ * "…에 모여요"). A whole line comes out of the rest of the text; a sentence
+ * inside a longer line is shown on its own and the text stays as written.
+ */
+export function meetingLine(
+  description: string,
+): { line: string; rest: string } | null {
+  const meets = /(만나|모여|모이|집결)/;
+  const lines = description.split(/\r?\n/);
+  const index = lines.findIndex((line) => meets.test(line));
+  if (index === -1) return null;
+  const sentences = lines[index].match(/[^.!?。]+[.!?。]?/g) ?? [];
+  const sentence = sentences.find((part) => meets.test(part))?.trim();
+  if (!sentence) return null;
+  const whole = sentence === lines[index].trim();
+  return {
+    line: sentence,
+    rest: whole
+      ? lines
+          .filter((_, at) => at !== index)
+          .join("\n")
+          .trim()
+      : description,
+  };
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={styles.meetingIcon}>
+      <path
+        d="M10 18s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z"
+        fill="currentColor"
+        opacity="0.18"
+      />
+      <path
+        d="M10 18s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="10" cy="8" r="2.2" fill="currentColor" />
+    </svg>
   );
 }

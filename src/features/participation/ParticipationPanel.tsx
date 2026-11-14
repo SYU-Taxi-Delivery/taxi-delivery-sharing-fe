@@ -20,6 +20,7 @@ export function ParticipationPanel({
   participation,
   schedule = true,
   joinedAction,
+  rosterNote,
 }: {
   participation: ParticipationController;
   /**
@@ -33,6 +34,11 @@ export function ParticipationPanel({
    * own 참여자 안내 section; without it the bar keeps 참여 취소.
    */
   joinedAction?: ReactNode;
+  /**
+   * The roster is hidden from this viewer: say who can see it right under
+   * the headcount instead of in an otherwise empty roster section.
+   */
+  rosterNote?: string;
 }) {
   const { snapshot, availability, nowMs, busy, needsRefresh, feedback } =
     participation;
@@ -92,6 +98,18 @@ export function ParticipationPanel({
           ]
       : null;
 
+  // The real cutoff next to the button, read before the general notes:
+  // "오늘 23:53까지 신청" / while joined "오늘 23:53까지 취소 가능".
+  const deadlineOpen =
+    Number.isFinite(availability.deadline) && nowMs < availability.deadline;
+  const deadlineText = deadlineOpen
+    ? joined
+      ? `${dayTime(availability.deadline, nowMs)}까지 취소 가능`
+      : snapshot.status === "OPEN"
+        ? `${dayTime(availability.deadline, nowMs)}까지 신청`
+        : null
+    : null;
+
   if (snapshot.status === "REMOVED") {
     return <p role="status">관리자에 의해 삭제된 모집이에요.</p>;
   }
@@ -129,8 +147,12 @@ export function ParticipationPanel({
         <p className={styles.muted}>
           현재 {snapshot.currentMemberCount} / {snapshot.capacity}명 · 작성자
           포함
-          <br />
-          정원이 차면 자동으로 마감돼요.
+          {rosterNote && (
+            <>
+              <br />
+              {rosterNote}
+            </>
+          )}
         </p>
       </div>
       {schedule && (
@@ -147,6 +169,14 @@ export function ParticipationPanel({
       {availability.reason && <p id={reasonId}>{availability.reason}</p>}
       {bar && (
         <div className={styles.action} data-bottom-action="true">
+          {deadlineText && (
+            /* Wide screens: the cutoff right above the button. Phones show
+               it in the bar's two-line hint instead. */
+            <p className={styles.deadline}>
+              <ClockIcon className={styles.deadlineIcon} />
+              {deadlineText}
+            </p>
+          )}
           {hint && (
             /* Phones: two short lines beside the button */
             <p className={styles.actionHint} data-bottom-hint="true">
@@ -174,6 +204,9 @@ export function ParticipationPanel({
             </button>
           )}
         </div>
+      )}
+      {bar && !joined && snapshot.status === "OPEN" && !timeClosed && (
+        <p className={styles.help}>정원이 차면 자동으로 마감돼요.</p>
       )}
       {schedule &&
         active &&

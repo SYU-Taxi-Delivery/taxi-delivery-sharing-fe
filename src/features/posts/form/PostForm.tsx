@@ -92,7 +92,8 @@ const STEP_ONE: readonly FieldName[] = [
   "time",
   "capacity",
 ];
-const STEPS = ["유형·장소·일정", "안내·미리보기"] as const;
+// Step 1 also holds the headcount, so its name says so.
+const STEPS = ["유형·장소·일정·정원", "안내·미리보기"] as const;
 
 export function PostForm({
   mode,
@@ -577,11 +578,7 @@ export function PostForm({
           </p>
         )}
 
-        <p className={styles.legend}>
-          <Tag kind="required" visible /> 꼭 입력해요 ·{" "}
-          <Tag kind="optional" visible /> 비워도 돼요
-        </p>
-
+        {/* Every field shows its own 필수/선택 tag; no legend on top. */}
         {step === 1 && (
           <>
             {/* One label for the choice: the group title is the legend. */}

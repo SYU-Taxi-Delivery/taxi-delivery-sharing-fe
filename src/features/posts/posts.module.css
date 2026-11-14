@@ -245,19 +245,12 @@
   height: 2.5rem;
 }
 
-.headingText {
+/* Fills the row so 모집글 쓰기 stays at the right end (the base h1 rule
+   caps headings at 20ch). */
+.listTitle {
   flex: 1;
   min-width: 0;
-}
-
-.eyebrow {
-  color: var(--posts-primary-text);
-  font-size: var(--type-micro);
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.listTitle {
+  max-width: none;
   font-size: var(--type-heading);
   font-weight: 700;
   line-height: 1.3;
@@ -448,14 +441,16 @@
   font-size: var(--type-label);
 }
 
+/* The result count is a quiet summary line; each day group's heading
+   below is the bigger, bolder title. */
 .count {
-  color: var(--posts-text);
-  font-weight: 700;
+  color: var(--posts-muted);
+  font-weight: 600;
 }
 
 .sort {
   color: var(--posts-muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @media (min-width: 40rem) {
@@ -477,22 +472,19 @@
   position: sticky;
   top: calc(3.5rem + 1px); /* below the sticky app bar */
   z-index: 2;
-  margin-top: var(--space-4);
   padding: var(--space-1) 0 var(--space-2);
   background: var(--color-paper);
   color: var(--posts-text);
-  font-size: var(--type-label);
-  font-weight: 700;
+  font-size: var(--type-subhead);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
 }
 
-/* The first day heading sits right under the result summary (the board's
-   own top margin); later ones open a new day with more space. */
-.day:first-child > .dayHeading {
-  margin-top: 0;
-}
-
+/* Each heading sits close to its own cards; a new day opens well apart
+   from the one before. */
 .day + .day {
-  margin-top: var(--space-2);
+  margin-top: var(--space-8);
 }
 
 /* Cards stand apart on the paper background: gaps, no row dividers. */
@@ -1060,7 +1052,43 @@
 
   .list .card,
   .list .skeleton {
-    padding: 1.125rem var(--space-5);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  /* A day with one pod: the card takes the full row and lays out across it,
+     place (and the type · status line) on the left, when + seats on the
+     right; its height follows its content. */
+  .list[data-single="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list[data-single="true"] .card {
+    align-items: center;
+  }
+
+  .list[data-single="true"] .cardBody {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head facts"
+      "meta facts";
+    align-items: center;
+    column-gap: var(--space-6);
+  }
+
+  .list[data-single="true"] .cardHead {
+    grid-area: head;
+  }
+
+  .list[data-single="true"] .cardMeta {
+    grid-area: meta;
+  }
+
+  .list[data-single="true"] .facts {
+    grid-area: facts;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-top: 0;
+    text-align: right;
   }
 }
 

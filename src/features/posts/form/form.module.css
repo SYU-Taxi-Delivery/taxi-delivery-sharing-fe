@@ -206,15 +206,6 @@ legend.labelGroup {
 }
 
 /* 필수 / 선택 legend and tags */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-}
-
 .labelGroup {
   display: inline-flex;
   align-items: center;

@@ -94,10 +94,8 @@ export function PostListScreen({
     <AppShell current="posts" postsPath={basePath} wide>
       <div className={styles.listHeading}>
         <BeanArt className={styles.headingBean} wave />
-        <div className={styles.headingText}>
-          <p className={styles.eyebrow}>두유팟</p>
-          <h1 className={styles.listTitle}>택시·배달 모집</h1>
-        </div>
+        {/* The app bar already says 두유팟; the bean and the title are one group. */}
+        <h1 className={styles.listTitle}>택시·배달 모집</h1>
         <Link
           href={path(
             query.type === "DELIVERY"
@@ -145,9 +143,33 @@ function PostList({
     router.push(href(next), { scroll: false });
   const filtered = isFilteredQuery(query);
   const posts = page?.content.filter((post) => post.status !== "REMOVED") ?? [];
-  const groups = groupPostsByDay(posts);
+  // Day headings follow the schedule order only. 최근 등록 순 keeps the
+  // server's order as one run, never regrouped back into schedule order.
+  const groups =
+    query.sort === "RECENT"
+      ? posts.length > 0
+        ? [{ key: "recent", time: 0, posts }]
+        : []
+      : groupPostsByDay(posts);
   const scrollKey = path(postQueryHref(basePath, query));
   const loaded = !loading && page !== null;
+  // A removed chip (or the 초기화 button) leaves the page, so focus would
+  // fall back to the top of the document. Put it on the chip now in that
+  // place, or on the results heading when no chip is left.
+  const focusAfter = useRef<number | null>(null);
+  const chipGroup = useRef<HTMLDivElement>(null);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const index = focusAfter.current;
+    if (index === null) return;
+    focusAfter.current = null;
+    const buttons = chipGroup.current?.querySelectorAll("button");
+    const next =
+      buttons && buttons.length > 0 && index >= 0
+        ? buttons[Math.min(index, buttons.length - 1)]
+        : resultsHeading.current;
+    next?.focus();
+  }, [scrollKey]);
 
   // Back from a detail page: return to the same spot once the rows exist.
   useEffect(() => {
@@ -162,7 +184,7 @@ function PostList({
       scroll: false,
     });
   };
-  const panel = (heading: ReactNode) => (
+  const panel = (heading: ReactNode, mode: "sidebar" | "sheet") => (
     <SearchPanel
       // Applying or removing a chip changes the URL; the draft starts over.
       key={postQueryHref("", query)}
@@ -171,6 +193,7 @@ function PostList({
       onApply={apply}
       heading={heading}
       appliedTotal={page?.totalElements ?? null}
+      mode={mode}
     />
   );
 
@@ -182,6 +205,7 @@ function PostList({
             <h2 id={sidebarTitleId} className={styles.panelTitle}>
               검색 조건
             </h2>,
+            "sidebar",
           )}
         </aside>
       )}
@@ -238,12 +262,13 @@ function PostList({
               <button
                 type="button"
                 className={styles.textButton}
-                onClick={() =>
+                onClick={() => {
+                  focusAfter.current = -1;
                   router.push(
                     path(postQueryHref(basePath, clearedSearch(query))),
                     { scroll: false },
-                  )
-                }
+                  );
+                }}
               >
                 초기화
               </button>
@@ -256,22 +281,31 @@ function PostList({
           aria-labelledby={headingId}
           aria-busy={loading}
         >
-          <h2 id={headingId} className={styles.srOnly}>
+          <h2
+            id={headingId}
+            ref={resultsHeading}
+            tabIndex={-1}
+            className={styles.srOnly}
+          >
             {active.label} 모집글 목록
           </h2>
           {chips.length > 0 && (
             <div
+              ref={chipGroup}
               className={styles.activeChips}
               role="group"
               aria-label="적용된 검색 조건"
             >
-              {chips.map((chip) => (
+              {chips.map((chip, index) => (
                 <button
                   key={chip.key}
                   type="button"
                   className={styles.activeChip}
                   aria-label={`${chip.label} 조건 지우기`}
-                  onClick={() => go(chip.clear)}
+                  onClick={() => {
+                    focusAfter.current = index;
+                    go(chip.clear);
+                  }}
                 >
                   {chip.label}
                   <span aria-hidden="true">×</span>
@@ -362,7 +396,11 @@ function PostList({
                           {day === date ? date : `${day} · ${date}`}
                         </h3>
                       )}
-                      <ul className={styles.list}>
+                      {/* A day with one pod: one full-width card, no empty column. */}
+                      <ul
+                        className={styles.list}
+                        data-single={group.posts.length === 1 || undefined}
+                      >
                         {group.posts.map((post) => (
                           <li key={post.id}>
                             <PostCard post={post} now={now} />
@@ -482,6 +520,7 @@ function PostList({
                 ×
               </button>
             </div>,
+            "sheet",
           )}
         </SearchSheet>
       )}

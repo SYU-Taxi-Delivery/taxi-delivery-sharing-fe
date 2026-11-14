@@ -16,7 +16,7 @@ import {
 import { rememberListOrigin } from "../listOrigin";
 import { postQueryHref } from "../posts";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
-import { PostDetailScreen } from "./PostDetailScreen";
+import { meetingLine, PostDetailScreen } from "./PostDetailScreen";
 
 const router = { push: vi.fn(), replace: vi.fn() };
 vi.mock("next/navigation", () => ({
@@ -198,10 +198,17 @@ describe("상세 조회", () => {
     expect(within(facts).getByText("1시간 50분 남음")).toBeVisible();
     expect(screen.getByText(/정문 앞에서 만나요/)).toBeVisible();
     expect(screen.getByText("모집 중")).toBeVisible();
-    expect(within(members()).queryByText("이서연")).not.toBeInTheDocument();
+    // No roster section for a non-member: who can see it is said under the
+    // headcount in the participation panel instead.
     expect(
-      within(members()).getByText(/작성자와 참여한 학생에게만/),
-    ).toBeVisible();
+      screen.queryByRole("heading", { name: /함께하는 학생/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("이서연")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "1자리 남았어요" }),
+    ).toHaveTextContent("작성자와 참여한 학생에게만 보여요");
+    // The author's meeting line is its own 만나는 곳 row.
+    expect(screen.getByText("만나는 곳")).toBeVisible();
     expect(
       screen.queryByRole("link", { name: /소통 링크/ }),
     ).not.toBeInTheDocument();
@@ -292,7 +299,10 @@ describe("상세 조회", () => {
         ),
       }),
     );
-    expect(within(members()).queryByText("이서연")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /함께하는 학생/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("이서연")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /소통 링크/ }),
     ).not.toBeInTheDocument();
@@ -334,7 +344,10 @@ describe("상세 조회", () => {
       }),
     );
     expect(screen.getByText(/작성자가 취소한 모집이에요/)).toBeVisible();
-    expect(within(members()).queryByText("이서연")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /함께하는 학생/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("이서연")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /소통 링크/ }),
     ).not.toBeInTheDocument();
@@ -1325,5 +1338,30 @@ describe("상세 하단 고정 바·참여자 안내", () => {
     expect(
       screen.queryByRole("button", { name: /참여하기|참여 취소/ }),
     ).toBeNull();
+  });
+});
+
+describe("만나는 곳 문장", () => {
+  it("만나는 줄 하나는 따로 꺼내고 나머지 안내는 그대로 둔다", () => {
+    expect(
+      meetingLine(
+        "정문에서 석계역까지 같이 가요.\n출발 5분 전, 정문 앞에서 만나요.",
+      ),
+    ).toEqual({
+      line: "출발 5분 전, 정문 앞에서 만나요.",
+      rest: "정문에서 석계역까지 같이 가요.",
+    });
+  });
+
+  it("긴 줄 안의 문장은 꺼내 보여 주되 원문은 바꾸지 않는다", () => {
+    const text = "같이 가요. 후문 편의점 앞에 모여요. 짐은 작게 챙겨요.";
+    expect(meetingLine(text)).toEqual({
+      line: "후문 편의점 앞에 모여요.",
+      rest: text,
+    });
+  });
+
+  it("만나는 곳이 없는 안내는 그대로 둔다", () => {
+    expect(meetingLine("석계역까지 같이 가요.")).toBeNull();
   });
 });

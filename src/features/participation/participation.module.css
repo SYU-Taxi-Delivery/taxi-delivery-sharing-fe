@@ -17,7 +17,8 @@
 .panel {
   /* Buttons in this box share its rounded-rectangle shape */
   --button-round: var(--round-control);
-  --participation-scene-width: 8.5rem;
+  /* A small corner scene: the type icon at the top of the page is the big one. */
+  --participation-scene-width: 5.5rem;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -258,6 +259,23 @@
   display: none;
 }
 
+.deadline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--participation-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.deadlineIcon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary-text);
+}
+
 @media (max-width: 47.99rem) {
   .action[data-bottom-action="true"] {
     grid-template-columns: minmax(0, 1fr) minmax(9rem, auto);
@@ -290,6 +308,10 @@
 
   .action .primary {
     min-height: var(--action-button-height);
+  }
+
+  .action[data-bottom-action="true"] > .deadline {
+    display: none;
   }
 }
 
