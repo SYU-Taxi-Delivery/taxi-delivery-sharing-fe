@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import styles from "./form.module.css";
+import styles from "./pickers.module.css";
 import { formatDate } from "@/lib/dateFormat";
 
 type Ymd = { y: number; m: number; d: number };
@@ -70,6 +70,7 @@ export function DatePicker({
   min,
   readOnly = false,
   invalid = false,
+  compact = false,
   describedBy,
   placeholder = "날짜 선택",
   onChange,
@@ -82,6 +83,8 @@ export function DatePicker({
   min: string;
   readOnly?: boolean;
   invalid?: boolean;
+  /** Search panel size: 44px trigger; dates without the year. */
+  compact?: boolean;
   describedBy?: string;
   placeholder?: string;
   onChange: (value: string) => void;
@@ -187,6 +190,7 @@ export function DatePicker({
     <div
       ref={container}
       className={styles.datePicker}
+      data-size={compact ? "compact" : undefined}
       onKeyDown={(event) => {
         if (open && event.key === "Escape") {
           event.preventDefault();
@@ -200,7 +204,7 @@ export function DatePicker({
         id={id}
         type="button"
         data-field={name}
-        className={`${styles.input} ${styles.dateTrigger}`}
+        className={styles.dateTrigger}
         aria-haspopup="dialog"
         aria-expanded={open}
         data-invalid={invalid}
@@ -211,7 +215,7 @@ export function DatePicker({
       >
         <span className={selected ? undefined : styles.placeholder}>
           {selected
-            ? formatDate(toUtc(selected), { timeZone: "UTC", year: true })
+            ? formatDate(toUtc(selected), { timeZone: "UTC", year: !compact })
             : placeholder}
         </span>
         <Image src="/posts/calendar.svg" width={20} height={20} alt="" />

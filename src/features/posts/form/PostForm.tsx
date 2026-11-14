@@ -18,8 +18,8 @@ import { ApiError } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AppShellLeaveGuard } from "../AppShell";
 import { PostCard } from "../PostCard";
-import { DatePicker } from "./DatePicker";
-import { TimePicker } from "./TimePicker";
+import { DatePicker } from "@/features/ui/pickers/DatePicker";
+import { TimePicker } from "@/features/ui/pickers/TimePicker";
 import { toPostSummaries, type PostSummary } from "../posts";
 import {
   CAPACITY,

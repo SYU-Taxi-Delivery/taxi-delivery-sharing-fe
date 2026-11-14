@@ -1498,12 +1498,29 @@
   gap: var(--space-2);
 }
 
+/* 부터 / 까지: a small label over the date and time pickers, side by side
+   across the panel's full width so "11/14 (토)" never gets cut off. */
 .rangeField {
   display: grid;
   gap: var(--space-1);
+}
+
+.rangeLabel {
   color: var(--posts-muted);
   font-size: var(--type-label);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+/* The pickers' popups open across both fields, not inside one half. */
+.rangePickers {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.rangePickers > div {
+  position: static;
 }
 
 /* Radio options: side by side, each a 44px row; wraps when narrow. */

@@ -8,7 +8,7 @@ import {
   type PostSort,
   type TimeWindow,
 } from "./posts";
-import { dayLabel, formatDate, formatTime } from "@/lib/dateFormat";
+import { dayLabel, dayTime, formatDate, formatTime } from "@/lib/dateFormat";
 
 const MINUTE = 60_000;
 const SEOUL_OFFSET_MS = 9 * 3_600_000;
@@ -181,6 +181,28 @@ export function presetRangeText(
     : `${dayLabel(start, nowMs)} ${formatTime(start)} ~ ${dayLabel(end, nowMs)} ${formatTime(end)}`;
   if (short) return range.replace(/ ~ /, "~");
   return `${range} (${sameDay ? date(start) : `${date(start)} ~ ${date(end)}`})`;
+}
+
+const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * A custom window in day words, as read at `nowMs`: "오늘 21:00 ~ 내일
+ * 02:00", "내일 09:00부터", "오늘 23:00까지". Null until one end is set.
+ */
+export function customRangeText(
+  from: string | undefined,
+  to: string | undefined,
+  nowMs: number,
+): string | null {
+  const at = (local?: string) =>
+    local && localMinute.test(local)
+      ? dayTime(Date.parse(`${local}:00+09:00`), nowMs)
+      : null;
+  const start = at(from);
+  const end = at(to);
+  if (start && end) return `${start} ~ ${end}`;
+  if (start) return `${start}부터`;
+  return end ? `${end}까지` : null;
 }
 
 export type SearchChip = {
