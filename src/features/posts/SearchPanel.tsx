@@ -21,16 +21,25 @@ import {
 } from "./posts";
 import { useClientNow } from "./PostCard";
 import {
+  customRangeText,
   invalidCustomRange,
   presetRangeText,
   SORT_LABELS,
   TIME_LABELS,
 } from "./search";
 import { usePostCount } from "./usePostList";
+import { toSeoulParts } from "./form/postDraft";
+import { DatePicker } from "@/features/ui/pickers/DatePicker";
+import { TimePicker } from "@/features/ui/pickers/TimePicker";
 import styles from "./posts.module.css";
 
 const TIME_CHOICES: TimeWindow[] = ["hour", "tonight", "morning", "custom"];
 const SORTS: PostSort[] = ["TIME", "RECENT"];
+const DIRECTIONS: [Direction | undefined, string][] = [
+  [undefined, "전체"],
+  ["TO_SCHOOL", "학교행"],
+  ["FROM_SCHOOL", "학교발"],
+];
 
 /** Search conditions only; type, 참여 가능만 and page come from the list. */
 const resetDraft = (query: PostQuery): PostQuery => ({
@@ -87,6 +96,10 @@ export function SearchPanel({
   const target: RouteKey =
     picked ?? (draft.departure?.trim() ? "destination" : "departure");
   const range = now === null ? null : presetRangeText(draft, now);
+  const custom =
+    now === null || draft.time !== "custom"
+      ? null
+      : customRangeText(draft.from, draft.to, now);
 
   function suggest(place: string) {
     const current = draft[target] ?? "";
@@ -104,7 +117,8 @@ export function SearchPanel({
   return (
     <form className={styles.panel} onSubmit={submit} noValidate>
       {heading}
-      <div className={styles.panelBody}>
+      {/* Only this part scrolls; the footer stays below it, never on top. */}
+      <div className={styles.panelBody} data-panel-scroll>
         {taxi && (
           <fieldset className={styles.panelSection}>
             {/* The inputs' own labels say it; read out, not shown. */}
@@ -143,38 +157,37 @@ export function SearchPanel({
                 <span aria-hidden="true">⇅</span>
               </button>
             </div>
+            {/* Route direction: one exclusive choice, drawn as a segmented
+                switch so it never reads as another place chip. */}
+            <div
+              className={styles.direction}
+              role="radiogroup"
+              aria-labelledby={`${id}-direction`}
+            >
+              <span id={`${id}-direction`} className={styles.directionLabel}>
+                방향
+              </span>
+              <span className={styles.segmented}>
+                {DIRECTIONS.map(([value, label]) => (
+                  <label key={label} className={styles.segment}>
+                    <input
+                      type="radio"
+                      name={`${id}-direction`}
+                      className={styles.segmentInput}
+                      checked={draft.direction === value}
+                      onChange={() => set({ direction: value })}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </span>
+            </div>
             <Suggestions
               places={TAXI_PLACES}
               target={ROUTE_LABELS[target]}
               value={draft[target] ?? ""}
               onPick={suggest}
             />
-            <div
-              className={styles.choiceRow}
-              role="group"
-              aria-label="학교 방향"
-            >
-              {(
-                [
-                  ["TO_SCHOOL", "학교행"],
-                  ["FROM_SCHOOL", "학교발"],
-                ] as [Direction, string][]
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={styles.choice}
-                  aria-pressed={draft.direction === value}
-                  onClick={() =>
-                    set({
-                      direction: draft.direction === value ? undefined : value,
-                    })
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </fieldset>
         )}
 
@@ -254,28 +267,29 @@ export function SearchPanel({
           )}
           {draft.time === "custom" && (
             <div className={styles.rangeInputs}>
-              <label className={styles.rangeField}>
-                <span>부터</span>
-                <input
-                  type="datetime-local"
-                  className={styles.searchInput}
-                  value={draft.from ?? ""}
-                  aria-invalid={invalid || undefined}
-                  aria-describedby={invalid ? `${id}-range` : undefined}
-                  onChange={(event) => set({ from: event.target.value })}
-                />
-              </label>
-              <label className={styles.rangeField}>
-                <span>까지</span>
-                <input
-                  type="datetime-local"
-                  className={styles.searchInput}
-                  value={draft.to ?? ""}
-                  aria-invalid={invalid || undefined}
-                  aria-describedby={invalid ? `${id}-range` : undefined}
-                  onChange={(event) => set({ to: event.target.value })}
-                />
-              </label>
+              <RangeEnd
+                label="부터"
+                value={draft.from ?? ""}
+                fallbackTime="00:00"
+                now={now}
+                invalid={invalid}
+                describedBy={invalid ? `${id}-range` : undefined}
+                onChange={(from) => set({ from })}
+              />
+              <RangeEnd
+                label="까지"
+                value={draft.to ?? ""}
+                fallbackTime="23:55"
+                now={now}
+                invalid={invalid}
+                describedBy={invalid ? `${id}-range` : undefined}
+                onChange={(to) => set({ to })}
+              />
+              {custom && !invalid && (
+                <p className={styles.rangeText} data-testid="time-range">
+                  {custom}
+                </p>
+              )}
               {invalid && (
                 <p
                   id={`${id}-range`}
@@ -377,6 +391,74 @@ function Suggestions({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One end of the 시간 지정 window: the post form's Korean date and time
+ * pickers side by side, read as one `YYYY-MM-DDTHH:mm` value. Picking only
+ * the date fills `fallbackTime`; only the time, today's date.
+ */
+function RangeEnd({
+  label,
+  value,
+  fallbackTime,
+  now,
+  invalid,
+  describedBy,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  fallbackTime: string;
+  now: number | null;
+  invalid: boolean;
+  describedBy?: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  const [date = "", time = ""] = value.split("T");
+  // The panel's clock (set right after hydration, before any tap).
+  const today = now === null ? "" : toSeoulParts(now).date;
+  return (
+    <div
+      className={styles.rangeField}
+      role="group"
+      aria-labelledby={`${id}-label`}
+    >
+      <span id={`${id}-label`} className={styles.rangeLabel}>
+        {label}
+      </span>
+      <span className={styles.rangePickers}>
+        <label htmlFor={`${id}-date`} className={styles.srOnly}>
+          {label} 날짜
+        </label>
+        <DatePicker
+          id={`${id}-date`}
+          name={`${label}-date`}
+          label={`${label} 날짜`}
+          value={date}
+          min={today}
+          compact
+          invalid={invalid}
+          describedBy={describedBy}
+          onChange={(next) => onChange(`${next}T${time || fallbackTime}`)}
+        />
+        <label htmlFor={`${id}-time`} className={styles.srOnly}>
+          {label} 시간
+        </label>
+        <TimePicker
+          id={`${id}-time`}
+          name={`${label}-time`}
+          label={`${label} 시간`}
+          value={time}
+          compact
+          invalid={invalid}
+          describedBy={describedBy}
+          onChange={(next) => onChange(`${date || today}T${next}`)}
+        />
+      </span>
     </div>
   );
 }

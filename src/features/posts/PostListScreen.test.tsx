@@ -217,7 +217,7 @@ describe("PostListScreen", () => {
       page: 0,
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "조건에 맞는 모집글이 없어요",
+      "조건에 맞는 모집이 없어요아직 배달 모집이 없어요.",
     );
     expect(
       screen.getByRole("link", { name: "전체 모집글 보기" }),
@@ -338,8 +338,9 @@ describe("PostListScreen", () => {
 
   it("참여 가능한 글이 없으면 마감된 모집도 보기를 안내한다", async () => {
     await setup(async () => pageOf([]));
+    // No search condition: the fallback line instead of a quote.
     expect(screen.getByRole("status")).toHaveTextContent(
-      "지금 참여할 수 있는 모집글이 없어요",
+      "조건에 맞는 모집이 없어요지금 참여할 수 있는 모집이 없어요.",
     );
     expect(
       screen.getByRole("button", { name: "마감된 모집도 보기" }),

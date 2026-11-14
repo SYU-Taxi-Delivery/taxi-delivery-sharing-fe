@@ -8,7 +8,7 @@ import {
   type PostSort,
   type TimeWindow,
 } from "./posts";
-import { dayLabel, formatDate, formatTime } from "@/lib/dateFormat";
+import { dayLabel, dayTime, formatDate, formatTime } from "@/lib/dateFormat";
 
 const MINUTE = 60_000;
 const SEOUL_OFFSET_MS = 9 * 3_600_000;
@@ -20,7 +20,7 @@ export const SORT_LABELS: Record<PostSort, string> = {
 };
 
 export const TIME_LABELS: Record<TimeWindow, string> = {
-  hour: "1시간 안",
+  hour: "1시간 이내",
   tonight: "오늘 밤",
   morning: "내일 아침",
   custom: "시간 지정",
@@ -41,7 +41,7 @@ const dayAfter = (date: string) =>
 
 /**
  * The reference-time window for the server's `from`/`to` (from inclusive, to
- * exclusive), worked out at `nowMs` so "1시간 안" always means from now.
+ * exclusive), worked out at `nowMs` so "1시간 이내" always means from now.
  */
 export function timeRange(
   query: PostQuery,
@@ -181,6 +181,55 @@ export function presetRangeText(
     : `${dayLabel(start, nowMs)} ${formatTime(start)} ~ ${dayLabel(end, nowMs)} ${formatTime(end)}`;
   if (short) return range.replace(/ ~ /, "~");
   return `${range} (${sameDay ? date(start) : `${date(start)} ~ ${date(end)}`})`;
+}
+
+const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * A custom window in day words, as read at `nowMs`: "오늘 21:00 ~ 내일
+ * 02:00", "내일 09:00부터", "오늘 23:00까지". Null until one end is set.
+ */
+export function customRangeText(
+  from: string | undefined,
+  to: string | undefined,
+  nowMs: number,
+): string | null {
+  const at = (local?: string) =>
+    local && localMinute.test(local)
+      ? dayTime(Date.parse(`${local}:00+09:00`), nowMs)
+      : null;
+  const start = at(from);
+  const end = at(to);
+  if (start && end) return `${start} ~ ${end}`;
+  if (start) return `${start}부터`;
+  return end ? `${end}까지` : null;
+}
+
+/**
+ * The empty list's first line, quoting the applied conditions:
+ * "‘후문 출발 · 오늘 밤’ 택시 모집이 아직 없어요.". Without any condition
+ * (only 참여 가능만): "지금 참여할 수 있는 택시 모집이 없어요.".
+ */
+export function noResultsText(query: PostQuery): string {
+  const clean = cleanSearch(query);
+  const parts: string[] = [];
+  if (clean.departure) parts.push(`${clean.departure} 출발`);
+  if (clean.destination) parts.push(`${clean.destination} 도착`);
+  if (clean.direction)
+    parts.push(clean.direction === "TO_SCHOOL" ? "학교행" : "학교발");
+  if (clean.restaurant) parts.push(clean.restaurant);
+  if (clean.pickup) parts.push(`${clean.pickup} 수령`);
+  if (clean.q) parts.push(clean.q);
+  if (clean.time)
+    parts.push(
+      clean.time === "custom"
+        ? customRangeLabel(clean.from, clean.to)
+        : TIME_LABELS[clean.time],
+    );
+  const type =
+    clean.type === "TAXI" ? "택시 " : clean.type === "DELIVERY" ? "배달 " : "";
+  if (parts.length === 0) return `지금 참여할 수 있는 ${type}모집이 없어요.`;
+  return `‘${parts.join(" · ")}’ ${type}모집이 아직 없어요.`;
 }
 
 export type SearchChip = {
