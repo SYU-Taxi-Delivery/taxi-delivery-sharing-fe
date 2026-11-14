@@ -153,6 +153,23 @@ function PostList({
       : groupPostsByDay(posts);
   const scrollKey = path(postQueryHref(basePath, query));
   const loaded = !loading && page !== null;
+  // A removed chip (or the 초기화 button) leaves the page, so focus would
+  // fall back to the top of the document. Put it on the chip now in that
+  // place, or on the results heading when no chip is left.
+  const focusAfter = useRef<number | null>(null);
+  const chipGroup = useRef<HTMLDivElement>(null);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const index = focusAfter.current;
+    if (index === null) return;
+    focusAfter.current = null;
+    const buttons = chipGroup.current?.querySelectorAll("button");
+    const next =
+      buttons && buttons.length > 0 && index >= 0
+        ? buttons[Math.min(index, buttons.length - 1)]
+        : resultsHeading.current;
+    next?.focus();
+  }, [scrollKey]);
 
   // Back from a detail page: return to the same spot once the rows exist.
   useEffect(() => {
@@ -245,12 +262,13 @@ function PostList({
               <button
                 type="button"
                 className={styles.textButton}
-                onClick={() =>
+                onClick={() => {
+                  focusAfter.current = -1;
                   router.push(
                     path(postQueryHref(basePath, clearedSearch(query))),
                     { scroll: false },
-                  )
-                }
+                  );
+                }}
               >
                 초기화
               </button>
@@ -263,22 +281,31 @@ function PostList({
           aria-labelledby={headingId}
           aria-busy={loading}
         >
-          <h2 id={headingId} className={styles.srOnly}>
+          <h2
+            id={headingId}
+            ref={resultsHeading}
+            tabIndex={-1}
+            className={styles.srOnly}
+          >
             {active.label} 모집글 목록
           </h2>
           {chips.length > 0 && (
             <div
+              ref={chipGroup}
               className={styles.activeChips}
               role="group"
               aria-label="적용된 검색 조건"
             >
-              {chips.map((chip) => (
+              {chips.map((chip, index) => (
                 <button
                   key={chip.key}
                   type="button"
                   className={styles.activeChip}
                   aria-label={`${chip.label} 조건 지우기`}
-                  onClick={() => go(chip.clear)}
+                  onClick={() => {
+                    focusAfter.current = index;
+                    go(chip.clear);
+                  }}
                 >
                   {chip.label}
                   <span aria-hidden="true">×</span>

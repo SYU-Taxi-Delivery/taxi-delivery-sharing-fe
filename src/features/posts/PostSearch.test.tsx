@@ -411,6 +411,21 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
         .getAllByRole("button")
         .map((chip) => chip.getAttribute("aria-label")),
     ).toEqual([expect.stringMatching(/^1시간 이내 · /)]);
+    // Focus moves to the chip now in the removed one's place.
+    expect(document.activeElement).toHaveAccessibleName(/^1시간 이내 · /);
+
+    // Removing the last chip puts focus on the results heading.
+    fireEvent.click(screen.getByRole("button", { name: /^1시간 이내 · / }));
+    await rerenderWith(
+      parsePostQuery(
+        Object.fromEntries(
+          new URL(router.push.mock.calls[1][0], "http://x").searchParams,
+        ),
+      ),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "택시 모집글 목록" }),
+    );
   });
 
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {
