@@ -69,7 +69,7 @@ export function usePostList(query: PostQuery, operations: PostListOperations) {
 }
 
 /**
- * Result count for conditions not applied yet (the "결과 N개 보기" button).
+ * Result count for conditions not applied yet (the panel's apply button).
  * Waits briefly while typing; null while loading or when the count failed.
  */
 export function usePostCount(

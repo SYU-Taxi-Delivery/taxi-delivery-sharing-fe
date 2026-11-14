@@ -225,6 +225,18 @@
   gap: var(--space-1) var(--space-2);
 }
 
+/* Joined delivery: the author's order guide, first in 참여자 안내 */
+.guideNote {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.guideNote > p {
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* The pod's art tile: the post type, never a member */
 .sticker {
   display: grid;

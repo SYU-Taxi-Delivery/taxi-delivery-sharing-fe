@@ -38,6 +38,7 @@ import { MoreMenu } from "./MoreMenu";
 import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { useListHref } from "../listOrigin";
 import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
@@ -60,9 +61,10 @@ export function PostDetailScreen({
   commentOperations?: CommentsOperations;
 }) {
   const path = useAppPath();
+  const listHref = useListHref(postId, path(listPath));
   return (
     <AppShell current="posts" postsPath={listPath} wide>
-      <Link href={path(listPath)} className={styles.back}>
+      <Link href={listHref} className={styles.back}>
         <span aria-hidden="true">‹</span> 모집글 목록
       </Link>
       <RequireAuth>
@@ -98,6 +100,7 @@ function DetailLoader({
   commentOperations: CommentsOperations;
 }) {
   const path = useAppPath();
+  const listHref = useListHref(postId, path(listPath));
   const { handleUnauthorized } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -158,7 +161,7 @@ function DetailLoader({
       <div className={styles.state}>
         <h1 className={styles.stateTitle}>모집을 찾을 수 없어요</h1>
         <p>삭제되었거나 주소가 잘못된 모집이에요.</p>
-        <Link href={path(listPath)} className={styles.secondary}>
+        <Link href={listHref} className={styles.secondary}>
           모집글 목록으로
         </Link>
       </div>
@@ -337,6 +340,8 @@ function DetailView({
     !author &&
     (status === "CANCELLED" || (!joined && chip.label === "작성자 마감"));
   const guideShown = (joined && !history) || !!visible.communicationUrl;
+  // Delivery members read the order guide first, inside 참여자 안내.
+  const guideNote = guideShown && !taxi ? detail.orderGuide : undefined;
 
   function showGuide() {
     const section = guideRef.current;
@@ -499,16 +504,27 @@ function DetailView({
           <h2 id="post-link" className={styles.sectionTitle}>
             참여자 안내
           </h2>
-          <p className={styles.place}>
-            <span className={styles.meta}>
-              {taxi ? "만나는 곳" : "수령 장소"}
-            </span>
-            <strong>{taxi ? detail.departure : detail.pickupLocation}</strong>
-          </p>
-          <p className={styles.place}>
-            <span className={styles.meta}>{scheduleTerm}</span>
-            <strong>{dayTime(reference, clockMs)}</strong>
-          </p>
+          {taxi ? (
+            <>
+              <p className={styles.place}>
+                <span className={styles.meta}>만나는 곳</span>
+                <strong>{detail.departure}</strong>
+              </p>
+              <p className={styles.place}>
+                <span className={styles.meta}>{scheduleTerm}</span>
+                <strong>{dayTime(reference, clockMs)}</strong>
+              </p>
+            </>
+          ) : (
+            // Pickup place and order time are already in the summary above;
+            // the author's own order guide is what a member needs here.
+            guideNote && (
+              <div className={styles.guideNote}>
+                <span className={styles.meta}>주문 안내</span>
+                <p>{guideNote}</p>
+              </div>
+            )
+          )}
           {author && visible.communicationUrl && (
             <a
               href={visible.communicationUrl}
@@ -615,7 +631,7 @@ function DetailView({
             {notice.text}
           </p>
         )}
-        {!taxi && detail.orderGuide && (
+        {!taxi && detail.orderGuide && !guideNote && (
           <dl className={styles.info}>
             <div className={styles.infoRow}>
               <dt className={styles.meta}>주문 안내</dt>

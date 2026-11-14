@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -6,6 +13,7 @@ import {
   CommentsError,
   type CommentsOperations,
 } from "@/features/comments/comments";
+import { rememberListOrigin } from "../listOrigin";
 import { postQueryHref } from "../posts";
 import { PostDetailError, type PostDetailOperations } from "./postDetail";
 import { PostDetailScreen } from "./PostDetailScreen";
@@ -368,6 +376,40 @@ describe("상세 조회", () => {
     ).toHaveAttribute("href", "/posts");
   });
 
+  it("목록에서 연 상세의 모집글 목록은 연 목록 주소(유형·조건·쪽)로 돌아간다", async () => {
+    const listHref = "/posts?type=TAXI&destination=%EC%84%9D%EA%B3%84&page=2";
+    rememberListOrigin("p1", listHref);
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      listHref,
+    );
+    sessionStorage.clear();
+  });
+
+  it("공유 링크처럼 바로 연 상세나 다른 글을 열던 기록이면 기본 목록으로 간다", async () => {
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    cleanup();
+    rememberListOrigin("other", "/posts?type=DELIVERY");
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    cleanup();
+    rememberListOrigin("p1", "//evil.example/posts");
+    await setup(ops());
+    expect(screen.getByRole("link", { name: /모집글 목록/ })).toHaveAttribute(
+      "href",
+      "/posts",
+    );
+    sessionStorage.clear();
+  });
+
   it("403은 접근 권한 안내를 보여 준다", async () => {
     await setup(
       ops({ load: vi.fn(async () => Promise.reject(new ApiError(403, ""))) }),
@@ -537,6 +579,35 @@ describe("상세 요약·참여자 안내·더보기", () => {
     expect(info).toHaveTextContent("만나는 곳삼육대학교 정문");
     // Right after the summary, before the participation panel.
     expect(header.nextElementSibling).toBe(info);
+  });
+
+  it("참여 중인 배달은 요약과 겹치는 수령 장소·주문 시각 대신 주문 안내를 먼저 보여 준다", async () => {
+    await setup(
+      load({
+        relation: "JOINED",
+        type: "DELIVERY",
+        departure: undefined,
+        destination: undefined,
+        restaurantName: "정문 김밥",
+        pickupLocation: "학생회관 앞",
+        orderGuide: "메뉴는 각자 골라요",
+      }),
+    );
+    const info = screen.getByRole("region", { name: "참여자 안내" });
+    expect(info).not.toHaveTextContent("학생회관 앞");
+    expect(within(info).queryByText("주문 마감")).not.toBeInTheDocument();
+    const guide = within(info).getByText("메뉴는 각자 골라요");
+    const heading = within(info).getByRole("heading", { name: "참여자 안내" });
+    // Right after the heading, before the help text and 참여 취소.
+    expect(heading.nextElementSibling).toContainElement(guide);
+    // Said once: not repeated further down the page.
+    expect(screen.getAllByText("메뉴는 각자 골라요")).toHaveLength(1);
+    const cancel = within(info).getByRole("button", { name: "참여 취소" });
+    // Its deadline sits right beside it.
+    expect(cancel).toHaveAccessibleDescription(/까지 가능$/);
+    expect(cancel.nextElementSibling).toHaveTextContent(/까지 가능$/);
+    // The member's main action stays 오픈채팅 in the bar.
+    expect(screen.getByRole("link", { name: /오픈채팅 열기/ })).toBeVisible();
   });
 
   it("정원 마감에 참여 중이면 모집 상태와 참여 중을 함께 보여 준다", async () => {

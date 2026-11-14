@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/AuthProvider";
-import type { PostListOperations, PostQuery } from "./posts";
+import {
+  parsePostQuery,
+  type PostListOperations,
+  type PostQuery,
+} from "./posts";
 import { PostListScreen } from "./PostListScreen";
 
 const router = { push: vi.fn(), replace: vi.fn() };
@@ -66,12 +70,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+let rerenderWith: (query: PostQuery) => Promise<void> = async () => {};
+
 async function setup(
   query: PostQuery,
   list: PostListOperations["list"] = async () => pageOf([taxi]),
 ) {
   const operations = { list: vi.fn(list) };
-  render(
+  const tree = (current: PostQuery) => (
     <AuthProvider
       operations={{
         me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
@@ -79,9 +85,15 @@ async function setup(
         logout: vi.fn(),
       }}
     >
-      <PostListScreen query={query} operations={operations} />
-    </AuthProvider>,
+      <PostListScreen query={current} operations={operations} />
+    </AuthProvider>
   );
+  const view = render(tree(query));
+  // The URL the router was sent to becomes the screen's new query.
+  rerenderWith = async (next) => {
+    view.rerender(tree(next));
+    await act(async () => {});
+  };
   await act(async () => {});
   return operations;
 }
@@ -105,17 +117,21 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(button).toHaveFocus();
   });
 
-  it("택시 조건(출발·도착 추천, 바꾸기, 학교행, 시간대, 정렬)을 주소로 적용한다", async () => {
+  it("택시 조건(추천 장소, 바꾸기, 학교행, 시간대, 정렬)을 주소로 적용한다", async () => {
     const operations = await setup(taxiQuery);
     fireEvent.click(screen.getByRole("button", { name: "필터" }));
     const sheet = within(screen.getByRole("dialog", { name: "필터" }));
 
+    // One suggestion list; it starts on the empty 출발지.
+    expect(sheet.getAllByRole("group", { name: /추천 장소/ })).toHaveLength(1);
+    const suggestions = () => sheet.getByRole("group", { name: /추천 장소/ });
+    expect(suggestions()).toHaveAccessibleName("추천 장소 출발지에 넣기");
     fireEvent.click(
-      within(sheet.getByRole("group", { name: "출발지 추천" })).getByRole(
-        "button",
-        { name: "삼육대학교 정문" },
-      ),
+      within(suggestions()).getByRole("button", { name: "삼육대학교 정문" }),
     );
+    expect(sheet.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
+    // Filling 출발지 moves the target on to 도착지.
+    expect(suggestions()).toHaveAccessibleName("추천 장소 도착지에 넣기");
     fireEvent.change(sheet.getByLabelText("도착지"), {
       target: { value: "석계" },
     });
@@ -141,25 +157,91 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
         sort: "RECENT",
       }),
     );
-    fireEvent.click(sheet.getByRole("button", { name: "결과 1개 보기" }));
+    fireEvent.click(
+      sheet.getByRole("button", { name: "조건 적용하기 · 결과 1개" }),
+    );
     expect(router.push).toHaveBeenCalledWith(
       "/posts?type=TAXI&departure=%EC%84%9D%EA%B3%84&destination=%EC%82%BC%EC%9C%A1%EB%8C%80%ED%95%99%EA%B5%90+%EC%A0%95%EB%AC%B8&direction=TO_SCHOOL&time=tonight&sort=RECENT",
       { scroll: false },
     );
   });
 
-  it("배달은 음식점·수령 장소, 직접 시간은 잘못된 구간을 막는다", async () => {
+  it("고른 입력칸이 추천 장소의 대상이 되고, 다시 누르면 비운다", async () => {
+    await setup({ ...taxiQuery, departure: "기숙사" });
+    fireEvent.click(screen.getByRole("button", { name: /^필터/ }));
+    const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    const suggestions = () => sheet.getByRole("group", { name: /추천 장소/ });
+    // 출발지 already set: 도착지 is the default target.
+    expect(suggestions()).toHaveAccessibleName("추천 장소 도착지에 넣기");
+    expect(sheet.getByLabelText("도착지").closest("label")).toHaveAttribute(
+      "data-target",
+      "true",
+    );
+
+    fireEvent.focus(sheet.getByLabelText("출발지"));
+    expect(suggestions()).toHaveAccessibleName("추천 장소 출발지에 넣기");
+    expect(sheet.getByLabelText("출발지").closest("label")).toHaveAttribute(
+      "data-target",
+      "true",
+    );
+    const dorm = within(suggestions()).getByRole("button", { name: "기숙사" });
+    expect(dorm).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(dorm);
+    expect(sheet.getByLabelText("출발지")).toHaveValue("");
+    expect(sheet.getByLabelText("도착지")).toHaveValue("");
+  });
+
+  it("바꾼 조건이 아직 적용 전이면 적용 안 됨을 알리고, 위 칩은 적용된 조건만 보여 준다", async () => {
+    setDesktop(true);
+    await setup({ ...taxiQuery, destination: "석계" });
+    const sidebar = within(
+      screen.getByRole("complementary", { name: "검색 조건" }),
+    );
+    const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
+    expect(sidebar.queryByText("적용 안 됨")).not.toBeInTheDocument();
+    expect(
+      sidebar.getByRole("button", { name: "결과 1개 보기" }),
+    ).toBeVisible();
+
+    fireEvent.change(sidebar.getByLabelText("도착지"), {
+      target: { value: "태릉" },
+    });
+    expect(sidebar.getByText("적용 안 됨")).toBeVisible();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(
+      sidebar.getByRole("button", { name: "조건 적용하기 · 결과 1개" }),
+    ).toBeVisible();
+    expect(
+      within(chips).getByRole("button", { name: "도착 석계 조건 지우기" }),
+    ).toBeVisible();
+    expect(within(chips).queryByText(/태릉/)).not.toBeInTheDocument();
+
+    // Typing it back to the applied value clears the note.
+    fireEvent.change(sidebar.getByLabelText("도착지"), {
+      target: { value: "석계" },
+    });
+    expect(sidebar.queryByText("적용 안 됨")).not.toBeInTheDocument();
+  });
+
+  it("배달은 음식점·수령 장소, 시간 지정은 잘못된 구간을 막는다", async () => {
     await setup({ type: "DELIVERY", joinableOnly: true, page: 0 });
     fireEvent.click(screen.getByRole("button", { name: "필터" }));
     const sheet = within(screen.getByRole("dialog", { name: "필터" }));
     expect(sheet.queryByLabelText("출발지")).not.toBeInTheDocument();
+    expect(sheet.getByLabelText("모집글 제목·장소 검색")).toBeVisible();
     fireEvent.change(sheet.getByLabelText("음식점"), {
       target: { value: "김밥" },
     });
+    expect(
+      sheet.getByRole("group", { name: "추천 장소 수령 장소에 넣기" }),
+    ).toBeVisible();
     fireEvent.click(sheet.getByRole("button", { name: "학생회관" }));
     expect(sheet.getByLabelText("수령 장소")).toHaveValue("학생회관");
+    expect(sheet.queryByRole("button", { name: "직접" })).toBeNull();
 
-    fireEvent.click(sheet.getByRole("button", { name: "직접" }));
+    fireEvent.click(sheet.getByRole("button", { name: "시간 지정" }));
     fireEvent.change(sheet.getByLabelText("부터"), {
       target: { value: "2026-11-14T21:00" },
     });
@@ -169,7 +251,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.getByRole("alert")).toHaveTextContent(
       "끝나는 시각을 시작 시각보다 뒤로",
     );
-    fireEvent.click(sheet.getByRole("button", { name: /결과/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
     expect(router.push).not.toHaveBeenCalled();
 
     fireEvent.click(sheet.getByRole("button", { name: "초기화" }));
@@ -177,25 +259,64 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.queryByLabelText("부터")).not.toBeInTheDocument();
   });
 
-  it("적용된 조건은 결과 수 위의 칩으로 보이고 하나씩 지울 수 있다", async () => {
-    await setup({
-      ...taxiQuery,
-      departure: "석계",
-      time: "hour",
-    });
+  it("오늘 밤은 자정을 넘는 실제 검색 시각을 날짜와 함께 보여 준다", async () => {
+    vi.setSystemTime(new Date("2026-11-13T23:30:00+09:00"));
+    await setup({ ...taxiQuery, time: "tonight" });
     const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
     expect(
-      within(chips)
-        .getAllByRole("button")
-        .map((chip) => chip.textContent),
-    ).toEqual(["출발 석계× 조건 지우기", "1시간 안× 조건 지우기"]);
+      within(chips).getByRole("button", {
+        name: "오늘 밤 · 오늘 18:00~내일 03:00 조건 지우기",
+      }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /^필터/ }));
+    const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    expect(sheet.getByTestId("time-range")).toHaveTextContent(
+      "오늘 18:00 ~ 내일 03:00 (11/13 금 ~ 11/14 토)",
+    );
+    fireEvent.click(sheet.getByRole("button", { name: "내일 아침" }));
+    expect(sheet.getByTestId("time-range")).toHaveTextContent(
+      "내일 06:00 ~ 12:00 (11/14 토)",
+    );
+  });
+
+  it("적용된 조건은 결과 수 위의 칩으로 보이고, 하나를 지우면 주소·결과·요약이 함께 바뀐다", async () => {
+    const operations = await setup(
+      { ...taxiQuery, departure: "석계", time: "hour" },
+      async (query) =>
+        pageOf(query.departure ? [taxi] : [taxi, { ...taxi, id: "t2" }]),
+    );
+    const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
+    const labels = within(chips)
+      .getAllByRole("button")
+      .map((chip) => chip.getAttribute("aria-label"));
+    expect(labels[0]).toBe("출발 석계 조건 지우기");
+    expect(labels[1]).toMatch(/^1시간 안 · .+~.+ 조건 지우기$/);
     expect(screen.getByRole("button", { name: /^필터/ })).toHaveAccessibleName(
       "필터, 적용된 조건 2개",
     );
-    fireEvent.click(within(chips).getByRole("button", { name: /출발 석계/ }));
+    expect(screen.getByText("택시 참여 가능 1개")).toBeVisible();
+    fireEvent.click(
+      within(chips).getByRole("button", { name: "출발 석계 조건 지우기" }),
+    );
     expect(router.push).toHaveBeenCalledWith("/posts?type=TAXI&time=hour", {
       scroll: false,
     });
+    await rerenderWith(
+      parsePostQuery(
+        Object.fromEntries(
+          new URL(router.push.mock.calls[0][0], "http://x").searchParams,
+        ),
+      ),
+    );
+    expect(operations.list).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ departure: expect.anything() }),
+    );
+    expect(screen.getByText("택시 참여 가능 2개")).toBeVisible();
+    expect(
+      within(screen.getByRole("group", { name: "적용된 검색 조건" }))
+        .getAllByRole("button")
+        .map((chip) => chip.getAttribute("aria-label")),
+    ).toEqual([expect.stringMatching(/^1시간 안 · /)]);
   });
 
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {

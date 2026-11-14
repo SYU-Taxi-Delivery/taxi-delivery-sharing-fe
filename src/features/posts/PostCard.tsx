@@ -59,8 +59,8 @@ export function postDayText(time: number, now: number | null): string {
 }
 
 /*
- * One pod on the board, read top-down on a phone: where (route or
- * restaurant), then when + seats left side by side, then type · status ·
+ * One pod on the board, read top-down on a phone: where (route, or the
+ * restaurant with a small "수령 · 후문" line), then when + seats left side by side, then type · status ·
  * author in small grey text. The whole row is one link. The post form's
  * preview renders the same card without the link (`preview`).
  */
@@ -94,26 +94,27 @@ export function PostCard({
     <>
       <span className={styles.sticker}>{taxi ? <TaxiArt /> : <BagArt />}</span>
       <span className={styles.cardBody}>
-        <span className={styles.cardTitle}>
-          {taxi ? (
-            <>
-              {post.departure}
-              <span className={styles.srOnly}>에서</span>
-              <span className={styles.arrow} aria-hidden="true">
-                {" → "}
-              </span>
-              {post.destination}
-              <span className={styles.srOnly}>까지</span>
-            </>
-          ) : (
-            <>
-              {post.restaurantName}
-              <span className={styles.arrow} aria-hidden="true">
-                {" · "}
-              </span>
-              <span className={styles.srOnly}>, 수령 장소 </span>
-              {post.pickupLocation}
-            </>
+        <span className={styles.cardHead}>
+          <span className={styles.cardTitle}>
+            {taxi ? (
+              <>
+                {post.departure}
+                <span className={styles.srOnly}>에서</span>
+                <span className={styles.arrow} aria-hidden="true">
+                  {" → "}
+                </span>
+                {post.destination}
+                <span className={styles.srOnly}>까지</span>
+              </>
+            ) : (
+              post.restaurantName
+            )}
+          </span>
+          {!taxi && (
+            <span className={styles.pickup}>
+              <span className={styles.srOnly}>, </span>
+              수령 · {post.pickupLocation}
+            </span>
           )}
         </span>
         <span className={styles.facts}>
@@ -166,6 +167,7 @@ export function PostCard({
     <Link
       href={path(`/posts/${encodeURIComponent(post.id)}`)}
       className={styles.card}
+      data-post-id={post.id}
       data-available={available}
       data-type={taxi ? "taxi" : "delivery"}
     >

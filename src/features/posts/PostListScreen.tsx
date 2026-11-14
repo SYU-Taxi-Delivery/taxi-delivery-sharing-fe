@@ -27,6 +27,7 @@ import {
 import { SearchPanel, SearchSheet } from "./SearchPanel";
 import { newPostHref, searchChips, SORT_LABELS } from "./search";
 import { postListOperations } from "./postsApi";
+import { rememberListOrigin } from "./listOrigin";
 import { usePostList } from "./usePostList";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
@@ -134,7 +135,7 @@ function PostList({
   const filterButton = useRef<HTMLButtonElement>(null);
   const sheetTitleId = useId();
   const sidebarTitleId = useId();
-  const chips = searchChips(query);
+  const chips = searchChips(query, now);
   const searching = hasSearch(query);
   const active = tabs.find((tab) => tab.type === query.type) ?? tabs[0];
   // Changing a filter always starts from the first page (AC-UI-PAGE-01).
@@ -269,11 +270,11 @@ function PostList({
                   key={chip.key}
                   type="button"
                   className={styles.activeChip}
+                  aria-label={`${chip.label} 조건 지우기`}
                   onClick={() => go(chip.clear)}
                 >
                   {chip.label}
                   <span aria-hidden="true">×</span>
-                  <span className={styles.srOnly}> 조건 지우기</span>
                 </button>
               ))}
             </div>
@@ -293,21 +294,36 @@ function PostList({
 
           {loading ? (
             <div className={styles.loading}>
+              {/* Where the result count goes, so nothing moves on load. */}
               <p role="status" className={styles.loadingText}>
                 모집글을 불러오고 있어요.
               </p>
-              <ul className={styles.skeletonList} aria-hidden="true">
-                {[0, 1, 2].map((index) => (
-                  <li key={index} className={styles.skeleton}>
-                    <span className={styles.skeletonSticker} />
-                    <span className={styles.skeletonLines}>
-                      <span />
-                      <span />
-                      <span />
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {/* Card-shaped placeholders in the board's own grid. */}
+              <div className={styles.board} aria-hidden="true">
+                <ul className={styles.list}>
+                  {[0, 1, 2, 3, 4, 5].map((index) => {
+                    const delivery =
+                      query.type === "DELIVERY" ||
+                      (query.type === "ALL" && index % 2 === 1);
+                    return (
+                      <li key={index}>
+                        <span
+                          className={styles.skeleton}
+                          data-type={delivery ? "delivery" : "taxi"}
+                        >
+                          <span className={styles.skeletonSticker} />
+                          <span className={styles.skeletonLines}>
+                            <span data-line="title" />
+                            {delivery && <span data-line="pickup" />}
+                            <span data-line="facts" />
+                            <span data-line="meta" />
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </div>
           ) : error ? (
             <div className={styles.state}>
@@ -327,9 +343,12 @@ function PostList({
               <div
                 className={styles.board}
                 onClickCapture={(event) => {
-                  if ((event.target as Element).closest("a")) {
-                    saveScroll(scrollKey);
-                  }
+                  const card = (event.target as Element).closest("a");
+                  if (!card) return;
+                  saveScroll(scrollKey);
+                  // "모집글 목록" on the detail comes back to this exact URL.
+                  const postId = card.getAttribute("data-post-id");
+                  if (postId) rememberListOrigin(postId, scrollKey);
                 }}
               >
                 {groups.map((group, index) => {

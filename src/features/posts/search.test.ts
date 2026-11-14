@@ -14,7 +14,9 @@ import {
   matchesSearch,
   newPostHref,
   placeKey,
+  presetRangeText,
   searchChips,
+  TIME_LABELS,
   timeRange,
 } from "./search";
 
@@ -196,6 +198,31 @@ describe("적용된 조건 칩과 글쓰기 연결", () => {
       from: undefined,
       to: undefined,
     });
+  });
+
+  it("시간 칩은 시간 지정이라 부르고, 지금 시각이 있으면 실제 검색 구간을 함께 적는다", () => {
+    expect(TIME_LABELS.custom).toBe("시간 지정");
+    const late = Date.parse("2026-11-13T23:30:00+09:00");
+    const tonight = {
+      ...base,
+      type: "TAXI" as const,
+      time: "tonight" as const,
+    };
+    expect(presetRangeText(tonight, late)).toBe(
+      "오늘 18:00 ~ 내일 03:00 (11/13 금 ~ 11/14 토)",
+    );
+    expect(presetRangeText(tonight, late, true)).toBe("오늘 18:00~내일 03:00");
+    expect(presetRangeText({ ...base, time: "hour" }, late)).toBe(
+      "오늘 23:30 ~ 내일 00:30 (11/13 금 ~ 11/14 토)",
+    );
+    expect(presetRangeText({ ...base, time: "morning" }, NOW)).toBe(
+      "내일 06:00 ~ 12:00 (11/14 토)",
+    );
+    expect(presetRangeText({ ...base, time: "custom" }, NOW)).toBeNull();
+    expect(presetRangeText(base, NOW)).toBeNull();
+    expect(
+      searchChips(tonight, late).find((chip) => chip.key === "time")?.label,
+    ).toBe("오늘 밤 · 오늘 18:00~내일 03:00");
   });
 
   it("검색한 장소로 글쓰기를 채운다", () => {

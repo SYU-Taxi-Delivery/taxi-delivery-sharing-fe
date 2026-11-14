@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import type { AuthOperations } from "@/features/auth/auth";
 import { AuthProvider } from "@/features/auth/AuthProvider";
-import type { PostListOperations, PostQuery } from "./posts";
+import { listOriginFor } from "./listOrigin";
+import {
+  parsePostQuery,
+  type PostListOperations,
+  type PostQuery,
+} from "./posts";
 import { PostListScreen } from "./PostListScreen";
 
 const router = { push: vi.fn(), replace: vi.fn() };
@@ -144,8 +149,13 @@ describe("PostListScreen", () => {
     await setup(async () => pageOf([delivery]));
     const card = cards()[0];
     expect(within(card).getByText("배달")).toBeVisible();
-    expect(card).toHaveTextContent("테스트음식점");
-    expect(card).toHaveTextContent("테스트음식점 · , 수령 장소 정문");
+    // The restaurant is the title; the pickup place is its own small line.
+    expect(card.querySelector("[class*=cardTitle]")).toHaveTextContent(
+      /^테스트음식점$/,
+    );
+    expect(card.querySelector("[class*=pickup]")).toHaveTextContent(
+      "수령 · 정문",
+    );
     expect(card).toHaveTextContent("10/5 (월) 17:50 주문 마감");
     expect(within(card).getByText("참여 마감")).toBeVisible();
     expect(card).toHaveTextContent("주문 마감 10분 전 마감");
@@ -418,7 +428,45 @@ describe("PostListScreen", () => {
 
     await setup(async () => pageOf([taxi]));
     expect(scrollTo).toHaveBeenCalledWith({ top: 640, behavior: "instant" });
-    expect(sessionStorage.length).toBe(0);
+    // The scroll is used once; only the detail's return target stays.
+    expect(sessionStorage.getItem("posts:scroll:/posts")).toBeNull();
+  });
+
+  it("조건을 건 2쪽에서 카드를 열면 그 목록 주소와 스크롤을 상세의 목록 복귀용으로 기억한다", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const query: PostQuery = {
+      type: "TAXI",
+      joinableOnly: true,
+      page: 1,
+      destination: "석계",
+      time: "tonight",
+    };
+    const listHref =
+      "/posts?type=TAXI&destination=%EC%84%9D%EA%B3%84&time=tonight&page=2";
+    const first = await setup(
+      async () => pageOf([taxi], { totalPages: 2, number: 1 }),
+      query,
+    );
+    Object.defineProperty(window, "scrollY", {
+      value: 900,
+      configurable: true,
+    });
+    const card = cards()[0];
+    card.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(card);
+    expect(listOriginFor("t1", "/posts")).toBe(listHref);
+    expect(listOriginFor("other", "/posts")).toBeNull();
+    first.view.unmount();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+
+    // "모집글 목록" opens the same URL, which parses back to the same list.
+    await setup(
+      async () => pageOf([taxi], { totalPages: 2, number: 1 }),
+      parsePostQuery(
+        Object.fromEntries(new URL(listHref, "http://x").searchParams),
+      ),
+    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: 900, behavior: "instant" });
   });
 
   it("AC-UI-FILTER-08, AC-UI-FILTER-09: 기본은 기준시각 빠른 순이고 정렬·검색은 목록에 펼치지 않는다", async () => {

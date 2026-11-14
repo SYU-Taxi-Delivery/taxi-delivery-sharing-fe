@@ -469,7 +469,7 @@
 /* ───────── Pod board rows ───────── */
 
 .board {
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
 }
 
 /* Day group heading: "오늘 · 11/13 (금)" before the first card of each day */
@@ -477,20 +477,31 @@
   position: sticky;
   top: calc(3.5rem + 1px); /* below the sticky app bar */
   z-index: 2;
-  margin-top: var(--space-3);
-  padding: var(--space-1) 0;
+  margin-top: var(--space-4);
+  padding: var(--space-1) 0 var(--space-2);
   background: var(--color-paper);
   color: var(--posts-text);
   font-size: var(--type-label);
   font-weight: 700;
 }
 
+/* The first day heading sits right under the result summary (the board's
+   own top margin); later ones open a new day with more space. */
+.day:first-child > .dayHeading {
+  margin-top: 0;
+}
+
+.day + .day {
+  margin-top: var(--space-2);
+}
+
+/* Cards stand apart on the paper background: gaps, no row dividers. */
 .list {
   display: grid;
+  gap: var(--space-3);
 }
 
 .list > li {
-  border-bottom: 1px solid var(--posts-border);
   animation: row-in 320ms var(--curve-enter) both;
 }
 
@@ -534,20 +545,26 @@
   }
 }
 
+/* One pod = one white card: thin light border, the app's card corners.
+   The whole card is the link to the detail page. */
 .card {
   display: grid;
   grid-template-columns: 2.5rem minmax(0, 1fr);
   align-items: start;
   gap: var(--space-3);
-  margin: 0 calc(var(--space-2) * -1);
-  padding: var(--space-3) var(--space-2);
-  border-radius: var(--round-control);
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
   transition:
     background-color var(--motion-fast) var(--curve-standard),
+    border-color var(--motion-fast) var(--curve-standard),
     transform var(--motion-fast) var(--bounce);
 }
 
 .card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--posts-border));
   background: var(--primary-tint);
 }
 
@@ -614,6 +631,22 @@
   letter-spacing: -0.01em;
   word-break: keep-all;
   overflow-wrap: break-word;
+}
+
+/* Row 1 of the card: the title, plus the delivery pickup line under it. */
+.cardHead {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+
+/* Delivery: where to pick the food up, its own small line under the
+   restaurant so the two places never read as one name. */
+.pickup {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .arrow {
@@ -721,27 +754,29 @@
   }
 }
 
+/* Loading keeps the loaded layout: the status sits where the result count
+   goes and the placeholders are cards in the same list grid, with the
+   card's padding, corners and line heights. */
 .loading {
   display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
 }
 
 .loadingText {
+  margin-top: var(--space-3);
   color: var(--posts-muted);
   font-size: var(--type-label);
 }
 
-.skeletonList {
-  display: grid;
-}
-
 .skeleton {
   display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: start;
   gap: var(--space-3);
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--posts-border);
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-card);
+  background: var(--canvas);
 }
 
 .skeletonSticker,
@@ -760,30 +795,44 @@
 }
 
 .skeletonSticker {
-  height: 3.5rem;
-  border-radius: 1rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
 }
 
 .skeletonLines {
   display: grid;
-  gap: var(--space-2);
+  align-content: start;
 }
 
+/* Each bar is one text line tall (1lh at that line's size), painted only
+   in its middle so the bars read as lines with space between. */
 .skeletonLines > span {
-  height: 0.75rem;
+  height: 1lh;
+  padding-block: 0.3lh;
+  background-clip: content-box;
 }
 
-.skeletonLines > span:nth-child(1) {
+.skeletonLines > [data-line="title"] {
+  width: 70%;
+  font-size: var(--type-subhead);
+  line-height: 1.4;
+}
+
+.skeletonLines > [data-line="pickup"] {
   width: 30%;
+  font-size: var(--type-label);
 }
 
-.skeletonLines > span:nth-child(2) {
-  width: 75%;
-  height: 1.125rem;
+.skeletonLines > [data-line="facts"] {
+  width: 50%;
+  margin-top: var(--space-1);
+  font-size: var(--type-body);
 }
 
-.skeletonLines > span:nth-child(3) {
-  width: 55%;
+.skeletonLines > [data-line="meta"] {
+  width: 40%;
+  margin-top: var(--space-1);
+  font-size: var(--type-micro);
 }
 
 @keyframes shimmer {
@@ -951,21 +1000,36 @@
   min-width: 0;
 }
 
+/* A short loading page and a long loaded one get the same width where
+   scrollbars take space, so cards never slide sideways between tabs. */
+:global(html):has(.searchLayout) {
+  scrollbar-gutter: stable;
+}
+
 .searchMain {
   min-width: 0;
   container: board / inline-size;
 }
 
-/* Two cards per row once the board itself is wide enough (≥45rem, about
-   720px), so a 1024px window with the sidebar keeps one column. Each card
+/* Two cards per row once the board itself is wide enough (≥50rem, about
+   800px), so a 1024px window with the sidebar keeps one column. Each card
    takes three rows of the list grid (title, time · seats, meta) through
    subgrid, so the cards in one row line up their lines: a two-line title
    pushes its neighbour's time line down only in that row, and one-line rows
    stay tight. */
-@container board (min-width: 45rem) {
+@container board (min-width: 50rem) {
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--space-5);
+    gap: var(--space-4);
+  }
+
+  .list .card,
+  .list .skeleton {
+    padding: 1.125rem var(--space-5);
+  }
+
+  .list .skeleton {
+    grid-row: span 3;
   }
 
   .list > li,
@@ -989,7 +1053,7 @@
 /* Desktop: conditions on the left, the board on the right. */
 .searchLayout[data-sidebar="true"] {
   display: grid;
-  grid-template-columns: 17.5rem minmax(0, 1fr);
+  grid-template-columns: 18.5rem minmax(0, 1fr);
   align-items: start;
   gap: var(--space-6);
   margin-top: var(--space-4);
@@ -1002,7 +1066,9 @@
 .sidebar {
   position: sticky;
   top: calc(3.5rem + var(--space-4));
-  max-height: calc(100svh - 3.5rem - var(--space-8));
+  /* Ends at the window's bottom where the page starts (header + list
+     heading, 10.5rem), so 적용 shows without scrolling the page first. */
+  max-height: calc(100svh - 10.5rem);
   overflow-y: auto;
   border: 1.5px solid var(--posts-border);
   border-radius: var(--round-control);
@@ -1134,7 +1200,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 0 var(--space-5) var(--space-2);
+  padding: 0 var(--space-4) var(--space-2);
 }
 
 .sheetClose {
@@ -1147,7 +1213,7 @@
 }
 
 .sidebar .panelTitle {
-  padding: var(--space-4) var(--space-5) 0;
+  padding: var(--space-3) var(--space-4) 0;
 }
 
 .panelTitle {
@@ -1158,8 +1224,8 @@
 
 .panelBody {
   display: grid;
-  gap: var(--space-6); /* between groups: search, time, sort */
-  padding: var(--space-3) var(--space-5) var(--space-5);
+  gap: var(--space-4); /* between groups: places, search, time, sort */
+  padding: var(--space-2) var(--space-4) var(--space-3);
 }
 
 .panelSection {
@@ -1227,7 +1293,7 @@
   display: flex;
   flex-wrap: wrap;
   /* Rows: the chips' own 4px margins make an 8px gap between faces */
-  gap: 0 var(--space-2);
+  gap: 0 0.375rem;
 }
 
 /* Time ranges: four chips as an even 2 × 2 grid, never one left alone. */
@@ -1248,7 +1314,7 @@
   align-items: center;
   min-height: 2.25rem;
   margin: 0.25rem 0;
-  padding: 0 var(--space-3);
+  padding: 0 0.625rem;
   border: 1.5px solid var(--input-border);
   border-radius: var(--round-pill);
   background: var(--canvas);
@@ -1275,22 +1341,84 @@
   font-weight: 700;
 }
 
-.swap {
-  display: inline-flex;
-  justify-self: start;
+/* 출발지 and 도착지 stacked tight, their labels inline, with the swap
+   button beside both rows. */
+.route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--touch-target);
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2);
+  row-gap: var(--space-2);
+  align-items: center;
+}
+
+.routeField {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--touch-target);
-  padding: 0 var(--space-2);
-  border-radius: var(--round-chip);
-  color: var(--posts-primary-text);
+}
+
+.routeLabel {
+  color: var(--posts-muted);
   font-size: var(--type-label);
+  font-weight: 700;
+}
+
+/* The input the suggestion chips fill: primary label and border. */
+.routeField[data-target="true"] .routeLabel {
+  color: var(--posts-primary-text);
+}
+
+.routeField[data-target="true"] .searchInput {
+  border-color: var(--posts-primary-text);
+  box-shadow: inset 3px 0 0 var(--posts-primary-text);
+}
+
+.swap {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-pill);
+  background: var(--canvas);
+  color: var(--posts-primary-text);
+  font-size: 1.125rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .swap:hover {
   background: var(--primary-tint);
+}
+
+/* One suggestion list for whichever input is the target. */
+.suggestions {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.suggestLabel {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}
+
+.suggestLabel strong {
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+/* The hours a preset chip searches, right under the chips. */
+.rangeText {
+  color: var(--posts-primary-text);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .rangeInputs {
@@ -1306,9 +1434,16 @@
   font-weight: 600;
 }
 
-/* Radio options: 44px rows stacked with no extra space between them */
+/* Radio options: side by side, each a 44px row; wraps when narrow. */
 .sortOptions {
-  gap: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+}
+
+.sortOptions .checkRow {
+  gap: var(--space-2);
+  font-size: var(--type-label);
 }
 
 .checkRow {
@@ -1332,8 +1467,8 @@
   bottom: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5)
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4)
     calc(var(--space-3) + env(safe-area-inset-bottom));
   border-top: 1px solid var(--posts-border);
   background: var(--canvas);
@@ -1341,4 +1476,21 @@
 
 .applyButton {
   composes: base primary from "../ui/button.module.css";
+}
+
+/* Draft differs from the list: say so above the buttons. */
+.draftNote {
+  grid-column: 1 / -1;
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 600;
+}
+
+.draftNote strong {
+  margin-right: var(--space-1);
+  padding: 0 0.375rem;
+  border-radius: var(--round-pill);
+  background: var(--soft);
+  color: var(--posts-warn);
+  font-weight: 700;
 }

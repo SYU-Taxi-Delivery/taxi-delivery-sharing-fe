@@ -8,6 +8,7 @@ import {
   type PostSort,
   type TimeWindow,
 } from "./posts";
+import { dayLabel, formatDate, formatTime } from "@/lib/dateFormat";
 
 const MINUTE = 60_000;
 const SEOUL_OFFSET_MS = 9 * 3_600_000;
@@ -22,7 +23,7 @@ export const TIME_LABELS: Record<TimeWindow, string> = {
   hour: "1시간 안",
   tonight: "오늘 밤",
   morning: "내일 아침",
-  custom: "직접",
+  custom: "시간 지정",
 };
 
 /** Seoul wall clock as `YYYY-MM-DDTHH:mm` (Korea has no DST). */
@@ -157,6 +158,31 @@ export function customRangeLabel(from?: string, to?: string): string {
   return to ? `${shortTime(to)}까지` : TIME_LABELS.custom;
 }
 
+/**
+ * The window a preset time chip searches, as read at `nowMs`:
+ * "오늘 18:00 ~ 내일 03:00 (11/13 금 ~ 11/14 토)", or within one day
+ * "내일 06:00 ~ 12:00 (11/14 토)". `short` leaves out the dates. Null for
+ * no time or a custom window (its own inputs already show it).
+ */
+export function presetRangeText(
+  query: PostQuery,
+  nowMs: number,
+  short = false,
+): string | null {
+  if (!query.time || query.time === "custom") return null;
+  const { from, to } = timeRange(query, nowMs);
+  if (!from || !to) return null;
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  const date = (ms: number) => formatDate(ms).replace(/[()]/g, "");
+  const sameDay = date(start) === date(end);
+  const range = sameDay
+    ? `${dayLabel(start, nowMs)} ${formatTime(start)} ~ ${formatTime(end)}`
+    : `${dayLabel(start, nowMs)} ${formatTime(start)} ~ ${dayLabel(end, nowMs)} ${formatTime(end)}`;
+  if (short) return range.replace(/ ~ /, "~");
+  return `${range} (${sameDay ? date(start) : `${date(start)} ~ ${date(end)}`})`;
+}
+
 export type SearchChip = {
   key: string;
   label: string;
@@ -166,9 +192,13 @@ export type SearchChip = {
 
 /**
  * The active search conditions, in the panel's order, as removable chips.
- * 참여 가능만 is not one: its toggle above the list already shows it.
+ * 참여 가능만 is not one: its toggle above the list already shows it. With
+ * `nowMs`, a preset time chip also says the hours it searches.
  */
-export function searchChips(query: PostQuery): SearchChip[] {
+export function searchChips(
+  query: PostQuery,
+  nowMs: number | null = null,
+): SearchChip[] {
   const clean = cleanSearch(query);
   const chips: SearchChip[] = [];
   const text = (
@@ -194,7 +224,9 @@ export function searchChips(query: PostQuery): SearchChip[] {
       label:
         clean.time === "custom"
           ? customRangeLabel(clean.from, clean.to)
-          : TIME_LABELS[clean.time],
+          : nowMs === null
+            ? TIME_LABELS[clean.time]
+            : `${TIME_LABELS[clean.time]} · ${presetRangeText(clean, nowMs, true)}`,
       clear: { time: undefined, from: undefined, to: undefined },
     });
   if (clean.sort === "RECENT")
