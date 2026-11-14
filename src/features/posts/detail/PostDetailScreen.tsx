@@ -241,6 +241,7 @@ function DetailView({
   const report = operations.report;
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const reportNoticeRef = useRef<HTMLParagraphElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const guideRef = useRef<HTMLElement>(null);
   const mounted = useRef(true);
 
@@ -294,7 +295,7 @@ function DetailView({
   const participation = useParticipation(toSnapshot(initial), participationOps);
   const nowMs = participation.nowMs;
   const serverNow = participation.serverNow;
-  // participation.nowMs only moves at the cutoff and T; the summary's
+  // participation.nowMs moves at midnight, the cutoff and T; the summary's
   // "n분 남음" needs a slower, steady tick of its own.
   const [tick, setTick] = useState(nowMs);
   useEffect(() => {
@@ -408,7 +409,12 @@ function DetailView({
           />
         </div>
         <div className={styles.route}>
-          <h1 id="post-title" className={styles.title}>
+          <h1
+            id="post-title"
+            ref={titleRef}
+            tabIndex={-1}
+            className={styles.title}
+          >
             {taxi ? (
               <>
                 <span className={styles.stop}>
@@ -518,7 +524,7 @@ function DetailView({
           {joined && !history && (
             <ParticipationCancel
               participation={participation}
-              onFocusFallback={() => guideRef.current?.focus()}
+              onFocusFallback={() => titleRef.current?.focus()}
             />
           )}
         </section>
