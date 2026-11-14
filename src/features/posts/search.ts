@@ -20,7 +20,7 @@ export const SORT_LABELS: Record<PostSort, string> = {
 };
 
 export const TIME_LABELS: Record<TimeWindow, string> = {
-  hour: "1시간 안",
+  hour: "1시간 이내",
   tonight: "오늘 밤",
   morning: "내일 아침",
   custom: "시간 지정",
@@ -41,7 +41,7 @@ const dayAfter = (date: string) =>
 
 /**
  * The reference-time window for the server's `from`/`to` (from inclusive, to
- * exclusive), worked out at `nowMs` so "1시간 안" always means from now.
+ * exclusive), worked out at `nowMs` so "1시간 이내" always means from now.
  */
 export function timeRange(
   query: PostQuery,

@@ -290,7 +290,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       .getAllByRole("button")
       .map((chip) => chip.getAttribute("aria-label"));
     expect(labels[0]).toBe("출발 석계 조건 지우기");
-    expect(labels[1]).toMatch(/^1시간 안 · .+~.+ 조건 지우기$/);
+    expect(labels[1]).toMatch(/^1시간 이내 · .+~.+ 조건 지우기$/);
     expect(screen.getByRole("button", { name: /^필터/ })).toHaveAccessibleName(
       "필터, 적용된 조건 2개",
     );
@@ -316,7 +316,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       within(screen.getByRole("group", { name: "적용된 검색 조건" }))
         .getAllByRole("button")
         .map((chip) => chip.getAttribute("aria-label")),
-    ).toEqual([expect.stringMatching(/^1시간 안 · /)]);
+    ).toEqual([expect.stringMatching(/^1시간 이내 · /)]);
   });
 
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {
