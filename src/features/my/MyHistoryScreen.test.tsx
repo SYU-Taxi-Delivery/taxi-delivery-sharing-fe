@@ -509,7 +509,7 @@ describe("my history screen", () => {
         joinable: false,
       });
     });
-    expect(screen.getByRole("link", { name: /소통 링크/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /오픈채팅/ })).toBeVisible();
 
     await openCancel();
     await confirmCancel();
@@ -519,7 +519,7 @@ describe("my history screen", () => {
     expect(upcoming()).toHaveLength(0);
     expect(past()[0]).toHaveTextContent("참여 취소함");
     expect(
-      screen.queryByRole("link", { name: /소통 링크/ }),
+      screen.queryByRole("link", { name: /오픈채팅/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "참여 취소" }),
@@ -581,6 +581,7 @@ describe("my history screen", () => {
           joinable: false,
         });
       });
+      expect(screen.getByRole("link", { name: /오픈채팅/ })).toBeVisible();
       await openCancel();
       await confirmCancel();
 
@@ -589,7 +590,7 @@ describe("my history screen", () => {
       expect(upcoming()).toHaveLength(0);
       expect(past()[0]).toHaveTextContent(label);
       expect(
-        screen.queryByRole("link", { name: /소통 링크/ }),
+        screen.queryByRole("link", { name: /오픈채팅/ }),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "참여 취소" }),
