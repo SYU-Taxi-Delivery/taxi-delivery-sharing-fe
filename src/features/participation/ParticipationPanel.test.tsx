@@ -161,6 +161,14 @@ describe("participation panel", () => {
   });
 
   it("slow cancellation does not steal focus after the user moves to another control", async () => {
+    // Native close events arrive later than close(), after focus may move.
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+        window.setTimeout(() => this.dispatchEvent(new Event("close")), 0);
+      },
+    });
     const operations = setup();
     let completeCancellation!: () => void;
     vi.mocked(operations.cancel).mockImplementation(
@@ -184,6 +192,8 @@ describe("participation panel", () => {
     const otherControl = screen.getByRole("button", { name: "다른 화면 동작" });
     otherControl.focus();
     expect(otherControl).toHaveFocus();
+    act(() => vi.advanceTimersByTime(0));
+    expect(otherControl).toHaveFocus();
 
     await act(async () => completeCancellation());
 
@@ -192,6 +202,24 @@ describe("participation panel", () => {
     );
     expect(otherControl).toHaveFocus();
   });
+
+  it.each(["NONE", "JOINED"] as const)(
+    "%s: standalone schedule and bar change day at Seoul midnight without a request",
+    (viewerRelation) => {
+      const operations = setup({
+        ...initial,
+        viewerRelation,
+        serverTime: "2026-11-14T23:59:59.999+09:00",
+        referenceTime: "2026-11-15T08:00:00+09:00",
+      });
+      expect(screen.getAllByText(/내일 08:00 출발/).length).toBeGreaterThan(0);
+      act(() => vi.advanceTimersByTime(1));
+      expect(screen.queryByText(/내일/)).toBeNull();
+      expect(screen.getAllByText(/오늘 08:00 출발/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/오늘 07:50 이전까지/)).toBeVisible();
+      expect(operations.refresh).not.toHaveBeenCalled();
+    },
+  );
 
   it("AC-JOIN-006-09: reaching cutoff inside confirmation disables confirmation", async () => {
     const operations = setup({

@@ -19,6 +19,8 @@ export type ParticipationOperations = {
 };
 
 type Action = "join" | "cancel";
+const DAY_MS = 86_400_000;
+const SEOUL_OFFSET_MS = 9 * 3_600_000;
 
 const requestName = (action: Action) =>
   action === "join" ? "참여 신청이" : "참여 취소가";
@@ -85,9 +87,21 @@ export function useParticipation(
       referenceTime: snapshot.referenceTime,
       participationDeadline: snapshot.participationDeadline,
     });
-    const boundary = nowMs < deadline ? deadline : referenceMs;
+    // Relative-day labels must change at Seoul midnight, even when the next
+    // participation boundary is hours away. Keep using the server clock.
+    const midnight =
+      (Math.floor((nowMs + SEOUL_OFFSET_MS) / DAY_MS) + 1) * DAY_MS -
+      SEOUL_OFFSET_MS;
+    const boundary = Math.min(
+      nowMs < deadline
+        ? deadline
+        : nowMs < referenceMs
+          ? referenceMs
+          : Infinity,
+      midnight,
+    );
     const remaining = boundary - serverNow();
-    if (!Number.isFinite(remaining) || nowMs >= referenceMs) return;
+    if (!Number.isFinite(remaining)) return;
     const timer = window.setTimeout(
       () => {
         const now = serverNow();
