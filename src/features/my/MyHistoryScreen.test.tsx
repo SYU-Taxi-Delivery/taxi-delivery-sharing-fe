@@ -157,6 +157,14 @@ describe("my history screen", () => {
     expect(first).toHaveTextContent("오늘 18:00 출발");
     expect(first).toHaveTextContent("오늘 17:50까지 가능");
     expect(first).toHaveTextContent("3 / 4명 · 작성자 포함");
+    // Seats left and headcount share one secondary line, seats first, in
+    // the list's status colour (last seat: the warn tone).
+    const summary = within(first).getByTestId("seat-summary");
+    expect(summary).toHaveTextContent(/^1자리 남음현재 3 \/ 4명 · 작성자 포함/);
+    expect(within(summary).getByText("1자리 남음")).toHaveAttribute(
+      "data-last",
+      "true",
+    );
     expect(second).toHaveTextContent("모집 마감");
     expect(past()[0]).toHaveTextContent("일정 종료");
     expect(past()[1]).toHaveTextContent("참여 취소함");
@@ -183,6 +191,10 @@ describe("my history screen", () => {
     );
     const [first, second] = upcoming();
     expect(first).toHaveTextContent("정문 김밥");
+    // The schedule and place come before the seat summary.
+    const text = first.textContent ?? "";
+    expect(text.indexOf("주문 마감")).toBeLessThan(text.indexOf("자리 남음"));
+    expect(text.indexOf("학생회관")).toBeLessThan(text.indexOf("자리 남음"));
     expect(first).toHaveTextContent("오늘 18:00 주문 마감");
     expect(first).toHaveTextContent("수령 장소 · 학생회관");
     expect(second).toHaveTextContent("내일 18:00 출발");
