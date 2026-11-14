@@ -64,6 +64,7 @@ export function MyHistoryCard({
   const referenceMs = Date.parse(item.referenceTime);
   const verb = item.type === "TAXI" ? "출발" : "주문 마감";
   const cancellable = nowMs < availability.deadline;
+  const remaining = item.capacity - item.currentMemberCount;
   const detailHref = path(`/posts/${encodeURIComponent(item.id)}`);
   const link =
     item.communicationUrl &&
@@ -127,6 +128,19 @@ export function MyHistoryCard({
         )}
       </div>
 
+      {/* Secondary: what is left and who is in, one small muted line. */}
+      <p className={styles.meta} data-testid="seat-summary">
+        {available && (
+          <span className={styles.seats} data-last={remaining === 1}>
+            {remaining}자리 남음
+          </span>
+        )}
+        <span>
+          현재 {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
+        </span>
+        {item.authorName && !author && <span>작성자 {item.authorName}</span>}
+      </p>
+
       {author && (
         <p className={styles.cutoff} data-closed={!cancellable}>
           {cancellable
@@ -134,18 +148,6 @@ export function MyHistoryCard({
             : "참여자 취소 마감됨"}
         </p>
       )}
-
-      <p className={styles.meta}>
-        <span>
-          {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
-        </span>
-        {available && (
-          <span className={styles.seats}>
-            {item.capacity - item.currentMemberCount}자리 남음
-          </span>
-        )}
-        {item.authorName && !author && <span>작성자 {item.authorName}</span>}
-      </p>
 
       {/* One full-width primary action, then 참여 취소 on its own row. */}
       <div className={styles.actions}>

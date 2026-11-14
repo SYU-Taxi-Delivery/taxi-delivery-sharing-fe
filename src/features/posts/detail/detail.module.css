@@ -779,6 +779,158 @@ p.stop::before {
   animation: doo-pop var(--motion-standard) var(--curve-enter);
 }
 
+/* ───────── Loading skeleton: bones in the loaded layout's places ───────── */
+
+/* Shown at once, no fade: it stands in for what is about to appear. */
+.detail[data-detail-loading="true"] {
+  --bone: color-mix(in srgb, var(--text) 7%, var(--canvas));
+  animation: none;
+}
+
+.bone,
+.boneLine {
+  display: block;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--veil) 50%,
+      transparent 100%
+    )
+    var(--bone);
+  background-size: 200% 100%;
+  animation: bone-shimmer 1.2s linear infinite;
+}
+
+/* One text line tall at that line's size, painted only in its middle */
+.boneLine {
+  max-width: 100%;
+  height: 1lh;
+  padding-block: 0.3lh;
+  background-clip: content-box;
+}
+
+.boneLine[data-bone="title"] {
+  font-size: var(--type-title);
+  line-height: 1.3;
+  margin-left: 1.5rem; /* the route's stop dots */
+}
+
+.boneLine[data-bone="heading"] {
+  font-size: var(--type-title);
+  line-height: 1.3;
+}
+
+.boneLine[data-bone="subhead"] {
+  font-size: var(--type-subhead);
+  line-height: 1.6;
+}
+
+.boneLine[data-bone="label"] {
+  font-size: var(--type-label);
+  line-height: 1.6;
+}
+
+.boneLine[data-bone="micro"] {
+  font-size: var(--type-micro);
+  line-height: 1.6;
+}
+
+.sticker.bone {
+  border-radius: 1.125rem;
+}
+
+.avatar.bone {
+  border-radius: 50%;
+}
+
+.boneChips {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.boneChips > .bone {
+  width: 2.5rem;
+  height: 1.75rem;
+}
+
+.boneChips > .bone + .bone {
+  width: 3.5rem;
+}
+
+/* Participation panel: the same card box, heading, seats and notes. */
+.bonePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1.5px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--canvas);
+}
+
+.bonePanel > .boneLine[data-bone="heading"] {
+  margin-bottom: calc(var(--space-2) - var(--space-4));
+}
+
+.boneSeats {
+  display: block;
+  width: 6.5rem;
+  height: 1.625rem;
+  margin-bottom: calc(var(--space-2) - var(--space-4));
+  border-radius: 0.5rem;
+  background: var(--bone);
+}
+
+.boneLines,
+.boneHint {
+  display: grid;
+}
+
+.boneHint {
+  display: none;
+}
+
+.boneButton {
+  height: 3rem;
+  border-radius: var(--round-control);
+}
+
+@media (max-width: 47.99rem) {
+  /* Phone: the action is the fixed bottom bar (hint left, button right) */
+  .boneAction {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto);
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .boneHint {
+    display: grid;
+  }
+
+  .boneButton {
+    height: var(--action-button-height);
+  }
+}
+
+@keyframes bone-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone,
+  .boneLine {
+    animation: none;
+    background-image: none;
+  }
+}
+
 .stateTitle {
   font-size: var(--type-heading);
   font-weight: 700;

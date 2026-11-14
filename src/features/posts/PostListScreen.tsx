@@ -25,7 +25,7 @@ import {
   type PostQuery,
 } from "./posts";
 import { SearchPanel, SearchSheet } from "./SearchPanel";
-import { newPostHref, searchChips, SORT_LABELS } from "./search";
+import { newPostHref, noResultsText, searchChips, SORT_LABELS } from "./search";
 import { postListOperations } from "./postsApi";
 import { rememberListOrigin } from "./listOrigin";
 import { usePostList } from "./usePostList";
@@ -387,8 +387,12 @@ function PostList({
             </div>
           ) : searching ? (
             <div className={styles.state}>
-              <SpotArt />
-              <p role="status">조건에 맞는 모집글이 없어요.</p>
+              <NoResults
+                lines={[
+                  noResultsText(query),
+                  "조건을 줄이거나 직접 모집해 보세요.",
+                ]}
+              />
               <div className={styles.stateActions}>
                 <button
                   type="button"
@@ -412,11 +416,9 @@ function PostList({
             </div>
           ) : query.joinableOnly ? (
             <div className={styles.state}>
-              <SpotArt />
-              <p role="status">
-                지금 참여할 수 있는{" "}
-                {query.type === "ALL" ? "" : `${active.label} `}모집글이 없어요.
-              </p>
+              <NoResults
+                lines={[noResultsText(query), "마감된 모집도 볼 수 있어요."]}
+              />
               <button
                 type="button"
                 className={styles.secondary}
@@ -427,8 +429,12 @@ function PostList({
             </div>
           ) : filtered && query.type !== "ALL" ? (
             <div className={styles.state}>
-              <SpotArt />
-              <p role="status">조건에 맞는 모집글이 없어요.</p>
+              <NoResults
+                lines={[
+                  `아직 ${active.label} 모집이 없어요.`,
+                  "다른 유형의 모집도 둘러보세요.",
+                ]}
+              />
               <Link href={href({ type: "ALL" })} className={styles.secondary}>
                 전체 모집글 보기
               </Link>
@@ -480,6 +486,26 @@ function PostList({
         </SearchSheet>
       )}
     </div>
+  );
+}
+
+/**
+ * No results: 두유콩 standing with a neutral face, the title, and two muted
+ * lines (what was looked for, what to try). One status message.
+ */
+function NoResults({ lines }: { lines: [string, string] }) {
+  return (
+    <>
+      <BeanArt className={styles.emptyBean} face="neutral" />
+      <div role="status" className={styles.emptyText}>
+        <p className={styles.emptyTitle}>조건에 맞는 모집이 없어요</p>
+        <p className={styles.emptyDescription}>
+          {lines[0]}
+          <br />
+          {lines[1]}
+        </p>
+      </div>
+    </>
   );
 }
 

@@ -233,16 +233,28 @@
   font-size: var(--type-label);
 }
 
-/* The headcount and what is left sit side by side, no joining dot. */
+/* Secondary line under the place: seats left, then the headcount, in the
+   smaller muted size so the schedule and place read first. */
 p.meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   column-gap: var(--space-3);
+  margin-top: calc(var(--space-1) * -1);
+  font-size: var(--type-micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Same status colours as the list: green while seats are left, the warm
+   orange for the last one. */
 .seats {
-  color: var(--posts-danger);
+  color: var(--posts-primary-text);
   font-weight: 700;
+}
+
+.seats[data-last="true"] {
+  color: var(--posts-warn);
 }
 
 /* Card actions: fill the card width in equal parts, 12px apart

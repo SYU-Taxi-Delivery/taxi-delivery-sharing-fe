@@ -70,6 +70,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Opens the "<end> 시간" picker and picks the hour, then the minute. */
+function pickTime(
+  scope: ReturnType<typeof within>,
+  end: "부터" | "까지",
+  hour: number,
+  minute: number,
+) {
+  fireEvent.click(scope.getByLabelText(`${end} 시간`));
+  const picker = scope.getByRole("dialog", { name: `${end} 시간 선택` });
+  const pad = (value: number) => String(value).padStart(2, "0");
+  fireEvent.click(
+    within(picker).getByRole("option", { name: `${pad(hour)}시` }),
+  );
+  fireEvent.click(
+    within(picker).getByRole("option", { name: `${pad(minute)}분` }),
+  );
+}
+
 let rerenderWith: (query: PostQuery) => Promise<void> = async () => {};
 
 async function setup(
@@ -140,7 +158,23 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     );
     expect(sheet.getByLabelText("출발지")).toHaveValue("석계");
     expect(sheet.getByLabelText("도착지")).toHaveValue("삼육대학교 정문");
-    fireEvent.click(sheet.getByRole("button", { name: "학교행" }));
+    // 방향 is its own radio group, apart from the place suggestions.
+    const direction = sheet.getByRole("radiogroup", { name: "방향" });
+    expect(
+      within(direction)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual(["전체", "학교행", "학교발"]);
+    expect(
+      within(direction).getByRole("radio", { name: "전체" }),
+    ).toBeChecked();
+    expect(
+      within(suggestions()).queryByRole("button", { name: "학교행" }),
+    ).toBeNull();
+    fireEvent.click(within(direction).getByRole("radio", { name: "학교행" }));
+    expect(
+      within(direction).getByRole("radio", { name: "학교행" }),
+    ).toBeChecked();
     fireEvent.click(sheet.getByRole("button", { name: "오늘 밤" }));
     fireEvent.click(sheet.getByRole("radio", { name: "최근 등록 순" }));
 
@@ -241,13 +275,10 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.getByLabelText("수령 장소")).toHaveValue("학생회관");
     expect(sheet.queryByRole("button", { name: "직접" })).toBeNull();
 
+    vi.setSystemTime(new Date("2026-11-14T12:00:00+09:00"));
     fireEvent.click(sheet.getByRole("button", { name: "시간 지정" }));
-    fireEvent.change(sheet.getByLabelText("부터"), {
-      target: { value: "2026-11-14T21:00" },
-    });
-    fireEvent.change(sheet.getByLabelText("까지"), {
-      target: { value: "2026-11-14T20:00" },
-    });
+    pickTime(sheet, "부터", 21, 0);
+    pickTime(sheet, "까지", 20, 0);
     expect(sheet.getByRole("alert")).toHaveTextContent(
       "끝나는 시각을 시작 시각보다 뒤로",
     );
@@ -256,7 +287,69 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
 
     fireEvent.click(sheet.getByRole("button", { name: "초기화" }));
     expect(sheet.getByLabelText("음식점")).toHaveValue("");
-    expect(sheet.queryByLabelText("부터")).not.toBeInTheDocument();
+    expect(sheet.queryByLabelText("부터 날짜")).not.toBeInTheDocument();
+  });
+
+  it("시간 지정은 한국어 날짜·시간 선택기로 고르고, 자정을 넘으면 오늘·내일로 보여 준다", async () => {
+    vi.setSystemTime(new Date("2026-11-14T12:00:00+09:00"));
+    await setup(taxiQuery);
+    fireEvent.click(screen.getByRole("button", { name: "필터" }));
+    const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    fireEvent.click(sheet.getByRole("button", { name: "시간 지정" }));
+    // No native date/time inputs (they show the browser's own English UI).
+    expect(
+      screen
+        .getByRole("dialog", { name: "필터" })
+        .querySelector(
+          'input[type="date"], input[type="time"], input[type="datetime-local"]',
+        ),
+    ).toBeNull();
+
+    // 부터: a date from the calendar (today), then a time from the lists.
+    const fromDate = sheet.getByLabelText("부터 날짜");
+    fireEvent.click(fromDate);
+    const calendar = sheet.getByRole("dialog", { name: "부터 날짜 선택" });
+    fireEvent.click(
+      within(calendar).getByRole("button", { name: /11월 14일 토요일/ }),
+    );
+    expect(fromDate).toHaveFocus();
+    expect(fromDate).toHaveTextContent("11/14 (토)");
+    // Picking only the date starts the day at 00:00.
+    expect(sheet.getByLabelText("부터 시간")).toHaveTextContent("00:00");
+    pickTime(sheet, "부터", 21, 0);
+    expect(sheet.getByLabelText("부터 시간")).toHaveFocus();
+
+    // 까지: the next day at 02:00 crosses midnight.
+    fireEvent.click(sheet.getByLabelText("까지 날짜"));
+    fireEvent.click(
+      within(sheet.getByRole("dialog", { name: "까지 날짜 선택" })).getByRole(
+        "button",
+        { name: /11월 15일 일요일/ },
+      ),
+    );
+    pickTime(sheet, "까지", 2, 0);
+    expect(sheet.getByLabelText("까지 날짜")).toHaveTextContent("11/15 (일)");
+    expect(sheet.getByTestId("time-range")).toHaveTextContent(
+      "오늘 21:00 ~ 내일 02:00",
+    );
+    expect(sheet.queryByRole("alert")).toBeNull();
+
+    // Escape closes an open picker and returns focus to its field.
+    const toTime = sheet.getByLabelText("까지 시간");
+    fireEvent.click(toTime);
+    fireEvent.keyDown(sheet.getByRole("dialog", { name: "까지 시간 선택" }), {
+      key: "Escape",
+    });
+    expect(
+      sheet.queryByRole("dialog", { name: "까지 시간 선택" }),
+    ).not.toBeInTheDocument();
+    expect(toTime).toHaveFocus();
+
+    fireEvent.click(sheet.getByRole("button", { name: /조건 적용하기/ }));
+    expect(router.push).toHaveBeenCalledWith(
+      "/posts?type=TAXI&time=custom&from=2026-11-14T21%3A00&to=2026-11-15T02%3A00",
+      { scroll: false },
+    );
   });
 
   it("오늘 밤은 자정을 넘는 실제 검색 시각을 날짜와 함께 보여 준다", async () => {
@@ -290,7 +383,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       .getAllByRole("button")
       .map((chip) => chip.getAttribute("aria-label"));
     expect(labels[0]).toBe("출발 석계 조건 지우기");
-    expect(labels[1]).toMatch(/^1시간 안 · .+~.+ 조건 지우기$/);
+    expect(labels[1]).toMatch(/^1시간 이내 · .+~.+ 조건 지우기$/);
     expect(screen.getByRole("button", { name: /^필터/ })).toHaveAccessibleName(
       "필터, 적용된 조건 2개",
     );
@@ -316,7 +409,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       within(screen.getByRole("group", { name: "적용된 검색 조건" }))
         .getAllByRole("button")
         .map((chip) => chip.getAttribute("aria-label")),
-    ).toEqual([expect.stringMatching(/^1시간 안 · /)]);
+    ).toEqual([expect.stringMatching(/^1시간 이내 · /)]);
   });
 
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {
@@ -325,7 +418,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       async () => pageOf([]),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "조건에 맞는 모집글이 없어요.",
+      "조건에 맞는 모집이 없어요‘석계 출발 · 정문 도착’ 택시 모집이 아직 없어요.조건을 줄이거나 직접 모집해 보세요.",
     );
     expect(
       screen.getByRole("link", { name: "이 조건으로 모집글 쓰기" }),

@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
-import styles from "./form.module.css";
+import styles from "./pickers.module.css";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -87,6 +87,7 @@ export function TimePicker({
   step = 5,
   readOnly = false,
   invalid = false,
+  compact = false,
   describedBy,
   placeholder = "시간 선택",
   isDisabled = () => false,
@@ -100,6 +101,8 @@ export function TimePicker({
   step?: number;
   readOnly?: boolean;
   invalid?: boolean;
+  /** Search panel size: 44px trigger; dates without the year. */
+  compact?: boolean;
   describedBy?: string;
   placeholder?: string;
   isDisabled?: (time: string) => boolean;
@@ -235,6 +238,7 @@ export function TimePicker({
     <div
       ref={container}
       className={styles.datePicker}
+      data-size={compact ? "compact" : undefined}
       onKeyDown={(event) => {
         if (open && event.key === "Escape") {
           event.preventDefault();
@@ -248,7 +252,7 @@ export function TimePicker({
         id={id}
         type="button"
         data-field={name}
-        className={`${styles.input} ${styles.dateTrigger}`}
+        className={styles.dateTrigger}
         aria-haspopup="dialog"
         aria-expanded={open}
         data-invalid={invalid}

@@ -260,6 +260,7 @@ export const BEAN = {
 export const BEAN_PLACE = "translate(-12 -29.4)";
 
 export type BeanLook = "ivory" | "green";
+export type BeanFace = "dot" | "happy" | "neutral";
 /** stand (arms down), wave (one arm up), cheer (both up), run, sit. */
 export type BeanPose = "stand" | "wave" | "cheer" | "run" | "sit";
 
@@ -302,7 +303,8 @@ const BEAN_LEGS: Record<BeanPose, [string, string]> = {
  * 두유콩 with its feet at the origin. `detail`: "face" for small scenes,
  * "full" adds arms, feet and a tiny green backpack (motion, large scenes).
  * `pose` changes only arms and feet; `face` "happy" closes the eyes into
- * arcs and opens the smile.
+ * arcs and opens the smile, "neutral" keeps the dot eyes over a short flat
+ * mouth (nothing found, no fuss).
  */
 export function Bean({
   look = "ivory",
@@ -316,7 +318,7 @@ export function Bean({
   detail?: "face" | "full";
   wave?: boolean;
   pose?: BeanPose;
-  face?: "dot" | "happy";
+  face?: BeanFace;
   bag?: boolean;
 }) {
   const fill = look === "green" ? GREEN_SOFT : IVORY;
@@ -372,7 +374,11 @@ export function Bean({
           <circle cx={13.6} cy={11.8} r={1.15} fill={INK} />
           <circle cx={18.4} cy={11.8} r={1.15} fill={INK} />
           <path
-            d="M14.6 14.8Q16 16.1 17.4 14.8"
+            d={
+              face === "neutral"
+                ? "M14.7 15.3H17.3"
+                : "M14.6 14.8Q16 16.1 17.4 14.8"
+            }
             fill="none"
             stroke={INK}
             strokeWidth={1.3}
@@ -390,11 +396,13 @@ export function BeanArt({
   look = "ivory",
   detail = "full",
   wave = false,
+  face,
   className,
 }: {
   look?: BeanLook;
   detail?: "face" | "full";
   wave?: boolean;
+  face?: BeanFace;
   className?: string;
 }) {
   return (
@@ -407,7 +415,7 @@ export function BeanArt({
       focusable="false"
     >
       <g transform="translate(12 29.4)">
-        <Bean look={look} detail={detail} wave={wave} />
+        <Bean look={look} detail={detail} wave={wave} face={face} />
       </g>
     </svg>
   );

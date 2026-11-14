@@ -148,13 +148,7 @@ function DetailLoader({
   };
 
   const current = loaded?.key === attempt ? loaded : null;
-  if (!current) {
-    return (
-      <p role="status" className={styles.state}>
-        모집 정보를 불러오고 있어요.
-      </p>
-    );
-  }
+  if (!current) return <DetailSkeleton />;
   if (current.error === "forbidden") return <AccessDenied />;
   if (current.error === "notFound") {
     return (
@@ -217,6 +211,70 @@ function DetailLoader({
       notice={notice}
       onReload={reload}
     />
+  );
+}
+
+/*
+ * Loading: grey bones where the loaded detail puts its sticker and chips,
+ * route title, the two schedule facts and the byline, with the participation
+ * panel in its column (desktop) or under the facts with its bottom bar
+ * (phone). Same classes as the real layout, so loading → loaded barely moves.
+ */
+function DetailSkeleton() {
+  const line = (kind: string, width: string) => (
+    <span className={styles.boneLine} data-bone={kind} style={{ width }} />
+  );
+  return (
+    <div className={styles.detail} data-detail-loading="true" aria-busy="true">
+      <p role="status" className={styles.srOnly}>
+        모집 정보를 불러오고 있어요.
+      </p>
+      <div className={styles.top} aria-hidden="true">
+        <div className={styles.topRow}>
+          <span className={`${styles.sticker} ${styles.bone}`} />
+          <span className={styles.boneChips}>
+            <span className={styles.bone} />
+            <span className={styles.bone} />
+          </span>
+        </div>
+        <div className={styles.route}>
+          <div className={styles.title}>
+            {line("title", "min(16rem, 70%)")}
+            {line("title", "min(19rem, 80%)")}
+          </div>
+        </div>
+        <div className={styles.facts}>
+          {["4rem", "7rem"].map((width) => (
+            <div key={width} className={styles.fact}>
+              {line("micro", width === "4rem" ? "2rem" : "5.5rem")}
+              {line("subhead", "6.5rem")}
+              {line("label", width)}
+            </div>
+          ))}
+        </div>
+        <p className={styles.byline}>
+          <span className={`${styles.avatar} ${styles.bone}`} />
+          {line("label", "11rem")}
+        </p>
+      </div>
+      <div className={styles.decision} aria-hidden="true">
+        <div className={styles.bonePanel}>
+          {line("heading", "9rem")}
+          <span className={styles.boneSeats} />
+          <span className={styles.boneLines}>
+            {line("label", "10rem")}
+            {line("label", "12rem")}
+          </span>
+          <div className={styles.boneAction} data-bottom-action="true">
+            <span className={styles.boneHint}>
+              {line("label", "4.5rem")}
+              {line("micro", "7rem")}
+            </span>
+            <span className={`${styles.boneButton} ${styles.bone}`} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
