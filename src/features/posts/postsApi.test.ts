@@ -64,15 +64,93 @@ describe("GET /api/posts 연동", () => {
     [{ type: "TAXI", joinableOnly: false }, "page=0&size=20&type=TAXI"],
     [
       { type: "DELIVERY", joinableOnly: true },
-      "page=0&size=20&type=DELIVERY&status=OPEN",
+      "page=0&size=20&type=DELIVERY&joinable=true&status=OPEN",
     ],
-    [{ type: "ALL", joinableOnly: true }, "page=0&size=20&status=OPEN"],
+    [
+      { type: "ALL", joinableOnly: true },
+      "page=0&size=20&joinable=true&status=OPEN",
+    ],
   ] as const)("필터 %j는 ?%s로 요청한다", async (filter, query) => {
     const { calls } = fakeBackend({
       [`GET /api/posts?${query}`]: () => page([]),
     });
     await postListOperations.list({ ...filter, page: 0 });
     expect(calls.at(-1)?.path).toBe(`/api/posts?${query}`);
+  });
+
+  it("작성자 표시 이름과 서버 공개 모집 상태를 카드에 쓴다", async () => {
+    fakeBackend({
+      "GET /api/posts?page=0&size=20": () =>
+        page([
+          {
+            ...taxiItem,
+            author: { displayName: "박지민" },
+            recruitmentStatus: "APPLICATION_CLOSED",
+            joinable: false,
+          },
+          {
+            ...deliveryItem,
+            currentMemberCount: 10,
+            remainingSeats: 0,
+            postStatus: "FULL",
+            recruitmentStatus: "FULL",
+          },
+        ]),
+    });
+    const [taxi, delivery] = toPostPage(
+      await postListOperations.list({
+        type: "ALL",
+        joinableOnly: false,
+        page: 0,
+      }),
+    ).content;
+    expect(taxi).toMatchObject({
+      authorName: "박지민",
+      recruitmentStatus: "APPLICATION_CLOSED",
+    });
+    expect(taxi).not.toHaveProperty("author");
+    expect(postStatusLabel(taxi)).toEqual({
+      label: "참여 마감",
+      reason: "출발 10분 전 마감",
+      available: false,
+    });
+    expect(postStatusLabel(delivery).label).toBe("정원 마감");
+  });
+
+  it("검색 조건을 서버 이름(q·장소·direction·from/to·sort)으로 보낸다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-13T22:47:30+09:00"));
+    const { calls } = fakeBackend({});
+    await postListOperations
+      .list({
+        type: "TAXI",
+        joinableOnly: true,
+        page: 0,
+        q: "역",
+        departure: "석계",
+        destination: "삼육대",
+        restaurant: "무시됨",
+        direction: "TO_SCHOOL",
+        time: "hour",
+        sort: "RECENT",
+      })
+      .catch(() => {});
+    vi.useRealTimers();
+    const params = new URL(`http://x${calls.at(-1)!.path}`).searchParams;
+    expect(Object.fromEntries(params)).toEqual({
+      page: "0",
+      size: "20",
+      type: "TAXI",
+      joinable: "true",
+      status: "OPEN",
+      q: "역",
+      departure: "석계",
+      destination: "삼육대",
+      direction: "TO_SCHOOL",
+      from: "2026-11-13T22:47:00+09:00",
+      to: "2026-11-13T23:47:00+09:00",
+      sort: "RECENT",
+    });
   });
 
   it("401은 로그인 만료 처리를 위해 그대로 전달한다", async () => {

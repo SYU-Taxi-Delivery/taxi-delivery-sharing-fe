@@ -5,6 +5,9 @@ import {
   getParticipationAvailability,
   hideUnavailableDetails,
   participationDeadlineMs,
+  ParticipationRejected,
+  REJECTION_MESSAGES,
+  withLatestState,
   type ParticipationSnapshot,
 } from "./participation";
 
@@ -24,7 +27,12 @@ type Feedback = {
   message: string;
   reason?: string | null;
 } | null;
-type Outcome = { action: Action; confirmed: boolean };
+type Outcome = {
+  action: Action;
+  confirmed: boolean;
+  /** The server's own reason for refusing, shown instead of a generic line. */
+  rejected?: string;
+};
 /** Set only after the join/cancel request itself succeeded; id changes per success. */
 export type ParticipationMotion = { action: Action; id: number } | null;
 
@@ -141,9 +149,11 @@ export function useParticipation(
               ? outcome.action === "join"
                 ? "현재 이 모집에 참여 중이에요. 최신 참여 상태를 확인했어요."
                 : "현재 내 참여가 취소된 상태예요. 최신 참여 상태를 확인했어요."
-              : reason
-                ? `${requestName(outcome.action)} 처리되지 않았어요. 최신 상태를 확인했어요.`
-                : "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요.",
+              : outcome.rejected
+                ? `${outcome.rejected} ${requestName(outcome.action)} 처리되지 않았어요.`
+                : reason
+                  ? `${requestName(outcome.action)} 처리되지 않았어요. 최신 상태를 확인했어요.`
+                  : "요청 완료를 확인하지 못했어요. 최신 상태를 확인한 후 다시 시도해 주세요.",
           });
         } else {
           setFeedback(null);
@@ -230,13 +240,37 @@ export function useParticipation(
       setFeedback(null);
       setMotion(null);
       let confirmed = false;
+      let rejected: ParticipationRejected | null = null;
       try {
         await operationsRef.current[action]();
         confirmed = true;
-      } catch {
-        // A lost or malformed response does not prove that the write failed.
+      } catch (error) {
+        // A lost or malformed response does not prove that the write failed;
+        // only a refusal with a known reason does.
+        if (error instanceof ParticipationRejected) rejected = error;
       }
       if (!mounted.current || sequence.current !== requestId) return;
+      const reason = rejected && REJECTION_MESSAGES[rejected.code];
+      if (rejected?.latest && reason) {
+        // The refusal carries the post's latest state: show it right away
+        // instead of asking the server again.
+        const now = serverNow();
+        const latest = hideUnavailableDetails(
+          withLatestState(snapshotRef.current, rejected.latest),
+          now,
+        );
+        snapshotRef.current = latest;
+        setSnapshot(latest);
+        setNowMs(now);
+        setFeedback({
+          tone: "error",
+          message: `${reason} ${requestName(action)} 처리되지 않았어요.`,
+          reason: getParticipationAvailability(latest, now).reason,
+        });
+        locked.current = false;
+        setBusy(false);
+        return;
+      }
       // The celebration never waits on, or delays, the refresh below.
       if (confirmed) setMotion({ action, id: requestId });
       if (confirmed && action === "cancel") {
@@ -247,7 +281,11 @@ export function useParticipation(
         snapshotRef.current = cancelled;
         setSnapshot(cancelled);
       }
-      await readLatest(requestId, { action, confirmed });
+      await readLatest(requestId, {
+        action,
+        confirmed,
+        ...(reason ? { rejected: reason } : {}),
+      });
     },
     [readLatest, serverNow],
   );

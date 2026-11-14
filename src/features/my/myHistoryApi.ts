@@ -1,6 +1,8 @@
+import { ApiError } from "@/lib/api";
 import {
   InvalidBackendResponse,
   backendGet,
+  errorCode,
   serverTimeNow,
 } from "@/lib/backend";
 import { PostDetailError } from "@/features/posts/detail/postDetail";
@@ -22,19 +24,69 @@ export class MyHistoryNotConnectedError extends Error {
 /** Newest 50 records; the screen has no paging yet. */
 const HISTORY_SIZE = 50;
 
+type HistoryPost = Record<string, unknown> & {
+  postId?: unknown;
+  isRemoved?: unknown;
+};
 type HistoryItem = {
   participationStatus?: unknown;
-  post?: { postId?: unknown; isRemoved?: unknown };
+  post?: HistoryPost;
 };
 
 /**
- * Participated tab: GET /api/users/me/participations. Its post summary has no
- * places, counts or joinable, so each post's detail is read as well. The
- * created tab has no backend API yet.
+ * Newer servers send the whole public post in the history (places, counts,
+ * author, recruitmentStatus). joinable is not part of it; it is exactly
+ * RECRUITING ("OPEN, seats left, before the cutoff").
+ */
+function fromHistoryPost(post: HistoryPost, relation: unknown) {
+  const summary = fromBackendSummary(post) as Record<string, unknown>;
+  return {
+    ...summary,
+    joinable:
+      typeof post.joinable === "boolean"
+        ? post.joinable
+        : post.recruitmentStatus === "RECRUITING",
+    relation,
+  };
+}
+
+const hasFullPost = (post: HistoryPost) =>
+  typeof post.type === "string" && typeof post.recruitmentStatus === "string";
+
+/** 404 without POST_NOT_FOUND / 405: this server has no such endpoint yet. */
+const missingEndpoint = (error: unknown) =>
+  error instanceof ApiError &&
+  (error.status === 405 ||
+    (error.status === 404 && errorCode(error) !== "POST_NOT_FOUND"));
+
+/** 작성한 글: GET /api/users/me/posts (list items + my link while active). */
+async function listCreated() {
+  try {
+    const { data, evaluatedAt } = await backendGet<{ items?: unknown }>(
+      `/api/users/me/posts?page=0&size=${HISTORY_SIZE}`,
+    );
+    if (!Array.isArray(data?.items)) throw new InvalidBackendResponse();
+    return {
+      content: data.items.map((item) => ({
+        ...(fromBackendSummary(item) as object),
+        relation: "AUTHOR",
+      })),
+      serverTime: evaluatedAt,
+    };
+  } catch (error) {
+    if (missingEndpoint(error)) throw new MyHistoryNotConnectedError();
+    throw error;
+  }
+}
+
+/**
+ * Participated tab: GET /api/users/me/participations. Newer servers include
+ * the post's public fields; for older ones, whose post summary has no places,
+ * counts or joinable, each post's detail is read as well.
  */
 export const myHistoryOperations: MyHistoryOperations = {
   list: async (tab) => {
-    if (tab === "created") throw new MyHistoryNotConnectedError();
+    if (tab === "created") return listCreated();
     const { data, evaluatedAt } = await backendGet<{ items?: unknown }>(
       `/api/users/me/participations?page=0&size=${HISTORY_SIZE}`,
     );
@@ -48,6 +100,8 @@ export const myHistoryOperations: MyHistoryOperations = {
           return { id, status: "REMOVED", relation };
         }
         if (typeof id !== "string") throw new InvalidBackendResponse();
+        if (hasFullPost(item.post!))
+          return fromHistoryPost(item.post!, relation);
         try {
           const { detail, evaluatedAt: detailTime } =
             await loadBackendDetail(id);

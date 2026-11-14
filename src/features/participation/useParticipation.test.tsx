@@ -1,6 +1,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ParticipationSnapshot } from "./participation";
+import {
+  ParticipationRejected,
+  type ParticipationSnapshot,
+} from "./participation";
 import {
   useParticipation,
   type ParticipationOperations,
@@ -471,5 +474,79 @@ describe("server clock", () => {
     expect(result.current.needsRefresh).toBe(true);
     await act(() => result.current.join());
     expect(operations.join).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe("409 refusals with the latest public state", () => {
+  it("방금 정원이 찼으면 다시 조회하지 않고 인원·상태를 바로 바꾼다", async () => {
+    const { result, operations } = setup({ ...initial, currentMemberCount: 3 });
+    vi.mocked(operations.join).mockRejectedValue(
+      new ParticipationRejected("POST_FULL", {
+        status: "FULL",
+        recruitmentStatus: "FULL",
+        currentMemberCount: 4,
+        capacity: 4,
+        joinable: false,
+      }),
+    );
+    await act(async () => {
+      await result.current.join();
+    });
+    expect(operations.refresh).not.toHaveBeenCalled();
+    expect(result.current.snapshot).toMatchObject({
+      status: "FULL",
+      recruitmentStatus: "FULL",
+      currentMemberCount: 4,
+      viewerRelation: "NONE",
+    });
+    expect(result.current.feedback).toMatchObject({
+      tone: "error",
+      message: "방금 정원이 찼어요. 참여 신청이 처리되지 않았어요.",
+      reason: "모집 정원이 마감되었습니다.",
+    });
+    expect(result.current.busy).toBe(false);
+    expect(result.current.availability.action).toBeNull();
+  });
+
+  it.each([
+    ["CANCEL_TIME_CLOSED", "신청 기한이 지났어요."],
+    ["POST_CANCELLED", "모집이 취소됐어요."],
+    ["POST_FINISHED", "일정이 끝났어요."],
+  ])("취소 거절 %s도 이유를 보여 준다", async (code, message) => {
+    const { result, operations } = setup({
+      ...initial,
+      viewerRelation: "JOINED",
+      currentMemberCount: 2,
+    });
+    vi.mocked(operations.cancel).mockRejectedValue(
+      new ParticipationRejected(code, { currentMemberCount: 2 }),
+    );
+    await act(async () => {
+      await result.current.cancel();
+    });
+    expect(result.current.feedback?.message).toBe(
+      `${message} 참여 취소가 처리되지 않았어요.`,
+    );
+    expect(operations.refresh).not.toHaveBeenCalled();
+  });
+
+  it("최신 상태가 없으면 다시 조회하되 서버의 이유를 그대로 쓴다", async () => {
+    const { result, operations } = setup();
+    vi.mocked(operations.join).mockRejectedValue(
+      new ParticipationRejected("POST_CLOSED"),
+    );
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...initial,
+      status: "CLOSED",
+      joinable: false,
+    });
+    await act(async () => {
+      await result.current.join();
+    });
+    expect(operations.refresh).toHaveBeenCalledTimes(1);
+    expect(result.current.snapshot.status).toBe("CLOSED");
+    expect(result.current.feedback?.message).toBe(
+      "작성자가 모집을 마감했어요. 참여 신청이 처리되지 않았어요.",
+    );
   });
 });

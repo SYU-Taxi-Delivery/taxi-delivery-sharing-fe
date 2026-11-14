@@ -1,4 +1,9 @@
-import { cutoffMinutes } from "@/features/participation/participation";
+import {
+  cutoffMinutes,
+  recruitmentStatusAt,
+  toRecruitmentStatus,
+  type RecruitmentStatus,
+} from "@/features/participation/participation";
 import { formatDate } from "@/lib/dateFormat";
 
 export type PostType = "TAXI" | "DELIVERY";
@@ -17,6 +22,8 @@ type PostBase = {
   joinable: boolean;
   /** Server join/cancel cutoff, ISO with offset. */
   participationDeadline?: string;
+  /** Server public status; preferred over the local derivation when present. */
+  recruitmentStatus?: RecruitmentStatus;
   authorName?: string;
 };
 
@@ -40,7 +47,34 @@ export type PostPage = {
 
 export type PostFilter = "ALL" | PostType;
 
-export type PostQuery = {
+export type Direction = "TO_SCHOOL" | "FROM_SCHOOL";
+/** Time window chips; `custom` uses `from`/`to`. */
+export type TimeWindow = "hour" | "tonight" | "morning" | "custom";
+export type PostSort = "TIME" | "RECENT";
+
+/**
+ * Search conditions (GET /api/posts). All optional; an empty or missing value
+ * means "no condition". Taxi fields only apply to TAXI, delivery fields only
+ * to DELIVERY.
+ */
+export type PostSearch = {
+  /** Any of places or title. */
+  q?: string;
+  departure?: string;
+  destination?: string;
+  restaurant?: string;
+  pickup?: string;
+  direction?: Direction;
+  time?: TimeWindow;
+  /** Custom window in Seoul local time, `YYYY-MM-DDTHH:mm`; from inclusive. */
+  from?: string;
+  /** Custom window end, exclusive. */
+  to?: string;
+  /** TIME (default) or RECENT. */
+  sort?: PostSort;
+};
+
+export type PostQuery = PostSearch & {
   type: PostFilter;
   joinableOnly: boolean;
   /** 0-based page index sent to the API. */
@@ -125,6 +159,9 @@ function toPostSummary(value: unknown): PostSummary {
     ...(instant(raw.participationDeadline)
       ? { participationDeadline: instant(raw.participationDeadline)! }
       : {}),
+    ...(toRecruitmentStatus(raw.recruitmentStatus)
+      ? { recruitmentStatus: toRecruitmentStatus(raw.recruitmentStatus) }
+      : {}),
     ...(text(raw.authorName) ? { authorName: text(raw.authorName)! } : {}),
   };
   if (type === "TAXI") {
@@ -177,53 +214,188 @@ export const DEFAULT_POST_QUERY: PostQuery = {
   page: 0,
 };
 
-/** True when type or the joinable filter differ from the default view. */
-export function isFilteredQuery(query: PostQuery): boolean {
+export const SEARCH_TEXT_MAX = 100;
+const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const TEXT_KEYS = [
+  "q",
+  "departure",
+  "destination",
+  "restaurant",
+  "pickup",
+] as const;
+
+/**
+ * Keeps only conditions that apply: taxi fields for TAXI, delivery fields for
+ * DELIVERY, trimmed text, a custom window only with a valid from or to, and
+ * TIME sort left out as the default.
+ */
+export function cleanSearch(query: PostQuery): PostQuery {
+  const next: PostQuery = {
+    type: query.type,
+    joinableOnly: query.joinableOnly,
+    page: query.page,
+  };
+  for (const key of TEXT_KEYS) {
+    const value = query[key]?.trim().slice(0, SEARCH_TEXT_MAX);
+    if (!value) continue;
+    if ((key === "departure" || key === "destination") && query.type !== "TAXI")
+      continue;
+    if ((key === "restaurant" || key === "pickup") && query.type !== "DELIVERY")
+      continue;
+    next[key] = value;
+  }
+  if (query.type === "TAXI" && query.direction)
+    next.direction = query.direction;
+  if (query.time && query.time !== "custom") next.time = query.time;
+  if (query.time === "custom") {
+    const from = query.from && localMinute.test(query.from) ? query.from : "";
+    const to = query.to && localMinute.test(query.to) ? query.to : "";
+    if (from || to) {
+      next.time = "custom";
+      if (from) next.from = from;
+      if (to) next.to = to;
+    }
+  }
+  if (query.sort === "RECENT") next.sort = "RECENT";
+  return next;
+}
+
+/** True when any search condition (not type, 참여 가능 or page) is set. */
+export function hasSearch(query: PostQuery): boolean {
+  const clean = cleanSearch(query);
   return (
-    query.type !== DEFAULT_POST_QUERY.type ||
-    query.joinableOnly !== DEFAULT_POST_QUERY.joinableOnly
+    TEXT_KEYS.some((key) => clean[key]) ||
+    !!clean.direction ||
+    !!clean.time ||
+    !!clean.sort
   );
 }
 
+/** True when type, the joinable filter or a search differs from the default. */
+export function isFilteredQuery(query: PostQuery): boolean {
+  return (
+    query.type !== DEFAULT_POST_QUERY.type ||
+    query.joinableOnly !== DEFAULT_POST_QUERY.joinableOnly ||
+    hasSearch(query)
+  );
+}
+
+type Params = Record<string, string | string[] | undefined>;
+
 /**
- * Reads `?type=&joinable=&page=` with a 1-based page; anything invalid falls
- * back. 참여 가능 is on by default, so only `joinable=false` turns it off.
+ * Reads `?type=&joinable=&page=` with a 1-based page plus the search
+ * conditions; anything invalid falls back. 참여 가능 is on by default, so only
+ * `joinable=false` turns it off.
  */
-export function parsePostQuery(params: {
-  type?: string | string[];
-  joinable?: string | string[];
-  page?: string | string[];
-}): PostQuery {
+export function parsePostQuery(params: Params): PostQuery {
   const first = (value?: string | string[]) =>
     Array.isArray(value) ? value[0] : value;
   const type = first(params.type);
   const page = Number(first(params.page));
-  return {
+  const direction = first(params.direction);
+  const time = first(params.time);
+  return cleanSearch({
     type: type === "TAXI" || type === "DELIVERY" ? type : "ALL",
     joinableOnly: first(params.joinable) !== "false",
     page:
       Number.isSafeInteger(page) && page >= 1 && page <= 10_000 ? page - 1 : 0,
-  };
+    q: first(params.q),
+    departure: first(params.departure),
+    destination: first(params.destination),
+    restaurant: first(params.restaurant),
+    pickup: first(params.pickup),
+    direction:
+      direction === "TO_SCHOOL" || direction === "FROM_SCHOOL"
+        ? direction
+        : undefined,
+    time:
+      time === "hour" ||
+      time === "tonight" ||
+      time === "morning" ||
+      time === "custom"
+        ? time
+        : undefined,
+    from: first(params.from),
+    to: first(params.to),
+    sort: first(params.sort) === "RECENT" ? "RECENT" : undefined,
+  });
 }
 
+/** The list URL; every condition lives in the query so it can be shared. */
 export function postQueryHref(basePath: string, query: PostQuery): string {
+  const clean = cleanSearch(query);
   const params = new URLSearchParams();
-  if (query.type !== "ALL") params.set("type", query.type);
-  if (!query.joinableOnly) params.set("joinable", "false");
-  if (query.page > 0) params.set("page", String(query.page + 1));
+  if (clean.type !== "ALL") params.set("type", clean.type);
+  if (!clean.joinableOnly) params.set("joinable", "false");
+  for (const key of TEXT_KEYS) {
+    if (clean[key]) params.set(key, clean[key]);
+  }
+  if (clean.direction) params.set("direction", clean.direction);
+  if (clean.time) params.set("time", clean.time);
+  if (clean.from) params.set("from", clean.from);
+  if (clean.to) params.set("to", clean.to);
+  if (clean.sort) params.set("sort", clean.sort);
+  if (clean.page > 0) params.set("page", String(clean.page + 1));
   const search = params.toString();
   return search ? `${basePath}?${search}` : basePath;
 }
 
+type StatusLabel = { label: string; reason: string | null; available: boolean };
+
+/** Card words for each server recruitment status. */
+function recruitmentLabel(
+  post: PostSummary,
+  status: RecruitmentStatus,
+): StatusLabel {
+  const deadline = post.type === "TAXI" ? "출발" : "주문 마감";
+  switch (status) {
+    case "RECRUITING":
+      return { label: "모집 중", reason: null, available: true };
+    case "FULL":
+      return { label: "정원 마감", reason: "정원 마감", available: false };
+    case "CLOSED":
+      return {
+        label: "모집 마감",
+        reason: "작성자 모집 마감",
+        available: false,
+      };
+    case "APPLICATION_CLOSED":
+      return {
+        label: "참여 마감",
+        reason: `${deadline} ${cutoffMinutes(post)}분 전 마감`,
+        available: false,
+      };
+    case "CANCELLED":
+      return {
+        label: "모집 취소",
+        reason: "작성자 모집 취소",
+        available: false,
+      };
+    case "FINISHED":
+      return {
+        label: "모집 완료",
+        reason: `${deadline} 시간 경과`,
+        available: false,
+      };
+    case "REMOVED":
+      return { label: "삭제된 모집", reason: "삭제된 모집", available: false };
+  }
+}
+
 /**
- * Text label for the card status. OPEN with joinable=false is shown as
+ * Text label for the card status. The server's recruitmentStatus wins (moved
+ * on by `nowMs` when given); without it, OPEN with joinable=false is shown as
  * "참여 마감" without inventing a new status (AC-DISC-003-04).
  */
-export function postStatusLabel(post: PostSummary): {
-  label: string;
-  reason: string | null;
-  available: boolean;
-} {
+export function postStatusLabel(
+  post: PostSummary,
+  nowMs?: number,
+): StatusLabel {
+  const server =
+    nowMs === undefined
+      ? post.recruitmentStatus
+      : recruitmentStatusAt(post, nowMs);
+  if (server) return recruitmentLabel(post, server);
   const deadline = post.type === "TAXI" ? "출발" : "주문 마감";
   switch (post.status) {
     case "OPEN":

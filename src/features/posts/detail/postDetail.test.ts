@@ -12,6 +12,7 @@ import {
   visibleDetails,
   type PostDetail,
 } from "./postDetail";
+import { postFixture } from "@/test/fixtures";
 
 const T = Date.parse("2026-10-05T18:00:00+09:00");
 const at = (time: string) => Date.parse(`2026-10-05T${time}+09:00`);
@@ -246,5 +247,53 @@ describe("신고", () => {
     expect(reportDetailError("😀".repeat(500))).toBeUndefined();
     expect(reportDetailError("😀".repeat(501))).toContain("500자 이하");
     expect(reportDetailError(`  ${"a".repeat(500)}  `)).toBeUndefined();
+  });
+});
+
+describe("recruitmentStatus", () => {
+  const base = postFixture({
+    referenceTime: "2026-10-05T18:00:00+09:00",
+    participationDeadline: "2026-10-05T17:50:00+09:00",
+  });
+  const at = (time: string) => Date.parse(`2026-10-05T${time}:00+09:00`);
+
+  it.each([
+    ["RECRUITING", "모집 중"],
+    ["FULL", "정원 마감"],
+    ["CLOSED", "작성자 마감"],
+    ["APPLICATION_CLOSED", "신청 마감"],
+    ["CANCELLED", "모집 취소"],
+    ["FINISHED", "일정 종료"],
+  ] as const)("서버 값 %s를 '%s'로 보여 준다", (value, label) => {
+    expect(
+      detailStatus({ ...base, recruitmentStatus: value }, at("17:30")).label,
+    ).toBe(label);
+  });
+
+  it("서버 값이 상태 필드와 달라도 서버 값이 이긴다", () => {
+    // OPEN + seats left would locally read 모집 중.
+    expect(
+      detailStatus({ ...base, recruitmentStatus: "CLOSED" }, at("17:30")).label,
+    ).toBe("작성자 마감");
+  });
+
+  it("받은 뒤 시간이 지나면 신청 마감, 일정 종료로 넘어간다", () => {
+    const post = { ...base, recruitmentStatus: "RECRUITING" as const };
+    expect(detailStatus(post, at("17:50")).label).toBe("신청 마감");
+    expect(detailStatus(post, at("18:00")).label).toBe("일정 종료");
+    expect(
+      detailStatus({ ...base, recruitmentStatus: "CANCELLED" }, at("18:30"))
+        .label,
+    ).toBe("모집 취소");
+  });
+
+  it("toPostDetail은 알려진 값만 읽고, 없으면 기존 계산을 쓴다", () => {
+    expect(
+      toPostDetail({ ...base, recruitmentStatus: "FULL" }).recruitmentStatus,
+    ).toBe("FULL");
+    expect(
+      toPostDetail({ ...base, recruitmentStatus: "SOMETHING" }),
+    ).not.toHaveProperty("recruitmentStatus");
+    expect(detailStatus(base, at("17:30")).label).toBe("모집 중");
   });
 });

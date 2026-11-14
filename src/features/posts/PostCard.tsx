@@ -73,11 +73,14 @@ export function PostCard({
 }) {
   const path = useAppPath();
   const ownNow = useClientNow();
+  const clock = now === undefined ? ownNow : now;
+  // The list has no server clock: retain its authoritative status until reload.
+  // The device clock only supplies relative date text below.
   const { label, reason, available } = postStatusLabel(post);
   const reference = Date.parse(post.referenceTime);
   const remaining = post.capacity - post.currentMemberCount;
   const taxi = post.type === "TAXI";
-  const day = postDayText(reference, now === undefined ? ownNow : now);
+  const day = postDayText(reference, clock);
 
   return (
     <Link

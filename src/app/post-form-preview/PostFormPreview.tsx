@@ -7,13 +7,28 @@ import {
   PostFormError,
   toSeoulParts,
   type EditablePost,
+  type InitialPlaces,
   type PostFormOperations,
+  type PostRequest,
 } from "@/features/posts/form/postDraft";
 import { PostFormScreen } from "@/features/posts/form/PostFormScreen";
 import { DevTools } from "@/features/demo/DevTools";
+import {
+  DEMO_VIEWER,
+  addDemoPost,
+  demoJoinable,
+  demoMemberCount,
+  demoPosts,
+  demoStatus,
+  findDemoPost,
+  regenerateDemoPost,
+  demoSummary,
+  updateDemoPost,
+  type DemoPostRecord,
+} from "@/features/demo/demoPosts";
 
 const auth: AuthOperations = {
-  me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
+  me: async () => DEMO_VIEWER,
   login: async () => {},
   logout: async () => {},
 };
@@ -40,56 +55,114 @@ type Mode = keyof typeof scenarios;
 const pause = () =>
   new Promise<void>((resolve) => window.setTimeout(resolve, 500));
 
-function editablePost(
-  scenario: string,
-  joinedAfterConflict: boolean,
-): EditablePost {
-  const { date } = toSeoulParts(Date.now() + 3 * 3_600_000);
-  const joined = scenario === "joined" || joinedAfterConflict;
+/** A post I wrote that is still open; edit mode opens it when no id is given. */
+export const DEFAULT_EDIT_ID = "preview-9";
+
+/** Edit scenarios rewrite the shared record, like the detail scenarios. */
+function applyEditScenario(id: string, scenario: string) {
+  const base = regenerateDemoPost(id);
+  if (!base) return;
+  updateDemoPost(id, (post) => {
+    const mine = {
+      ...post,
+      relation: "AUTHOR" as const,
+      authorName: DEMO_VIEWER.displayName,
+      state: "OPEN" as const,
+    };
+    switch (scenario) {
+      case "open":
+      case "conflict":
+        return { ...mine, members: [] };
+      case "joined":
+        return { ...mine, members: ["윤서준"] };
+      case "closed":
+        return { ...mine, state: "CLOSED" };
+      case "cancelled":
+        return { ...mine, state: "CANCELLED", members: [] };
+      default:
+        return post;
+    }
+  });
+}
+
+function editablePost(id: string): EditablePost {
+  const post = findDemoPost(id);
+  if (!post || post.state === "REMOVED") throw new PostFormError("notFound");
+  const now = Date.now();
+  const { date, time } = toSeoulParts(Date.parse(post.referenceTime));
+  const taxi = {
+    departure: post.departure ?? "",
+    destination: post.destination ?? "",
+    date,
+    time,
+    capacity: post.type === "TAXI" ? post.capacity : 4,
+  };
+  const delivery = {
+    restaurantName: post.restaurantName ?? "",
+    pickupLocation: post.pickupLocation ?? "",
+    date,
+    time,
+    capacity: post.type === "DELIVERY" ? post.capacity : 4,
+    orderGuide: post.orderGuide ?? "",
+  };
   return {
-    id: "preview-edit",
-    status:
-      scenario === "closed"
-        ? "CLOSED"
-        : scenario === "cancelled"
-          ? "CANCELLED"
-          : "OPEN",
-    isAuthor: true,
-    otherJoinedCount: joined ? 1 : 0,
-    currentMemberCount: joined ? 2 : 1,
+    id,
+    status: demoStatus(post, now),
+    isAuthor: post.relation === "AUTHOR",
+    otherJoinedCount: demoMemberCount(post) - 1,
+    currentMemberCount: demoMemberCount(post),
     draft: {
-      type: "TAXI",
+      type: post.type,
       common: {
-        title: "정문에서 석계역까지 같이 가요",
-        description: "정문 앞에서 만나요.",
-        communicationUrl: "https://open.kakao.com/o/preview",
+        title: post.title,
+        description: post.description,
+        communicationUrl: post.communicationUrl ?? "",
       },
-      taxi: {
-        departure: "삼육대학교 정문",
-        destination: "석계역 1번 출구",
-        date,
-        time: "21:00",
-        capacity: 4,
-      },
-      delivery: {
-        restaurantName: "",
-        pickupLocation: "",
-        date,
-        time: "",
-        capacity: 4,
-        orderGuide: "",
-      },
+      taxi,
+      delivery,
     },
   };
+}
+
+/** Request fields → record fields; omitted fields keep their value. */
+function applyRequest(
+  post: DemoPostRecord,
+  request: Partial<PostRequest>,
+): DemoPostRecord {
+  const next: DemoPostRecord = { ...post };
+  const fields = request as Record<string, unknown>;
+  for (const key of [
+    "title",
+    "description",
+    "departure",
+    "destination",
+    "restaurantName",
+    "pickupLocation",
+    "referenceTime",
+    "capacity",
+  ] as const) {
+    if (fields[key] !== undefined)
+      (next as Record<string, unknown>)[key] = fields[key];
+  }
+  if ("communicationUrl" in fields)
+    next.communicationUrl = (fields.communicationUrl as string | null) ?? null;
+  if ("orderGuide" in fields)
+    next.orderGuide = (fields.orderGuide as string | null) ?? undefined;
+  return next;
 }
 
 export function PostFormPreview({
   initialMode = "create",
   initialType = "TAXI",
+  postId,
+  initialPlaces,
 }: {
   initialMode?: Mode;
   initialType?: "TAXI" | "DELIVERY";
+  postId?: string;
+  initialPlaces?: InitialPlaces;
 }) {
+  const [editId, setEditId] = useState(postId);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [scenario, setScenario] = useState<string>(
     initialMode === "edit" ? "open" : "normal",
@@ -103,50 +176,60 @@ export function PostFormPreview({
         await pause();
         if (scenario === "similarError") throw new TypeError("Failed to fetch");
         if (scenario !== "similar") return [];
-        const base = {
-          status: "OPEN",
-          referenceTime: request.referenceTime,
-          capacity: 4,
-          currentMemberCount: 2,
-          joinable: true,
-          authorName: "박지민",
-        };
-        return request.type === "TAXI"
-          ? [
-              {
-                ...base,
-                id: "similar-1",
-                type: "TAXI",
-                departure: request.departure,
-                destination: request.destination,
-              },
-            ]
-          : [
-              {
-                ...base,
-                id: "similar-1",
-                type: "DELIVERY",
-                restaurantName: request.restaurantName,
-                pickupLocation: request.pickupLocation,
-              },
-            ];
+        // A real shared record, so its card opens the same post everywhere.
+        const now = Date.now();
+        const target = Date.parse(request.referenceTime);
+        const nearest = demoPosts()
+          .filter((post) => post.type === request.type)
+          .filter((post) => demoJoinable(post, now))
+          .sort(
+            (a, b) =>
+              Math.abs(Date.parse(a.referenceTime) - target) -
+              Math.abs(Date.parse(b.referenceTime) - target),
+          )[0];
+        return nearest ? [demoSummary(nearest, now)] : [];
       },
-      create: async () => {
+      create: async (request) => {
         await pause();
         if (scenario === "duplicate") throw new PostFormError("duplicate");
         if (scenario === "lost") throw new TypeError("Failed to fetch");
-        return "preview-created";
+        const created = addDemoPost(
+          applyRequest(
+            {
+              id: "",
+              type: request.type,
+              title: "",
+              description: "",
+              referenceTime: request.referenceTime,
+              createdAt: "",
+              capacity: request.capacity,
+              authorName: DEMO_VIEWER.displayName,
+              members: [],
+              relation: "AUTHOR",
+              state: "OPEN",
+              communicationUrl: null,
+              reported: false,
+            },
+            request,
+          ),
+        );
+        return created.id;
       },
-      load: async () => {
+      load: async (id) => {
         await pause();
-        return editablePost(scenario, conflict.joined);
+        return editablePost(id);
       },
-      update: async () => {
+      update: async (id, request) => {
         await pause();
         if (scenario === "conflict" && !conflict.joined) {
           conflict.joined = true;
+          updateDemoPost(id, (post) => ({ ...post, members: ["윤서준"] }));
           throw new PostFormError("conflict");
         }
+        const post = findDemoPost(id);
+        if (!post || post.state === "REMOVED")
+          throw new PostFormError("notFound");
+        updateDemoPost(id, (current) => applyRequest(current, request));
       },
     };
   }, [scenario]);
@@ -155,7 +238,9 @@ export function PostFormPreview({
     <AuthProvider operations={auth}>
       <DevTools>
         <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span>작성·수정 데모: 저장하면 데모 상세로 이동해요.</span>
+          <span>
+            작성·수정 데모 · 저장하면 목록·상세·내 활동에 함께 반영돼요.
+          </span>
           <label className="flex items-center gap-1">
             상황
             <select
@@ -163,6 +248,11 @@ export function PostFormPreview({
               value={`${mode}:${scenario}`}
               onChange={(event) => {
                 const [nextMode, nextScenario] = event.target.value.split(":");
+                if (nextMode === "edit") {
+                  const id = editId ?? DEFAULT_EDIT_ID;
+                  applyEditScenario(id, nextScenario);
+                  setEditId(id);
+                }
                 setMode(nextMode as Mode);
                 setScenario(nextScenario);
                 setVersion((value) => value + 1);
@@ -183,7 +273,8 @@ export function PostFormPreview({
         key={version}
         mode={mode}
         initialType={initialType}
-        postId="preview-edit"
+        initialPlaces={initialPlaces}
+        postId={editId ?? DEFAULT_EDIT_ID}
         listPath="/posts-preview"
         operations={operations}
       />

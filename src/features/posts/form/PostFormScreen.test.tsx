@@ -16,6 +16,7 @@ import {
   type PostFormOperations,
 } from "./postDraft";
 import { PostFormScreen } from "./PostFormScreen";
+import { parseInitialPlaces } from "./postDraft";
 
 const router = { push: vi.fn(), replace: vi.fn() };
 vi.mock("next/navigation", () => ({
@@ -136,6 +137,26 @@ describe("작성 폼", () => {
     }
     expect(screen.getByText(/2~10명/)).toBeVisible();
     expect(screen.queryByText(/한식|중식|음식 종류/)).not.toBeInTheDocument();
+  });
+
+  it("목록 검색 조건의 장소로 새 글을 채워 시작한다", async () => {
+    expect(
+      parseInitialPlaces({
+        departure: " 석계역 ",
+        destination: ["삼육대학교 정문", "x"],
+        restaurant: "",
+        pickup: "후문",
+      }),
+    ).toEqual({
+      departure: "석계역",
+      destination: "삼육대학교 정문",
+      pickupLocation: "후문",
+    });
+    await setup(ops(), {
+      initialPlaces: { departure: "석계역", destination: "삼육대학교 정문" },
+    });
+    expect(screen.getByLabelText("출발지")).toHaveValue("석계역");
+    expect(screen.getByLabelText("도착지")).toHaveValue("삼육대학교 정문");
   });
 
   it("AC-UI-FORM-01: 유형을 바꿔도 공통값과 유형별 초안·정원을 따로 보관한다", async () => {

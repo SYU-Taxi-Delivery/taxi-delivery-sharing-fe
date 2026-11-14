@@ -941,3 +941,352 @@
   outline: 2px solid var(--posts-focus);
   outline-offset: 2px;
 }
+
+/* ───────── Search: 필터 sheet (phones) · sidebar (desktop ≥64rem) ───────── */
+
+.searchLayout {
+  min-width: 0;
+}
+
+.searchMain {
+  min-width: 0;
+}
+
+/* Desktop: conditions on the left, the board on the right. */
+.searchLayout[data-sidebar="true"] {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.searchLayout[data-sidebar="true"] .filters {
+  margin-top: 0;
+}
+
+.sidebar {
+  position: sticky;
+  top: calc(3.5rem + var(--space-4));
+  max-height: calc(100svh - 3.5rem - var(--space-8));
+  overflow-y: auto;
+  border: 1.5px solid var(--posts-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  overscroll-behavior: contain;
+}
+
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  margin-right: auto;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-pill);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filterButton:active {
+  background: var(--primary-soft);
+}
+
+.filterButton:focus-visible,
+.activeChip:focus-visible,
+.choice:focus-visible,
+.swap:focus-visible,
+.sheetClose:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+.filterIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.filterBadge {
+  display: inline-grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  padding: 0 0.3rem;
+  border-radius: var(--round-pill);
+  background: var(--posts-primary-text);
+  color: white;
+  font-size: var(--type-micro);
+}
+
+/* The 참여 가능 toggle and 필터 sit together; 초기화 stays at the end. */
+.filterRow:has(.filterButton) {
+  justify-content: flex-start;
+}
+
+/* Applied conditions above the result count; each one removes itself. */
+.activeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.activeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--posts-primary-text);
+  border-radius: var(--round-pill);
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activeChip > span[aria-hidden="true"] {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.primary {
+  composes: base primary from "../ui/button.module.css";
+}
+
+/* Bottom sheet. globals.css makes every <dialog> a sheet on phones and
+   handles reduced motion; this sets the size and the inner layout. */
+.sheet {
+  width: calc(100% - 2rem);
+  max-width: 30rem;
+  max-height: calc(100svh - 3rem);
+  margin: auto;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-radius: var(--round-sheet);
+  background: var(--canvas);
+  color: var(--posts-text);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 39.99rem) {
+  .sheet[open] {
+    padding-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop {
+    transition: none;
+  }
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-2);
+}
+
+.sheetClose {
+  composes: base icon from "../ui/button.module.css";
+  font-size: 1.375rem;
+}
+
+.panel {
+  display: grid;
+}
+
+.sidebar .panelTitle {
+  padding: var(--space-4) var(--space-5) 0;
+}
+
+.panelTitle {
+  font-size: var(--type-heading);
+  font-weight: 700;
+  letter-spacing: var(--tracking-heading);
+}
+
+.panelBody {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.panelSection {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.panelLegend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+.panelHint {
+  color: var(--posts-muted);
+  font-size: var(--type-micro);
+  font-weight: 500;
+}
+
+.panelError {
+  color: var(--posts-danger);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+.placeField {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.fieldLabel {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+.searchInput {
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-chip);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font-size: 1rem; /* 16px keeps phones from zooming in */
+}
+
+.searchInput:focus {
+  border-color: var(--posts-primary-text);
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 1px;
+}
+
+.searchInput[aria-invalid="true"] {
+  border-color: var(--posts-danger);
+}
+
+.choiceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Suggestion and option chips: compact face, 44px tall hit area. */
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  margin: 0.25rem 0;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-pill);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice::after {
+  content: "";
+  position: absolute;
+  inset: -0.25rem 0;
+}
+
+.choice:hover {
+  background: var(--primary-tint);
+}
+
+.choice[aria-pressed="true"] {
+  border-color: var(--posts-primary-text);
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.swap {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border-radius: var(--round-chip);
+  color: var(--posts-primary-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.swap:hover {
+  background: var(--primary-tint);
+}
+
+.rangeInputs {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rangeField {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkRow input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  accent-color: var(--posts-primary-text);
+}
+
+.panelFooter {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5)
+    calc(var(--space-3) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--posts-border);
+  background: var(--canvas);
+}
+
+.applyButton {
+  composes: base primary from "../ui/button.module.css";
+}

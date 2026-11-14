@@ -10,6 +10,7 @@ import type { PostType } from "../posts";
 import {
   editAccess,
   emptyDraft,
+  type InitialPlaces,
   PostFormError,
   type EditablePost,
   type PostFormOperations,
@@ -23,12 +24,14 @@ export function PostFormScreen({
   mode,
   postId,
   initialType = "TAXI",
+  initialPlaces,
   listPath = "/posts",
   operations = postFormOperations,
 }: {
   mode: "create" | "edit";
   postId?: string;
   initialType?: PostType;
+  initialPlaces?: InitialPlaces;
   listPath?: string;
   operations?: PostFormOperations;
 }) {
@@ -38,6 +41,7 @@ export function PostFormScreen({
         {mode === "create" ? (
           <CreateForm
             initialType={initialType}
+            initialPlaces={initialPlaces}
             listPath={listPath}
             operations={operations}
           />
@@ -56,14 +60,31 @@ export function PostFormScreen({
 
 function CreateForm({
   initialType,
+  initialPlaces = {},
   listPath,
   operations,
 }: {
   initialType: PostType;
+  initialPlaces?: InitialPlaces;
   listPath: string;
   operations: PostFormOperations;
 }) {
-  const [draft] = useState(() => emptyDraft(Date.now(), initialType));
+  const [draft] = useState(() => {
+    const empty = emptyDraft(Date.now(), initialType);
+    return {
+      ...empty,
+      taxi: {
+        ...empty.taxi,
+        departure: initialPlaces.departure ?? "",
+        destination: initialPlaces.destination ?? "",
+      },
+      delivery: {
+        ...empty.delivery,
+        restaurantName: initialPlaces.restaurantName ?? "",
+        pickupLocation: initialPlaces.pickupLocation ?? "",
+      },
+    };
+  });
   return (
     <PostForm
       mode="create"

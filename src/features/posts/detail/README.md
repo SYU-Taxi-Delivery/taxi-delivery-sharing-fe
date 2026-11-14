@@ -1,6 +1,6 @@
 # 모집글 상세 (#7)
 
-> 연동 상태(2026-11-09): 상세 조회·명단(`/participants`)·참여·취소·재참여를 연결했다(`postDetailApi.ts`). 작성자 마감·모집 취소·신고는 백엔드 API가 없어 adapter에서 빠져 있고, 화면은 버튼을 비활성화하거나 숨기고 "준비 중"으로 안내한다. 설정·불일치·요청 목록은
+> 연동 상태(2026-11-14): 상세 조회·명단(`/participants`)·참여·취소·재참여, 작성자 마감(`POST /api/posts/{id}/close`)·모집 취소(`POST /api/posts/{id}/cancel`)를 연결했다(`postDetailApi.ts`). 마감·취소 경로가 아직 배포되지 않은 서버(404 API_NOT_FOUND·405)에는 "모집 관리 연동을 준비하고 있어요"로 안내한다. 참여·취소의 409는 `error.details.post`로 인원·상태를 바로 고치고 "방금 정원이 찼어요" 같은 이유를 보여 준다. 신고는 API가 없어 "준비 중"이다. 설정·불일치·요청 목록은
 > [docs/backend-integration.md](../../../../docs/backend-integration.md)를 참고한다.
 
 API 명세가 미정인 상태의 1차 구현이다. 로그인 사용자용 `/posts/[id]` 상세, 관계별 정보

@@ -16,6 +16,7 @@ import { AppShell } from "@/features/posts/AppShell";
 import type { PostStatus } from "@/features/posts/posts";
 import common from "@/features/posts/posts.module.css";
 import { DevTools } from "@/features/demo/DevTools";
+import { findDemoPost } from "@/features/demo/demoPosts";
 
 const scenarios = {
   normal: "모집 중 · 비참여 사용자",
@@ -198,8 +199,19 @@ export function createPreview(scenario: Scenario) {
   return { operations, auth, referenceTime, serverNow };
 }
 
+/** The shared demo post these comments belong to (same title as the list). */
+const commentPostId = (scenario: Scenario) =>
+  scenario === "delivery" ? "preview-8" : "preview-6";
+
 function PreviewCase({ scenario }: { scenario: Scenario }) {
   const [model] = useState(() => createPreview(scenario));
+  const postId = commentPostId(scenario);
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    // The demo store lives in the browser, so it is read after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTitle(findDemoPost(postId)?.title ?? null);
+  }, [postId]);
   const [nowMs, setNowMs] = useState(model.serverNow);
   useEffect(() => {
     const timer = window.setTimeout(
@@ -228,7 +240,7 @@ function PreviewCase({ scenario }: { scenario: Scenario }) {
           <h1 className={common.title}>
             {status === "REMOVED"
               ? "관리자에 의해 삭제된 모집"
-              : "정문에서 석계역까지 같이 가요"}
+              : (title ?? "모집 댓글")}
           </h1>
           <p className={`${common.muted} mb-6 mt-2`}>
             {status === "REMOVED"
@@ -236,7 +248,7 @@ function PreviewCase({ scenario }: { scenario: Scenario }) {
               : "공개 댓글로 만날 장소와 시간을 조율해요."}
           </p>
           <CommentsPanel
-            postId="preview-comments"
+            postId={postId}
             status={status}
             referenceTime={model.referenceTime}
             serverNow={model.serverNow}

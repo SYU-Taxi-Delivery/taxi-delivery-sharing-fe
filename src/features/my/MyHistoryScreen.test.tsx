@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { ParticipationRejected } from "@/features/participation/participation";
 import { PostDetailError } from "@/features/posts/detail/postDetail";
 import { MyHistoryScreen } from "./MyHistoryScreen";
 import type { MyHistoryOperations, MyTab } from "./myHistory";
@@ -451,6 +452,122 @@ describe("my history screen", () => {
       "출발 10분 전부터 참여 신청과 취소가 마감됩니다.",
     );
   });
+
+  it("모집 취소의 최신 상태가 담긴 409도 부모 이력을 갱신해 링크와 취소 버튼을 없앤다", async () => {
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(
+        history([post({ communicationUrl: "https://open.kakao.com/o/test" })]),
+      )
+      .mockResolvedValueOnce(
+        history([
+          post({
+            status: "CANCELLED",
+            recruitmentStatus: "CANCELLED",
+            relation: "CANCELLED",
+            currentMemberCount: 1,
+            joinable: false,
+          }),
+        ]),
+      );
+    const { operations } = await setup(list, async () => {
+      throw new ParticipationRejected("POST_CANCELLED", {
+        status: "CANCELLED",
+        recruitmentStatus: "CANCELLED",
+        currentMemberCount: 1,
+        joinable: false,
+      });
+    });
+    expect(screen.getByRole("link", { name: /소통 링크/ })).toBeVisible();
+
+    await openCancel();
+    await confirmCancel();
+
+    expect(operations.leave).toHaveBeenCalledExactlyOnceWith("p1");
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(upcoming()).toHaveLength(0);
+    expect(past()[0]).toHaveTextContent("참여 취소함");
+    expect(
+      screen.queryByRole("link", { name: /소통 링크/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "참여 취소" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "현재 내 참여가 취소된 상태예요",
+    );
+  });
+
+  it("409 뒤 이력 조회가 실패하면 변경을 막고 재전송 없이 조회만 재시도한다", async () => {
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockResolvedValueOnce(history([post()]))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(history([post()], T - 599_999));
+    const { operations } = await setup(list, async () => {
+      throw new ParticipationRejected("CANCEL_TIME_CLOSED", {
+        recruitmentStatus: "APPLICATION_CLOSED",
+        currentMemberCount: 3,
+        joinable: false,
+      });
+    });
+    await openCancel();
+    await confirmCancel();
+
+    expect(screen.getByRole("button", { name: "참여 취소" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "최신 참여 상태를 확인하지 못했어요",
+    );
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "다시 조회하기" })),
+    );
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(operations.leave).toHaveBeenCalledExactlyOnceWith("p1");
+    expect(
+      screen.queryByRole("button", { name: "참여 취소" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["POST_CANCELLED", "CANCELLED", "모집 취소", 1],
+    ["POST_FINISHED", "FINISHED", "일정 종료", 3],
+  ] as const)(
+    "%s의 최신 상태는 후속 조회 실패에도 링크와 다가오는 일정에서 제거한다",
+    async (code, status, label, count) => {
+      const list = vi
+        .fn<MyHistoryOperations["list"]>()
+        .mockResolvedValueOnce(
+          history([
+            post({ communicationUrl: "https://open.kakao.com/o/test" }),
+          ]),
+        )
+        .mockRejectedValueOnce(new Error("offline"));
+      const { operations } = await setup(list, async () => {
+        throw new ParticipationRejected(code, {
+          status,
+          recruitmentStatus: status,
+          currentMemberCount: count,
+          joinable: false,
+        });
+      });
+      await openCancel();
+      await confirmCancel();
+
+      expect(operations.leave).toHaveBeenCalledExactlyOnceWith("p1");
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(upcoming()).toHaveLength(0);
+      expect(past()[0]).toHaveTextContent(label);
+      expect(
+        screen.queryByRole("link", { name: /소통 링크/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "참여 취소" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "다시 조회하기" }),
+      ).toBeEnabled();
+    },
+  );
 
   it("창 복귀 재조회에서 취소 마감이 확인되면 요청을 보내지 않고 이유를 알린다", async () => {
     let complete!: (value: unknown) => void;
