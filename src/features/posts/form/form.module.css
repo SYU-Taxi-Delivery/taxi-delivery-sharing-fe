@@ -99,21 +99,38 @@ legend.labelGroup {
   padding: 0;
 }
 
-/* Numbered group: a round step badge, then space instead of divider lines */
+/* Input groups (유형 → 장소 → 일정·정원): space instead of divider lines.
+   Inside a group fields sit 16px apart; groups are 40px apart. */
 .section {
   display: grid;
   gap: var(--space-4);
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .section + .section {
-  margin-top: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+/* A group whose title is also its only label (유형): a fieldset legend */
+.sectionLegend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: var(--type-subhead);
+  font-weight: 700;
+  letter-spacing: var(--tracking-heading);
 }
 
 .sectionTitle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-bottom: calc(var(--space-1) * -1); /* 12px to its first field */
   font-size: var(--type-subhead);
   letter-spacing: var(--tracking-heading);
   /* Clear of the sticky app bar when a progress step jumps here */
@@ -130,106 +147,62 @@ legend.labelGroup {
   border-radius: var(--round-chip);
 }
 
-.stepBadge {
-  display: inline-grid;
-  flex-shrink: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-  border-radius: var(--round-pill);
-  background: var(--text);
-  color: var(--canvas);
-  font-size: var(--type-micro);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Progress: two steps. The current one is dark, a finished one green with
-   a check; labels sit centred under each bar. */
+/* Progress: one line (1/2 current step · next step) over a two-part bar */
 .progress {
   display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-5);
 }
 
-.progressCount {
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
+.progressNow {
+  font-size: var(--type-subhead);
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.progressSteps {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.progressStep {
-  display: grid;
-  min-height: var(--touch-target);
-  justify-items: center;
-  align-content: center;
-  gap: 0.125rem;
-  padding: var(--space-1);
-  border-top: 3px solid var(--closed);
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
-  text-align: center;
-  transition:
-    border-color var(--motion-fast) var(--curve-standard),
-    color var(--motion-fast) var(--curve-standard);
-}
-
-.progressStep .stepBadge {
-  background: var(--closed);
-  color: var(--posts-muted);
-}
-
-.progressStep[data-current="true"] {
-  border-top-color: var(--text);
-  color: var(--posts-text);
-  font-weight: 700;
-}
-
-.progressStep[data-current="true"] .stepBadge {
-  background: var(--text);
-  color: var(--canvas);
-}
-
-.progressStep[data-done="true"] {
-  border-top-color: var(--primary);
-  color: var(--posts-text);
-}
-
-.progressStep[data-done="true"] .stepBadge {
-  background: var(--primary);
-  color: var(--text);
-}
-
-/* "1단계 · 유형·장소·일정 및 정원": focus lands here on a step change */
-.stepHeading {
-  font-size: var(--type-title);
-  font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
   letter-spacing: var(--tracking-heading);
   scroll-margin-top: 5rem;
 }
 
-.stepHeading:focus {
+.progressNow:focus {
   outline: none;
 }
 
-.stepHeading:focus-visible {
+.progressNow:focus-visible {
   outline: 2px solid var(--posts-focus);
   outline-offset: 4px;
   border-radius: var(--round-chip);
 }
 
-.progressLabel {
-  max-width: 100%;
-  word-break: keep-all;
+.progressCount {
+  margin-right: var(--space-1);
+  color: var(--posts-primary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressNext {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  text-align: right;
+}
+
+.progressBar {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.progressBar > span {
+  height: 0.25rem;
+  border-radius: var(--round-pill);
+  background: var(--closed);
+  transition: background-color var(--motion-standard) var(--curve-standard);
+}
+
+.progressBar > span[data-filled="true"] {
+  background: var(--primary);
 }
 
 /* 필수 / 선택 legend and tags */

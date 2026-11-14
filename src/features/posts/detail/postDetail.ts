@@ -47,6 +47,28 @@ export type PostDetail =
       orderGuide?: string;
     });
 
+/** Words the suggested titles add around the places ("A → B 택시"). */
+const TITLE_FILLER = /택시|같이|주문해요|→|->|[-·,>~]|\s/g;
+
+/**
+ * The author's title when it says more than the route heading already does,
+ * or null when it only repeats it (the suggested "A → B 택시" or
+ * "가게 같이 주문해요", or the bare place names).
+ */
+export function extraTitle(detail: PostDetail): string | null {
+  const title = detail.title.trim();
+  const places =
+    detail.type === "TAXI"
+      ? [detail.departure, detail.destination]
+      : [detail.restaurantName, detail.pickupLocation];
+  let rest = title;
+  for (const place of places) {
+    const name = place.trim();
+    if (name) rest = rest.split(name).join("");
+  }
+  return rest.replace(TITLE_FILLER, "") ? title : null;
+}
+
 export const REPORT_REASONS = [
   { value: "INAPPROPRIATE", label: "부적절한 내용" },
   { value: "AD_PROMOTION", label: "광고·홍보" },

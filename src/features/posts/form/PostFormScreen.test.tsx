@@ -577,15 +577,14 @@ describe("작성 도우미", () => {
       name,
     });
 
-  it("단계 표시는 정확히 두 단계이고 필수/선택 안내를 보여 준다", async () => {
+  it("단계 표시는 지금 단계와 다음 단계를 한 번씩 보여 주고 필수/선택 안내를 보여 준다", async () => {
     await setup(ops());
-    const steps = screen.getByRole("list", { name: "작성 단계" });
-    const items = within(steps).getAllByRole("listitem");
-    expect(items).toHaveLength(2);
-    expect(items[0]).toHaveTextContent("유형·장소·일정 및 정원");
-    expect(items[1]).toHaveTextContent("안내·미리보기");
-    expect(items[0]).toHaveAttribute("aria-current", "step");
-    expect(screen.getByText("1/2 단계")).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정" }),
+    ).toBeVisible();
+    expect(screen.getByText("다음: 안내·미리보기")).toBeVisible();
+    expect(screen.getAllByText(/유형·장소·일정/)).toHaveLength(1);
+    expect(screen.getByRole("group", { name: "유형" })).toBeVisible();
     expect(screen.getByText(/꼭 입력해요/)).toBeVisible();
     expect(screen.getByLabelText("출발지")).toHaveAttribute(
       "aria-required",
@@ -593,14 +592,9 @@ describe("작성 도우미", () => {
     );
     fillStepOne();
     goStep(2);
-    expect(screen.getByText("2/2 단계")).toBeVisible();
+    expect(screen.getByText("마지막 단계")).toBeVisible();
     expect(
-      within(screen.getByRole("list", { name: "작성 단계" })).getAllByRole(
-        "listitem",
-      )[1],
-    ).toHaveAttribute("aria-current", "step");
-    expect(
-      screen.getByRole("heading", { name: "2단계 · 안내·미리보기" }),
+      screen.getByRole("heading", { name: "2/2단계 안내·미리보기" }),
     ).toHaveFocus();
     expect(screen.getByLabelText("외부 소통 링크")).not.toHaveAttribute(
       "aria-required",
@@ -715,7 +709,7 @@ describe("작성 도우미", () => {
       screen.getByRole("button", { name: "장소·일정·정원 고치기" }),
     );
     expect(
-      screen.getByRole("heading", { name: "1단계 · 유형·장소·일정 및 정원" }),
+      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정" }),
     ).toHaveFocus();
     expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
     fireEvent.click(screen.getByRole("button", { name: "정원 1명 줄이기" }));

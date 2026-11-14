@@ -121,6 +121,10 @@
   --control-height: 3.25rem;
   --touch-target: 2.75rem;
   --page-gutter: 1rem;
+  /* One app width for the header, the demo bar and every wide page, so the
+     logo and the content share one left/right line. Wide desktops get room
+     for the search sidebar plus a two-column board. */
+  --app-width: 64rem;
 
   /* Fixed bottom action bar (phones): 12px padding + 52px button + 12px.
      The device safe area is added separately below it, never inside. */
@@ -151,6 +155,12 @@
 
   /* Bottom tab bar height on phones (content keeps clear of it) */
   --dock-height: 4.5rem;
+}
+
+@media (min-width: 80rem) {
+  :root {
+    --app-width: 76rem;
+  }
 }
 
 html {
