@@ -1,5 +1,6 @@
 import {
   cutoffMinutes,
+  participationDeadlineMs,
   recruitmentStatusAt,
   toRecruitmentStatus,
   type RecruitmentStatus,
@@ -421,6 +422,12 @@ export function postStatusLabel(
       ? post.recruitmentStatus
       : recruitmentStatusAt(post, nowMs);
   if (server) return recruitmentLabel(post, server);
+  if (nowMs !== undefined && ["OPEN", "FULL", "CLOSED"].includes(post.status)) {
+    if (nowMs >= Date.parse(post.referenceTime))
+      return recruitmentLabel(post, "FINISHED");
+    if (post.status !== "CLOSED" && nowMs >= participationDeadlineMs(post))
+      return recruitmentLabel(post, "APPLICATION_CLOSED");
+  }
   const deadline = post.type === "TAXI" ? "출발" : "주문 마감";
   switch (post.status) {
     case "OPEN":

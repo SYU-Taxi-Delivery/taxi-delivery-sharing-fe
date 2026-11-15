@@ -384,6 +384,7 @@ function DetailView({
   const detail: PostDetail = {
     ...latest,
     status: participation.snapshot.status,
+    referenceTime: participation.snapshot.referenceTime,
     currentMemberCount: participation.snapshot.currentMemberCount,
     capacity: participation.snapshot.capacity,
     joinable: participation.snapshot.joinable,

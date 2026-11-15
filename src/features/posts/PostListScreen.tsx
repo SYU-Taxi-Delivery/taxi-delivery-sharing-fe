@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { participationDeadlineMs } from "@/features/participation/participation";
 import { AppShell } from "./AppShell";
 import { Pagination } from "./Pagination";
 import { PostCard, postDayText, useClientNow } from "./PostCard";
@@ -22,6 +23,7 @@ import {
   postQueryHref,
   type PostFilter,
   type PostListOperations,
+  type PostPage,
   type PostQuery,
 } from "./posts";
 import { SearchPanel, SearchSheet } from "./SearchPanel";
@@ -127,11 +129,11 @@ function PostList({
   const router = useRouter();
   const headingId = useId();
   const now = useClientNow();
-  const { loading, page, error, retry, clockOffset } = usePostList(
+  const { loading, page, error, retry, serverNow } = usePostList(
     query,
     operations,
   );
-  const statusNow = useServerTick(clockOffset);
+  const statusNow = useServerTick(serverNow, page);
   const desktop = useDesktop();
   const [sheetOpen, setSheetOpen] = useState(false);
   const filterButton = useRef<HTMLButtonElement>(null);
@@ -579,19 +581,52 @@ function FilterIcon() {
   );
 }
 
-/**
- * Server-aligned time for the cards' status, refreshed every 30 seconds, so a
- * card turns to 신청 마감 when the cutoff passes instead of on reload. Null
- * until mounted (server render and hydration show the saved status) and when
- * the page came without a server time.
- */
-function useServerTick(offset: number | null): number | null {
-  const [now, setNow] = useState<number | null>(null);
+/** Follow the same monotonic server clock and exact boundaries as detail/history. */
+function useServerTick(
+  serverNow: (() => number) | null,
+  page: PostPage | null,
+): number | null {
+  const [tick, setTick] = useState<{ page: PostPage; now: number } | null>(
+    null,
+  );
   useEffect(() => {
-    const tick = () => setNow(Date.now());
-    tick();
-    const timer = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return offset === null || now === null ? null : now + offset;
+    if (!serverNow || !page) return;
+    let timer: number | undefined;
+    const update = () => {
+      window.clearTimeout(timer);
+      const now = serverNow();
+      setTick({ page, now });
+      let boundary = Infinity;
+      for (const post of page.content) {
+        for (const time of [
+          participationDeadlineMs(post),
+          Date.parse(post.referenceTime),
+        ]) {
+          if (time > now) boundary = Math.min(boundary, time);
+        }
+      }
+      if (Number.isFinite(boundary)) {
+        timer = window.setTimeout(
+          update,
+          Math.min(Math.ceil(boundary - now), 2_147_483_647),
+        );
+      }
+    };
+    const resume = () => {
+      if (document.visibilityState === "visible") update();
+    };
+    update();
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [serverNow, page]);
+  return !serverNow || !page
+    ? null
+    : tick?.page === page
+      ? tick.now
+      : Date.parse(page.serverTime!);
 }

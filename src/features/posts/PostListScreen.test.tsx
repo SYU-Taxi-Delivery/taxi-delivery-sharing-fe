@@ -93,6 +93,192 @@ const cards = () =>
     .getAllByRole("listitem")
     .map((item) => within(item).getByRole("link"));
 
+describe("8주차 목록 상태 갱신", () => {
+  it.each([
+    ["TAXI", "RECRUITING"],
+    ["DELIVERY", "RECRUITING"],
+    ["TAXI", undefined],
+    ["DELIVERY", undefined],
+  ])(
+    "%s / %s 신청 마감 정각과 일정 종료에 서버 시계로 갱신한다",
+    async (type, recruitmentStatus) => {
+      vi.useFakeTimers();
+      const referenceTime = "2026-11-16T00:05:00+09:00";
+      const participationDeadline = "2026-11-15T23:45:00+09:00";
+      const { operations, view } = await setup(async () =>
+        pageOf(
+          [
+            {
+              ...(type === "TAXI" ? taxi : delivery),
+              referenceTime,
+              participationDeadline,
+              joinable: true,
+              recruitmentStatus,
+            },
+          ],
+          { serverTime: "2026-11-15T23:44:59.999+09:00" },
+        ),
+      );
+      expect(cards()[0]).toHaveAttribute("data-available", "true");
+      await act(async () => vi.advanceTimersByTime(1));
+      expect(cards()[0]).toHaveTextContent("참여 마감");
+      expect(cards()[0]).toHaveAttribute("data-available", "false");
+      await act(async () => vi.advanceTimersByTime(20 * 60_000));
+      expect(cards()[0]).toHaveTextContent("모집 완료");
+      expect(operations.list).toHaveBeenCalledTimes(1);
+      view.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it("조회 후 기기 시계를 바꿔도 신청 마감이 앞당겨지거나 되돌아가지 않는다", async () => {
+    vi.useFakeTimers();
+    const deadline = Date.parse("2026-11-15T23:50:00+09:00");
+    vi.setSystemTime(new Date(deadline - 60_000));
+    await setup(async () =>
+      pageOf(
+        [
+          {
+            ...taxi,
+            referenceTime: "2026-11-16T00:00:00+09:00",
+            recruitmentStatus: "RECRUITING",
+          },
+        ],
+        { serverTime: new Date(deadline - 60_000).toISOString() },
+      ),
+    );
+    vi.setSystemTime(new Date(deadline + 3_600_000));
+    await act(async () => vi.advanceTimersByTime(30_000));
+    expect(cards()[0]).toHaveTextContent("모집 중");
+    vi.setSystemTime(new Date(deadline - 3_600_000));
+    await act(async () => vi.advanceTimersByTime(30_000));
+    expect(cards()[0]).toHaveTextContent("참여 마감");
+  });
+
+  it.each(["focus", "visibilitychange"])(
+    "%s 복귀 시 최신 인원과 작성자 마감을 조회한다",
+    async (event) => {
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+      const list = vi
+        .fn()
+        .mockResolvedValueOnce(pageOf([taxi]))
+        .mockResolvedValue(
+          pageOf([
+            {
+              ...taxi,
+              status: "CLOSED",
+              currentMemberCount: 2,
+              joinable: false,
+            },
+          ]),
+        );
+      const { operations } = await setup(list);
+      await act(async () =>
+        fireEvent(event === "focus" ? window : document, new Event(event)),
+      );
+      expect(operations.list).toHaveBeenCalledTimes(2);
+      expect(cards()[0]).toHaveTextContent("모집 마감");
+      expect(cards()[0]).not.toHaveTextContent("자리 남음");
+    },
+  );
+
+  it("복귀 재조회 실패에는 이전 인원을 확정 표시하지 않고 재시도를 제공한다", async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(pageOf([taxi]))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(pageOf([{ ...taxi, currentMemberCount: 2 }]));
+    await setup(list);
+    await act(async () => fireEvent.focus(window));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "모집글을 불러오지 못했어요",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "다시 불러오기" }));
+    await act(async () => {});
+    expect(cards()[0]).toHaveTextContent("2자리 남음");
+  });
+
+  it("백그라운드 복귀 조회의 늦은 응답은 새 조건 결과를 덮어쓰지 않는다", async () => {
+    let resolve!: (value: unknown) => void;
+    const delayed = new Promise((done) => {
+      resolve = done;
+    });
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(pageOf([taxi]))
+      .mockReturnValueOnce(delayed)
+      .mockResolvedValue(pageOf([delivery]));
+    const { operations, view } = await setup(list);
+    await act(async () => fireEvent.focus(window));
+    view.rerender(
+      <AuthProvider
+        operations={{
+          me: async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" }),
+          login: vi.fn(),
+          logout: vi.fn(),
+        }}
+      >
+        <PostListScreen
+          query={{ ...defaultQuery, type: "DELIVERY" }}
+          operations={operations}
+        />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+    await act(async () =>
+      resolve(pageOf([{ ...taxi, currentMemberCount: 4 }])),
+    );
+    expect(cards()[0]).toHaveTextContent("테스트음식점");
+    expect(cards()).toHaveLength(1);
+  });
+
+  it("숨겨진 탭은 조회하지 않고 동시에 발생한 복귀 이벤트는 한 번만 조회한다", async () => {
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    let resolve!: (value: unknown) => void;
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(pageOf([taxi]))
+      .mockImplementationOnce(
+        () =>
+          new Promise((done) => {
+            resolve = done;
+          }),
+      );
+    const { operations, view } = await setup(list);
+    await act(async () => fireEvent(document, new Event("visibilitychange")));
+    expect(operations.list).toHaveBeenCalledTimes(1);
+    visibility.mockReturnValue("visible");
+    act(() => {
+      fireEvent.focus(window);
+      fireEvent(document, new Event("visibilitychange"));
+    });
+    expect(operations.list).toHaveBeenCalledTimes(2);
+    await act(async () =>
+      resolve(pageOf([{ ...taxi, currentMemberCount: 2 }])),
+    );
+    expect(cards()[0]).toHaveTextContent("2자리 남음");
+    view.unmount();
+    fireEvent.focus(window);
+    expect(operations.list).toHaveBeenCalledTimes(2);
+  });
+
+  it("화면 복귀 중 세션 만료는 이전 모집을 제거하고 로그인 안내로 전환한다", async () => {
+    await setup(
+      vi
+        .fn()
+        .mockResolvedValueOnce(pageOf([taxi]))
+        .mockRejectedValueOnce(new ApiError(401, "expired")),
+    );
+    await act(async () => fireEvent.focus(window));
+    expect(screen.getByRole("alert")).toHaveTextContent("로그인이 만료됐어요");
+    expect(
+      screen.queryByRole("link", { name: /석계역에서/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("PostListScreen", () => {
   it("AC-DISC-001-01, AC-NFR-TIME-01-01: 서버 순서대로 카드와 Asia/Seoul 시각을 표시한다", async () => {
     const { operations } = await setup(async () => pageOf([taxi, delivery]));
