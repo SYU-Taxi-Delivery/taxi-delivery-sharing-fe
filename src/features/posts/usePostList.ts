@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
+import { serverTimeNow } from "@/lib/backend";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
   parsePostQuery,
@@ -21,10 +22,10 @@ type Result =
   | {
       key: string;
       page: PostPage;
-      clockOffset: number | null;
+      serverNow: (() => number) | null;
       error?: undefined;
     }
-  | { key: string; error: string; page?: undefined; clockOffset?: undefined };
+  | { key: string; error: string; page?: undefined; serverNow?: undefined };
 
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.name === "PostsNotConnectedError") {
@@ -46,29 +47,42 @@ export function usePostList(query: PostQuery, operations: PostListOperations) {
 
   useEffect(() => {
     let active = true;
-    operations
-      .list(fromKey(queryKey))
-      .then((raw) => {
-        if (!active) return;
-        const page = toPostPage(raw);
-        // Server clock minus device clock, so the cards can tell when a
-        // cutoff passes by the server's time (same as the detail page).
-        // Without a server time the saved status stays as it is.
-        const clockOffset = page.serverTime
-          ? Date.parse(page.serverTime) - Date.now()
-          : null;
-        setResult({ key, page, clockOffset });
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        if (error instanceof ApiError && error.status === 401) {
-          handleUnauthorized();
-          return;
-        }
-        setResult({ key, error: errorMessage(error) });
-      });
+    let pending = false;
+    const load = () => {
+      if (pending) return;
+      pending = true;
+      void operations
+        .list(fromKey(queryKey))
+        .then((raw) => {
+          if (!active) return;
+          const page = toPostPage(raw);
+          const serverNow = page.serverTime
+            ? serverTimeNow(page.serverTime)
+            : null;
+          setResult({ key, page, serverNow });
+        })
+        .catch((error: unknown) => {
+          if (!active) return;
+          if (error instanceof ApiError && error.status === 401) {
+            handleUnauthorized();
+            return;
+          }
+          setResult({ key, error: errorMessage(error) });
+        })
+        .finally(() => {
+          pending = false;
+        });
+    };
+    const resume = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    load();
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resume);
     return () => {
       active = false;
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resume);
     };
   }, [key, queryKey, operations, handleUnauthorized]);
 
@@ -76,7 +90,7 @@ export function usePostList(query: PostQuery, operations: PostListOperations) {
   return {
     loading: current === null,
     page: current?.page ?? null,
-    clockOffset: current?.clockOffset ?? null,
+    serverNow: current?.serverNow ?? null,
     error: current?.error ?? null,
     retry: () => setAttempt((value) => value + 1),
   };

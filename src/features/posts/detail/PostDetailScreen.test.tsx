@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { ParticipationRejected } from "@/features/participation/participation";
 import {
   CommentsError,
   type CommentsOperations,
@@ -110,6 +111,33 @@ async function setup(
 
 const members = () =>
   screen.getByRole("heading", { name: /함께하는 학생/ }).closest("section")!;
+
+it("참여 거절 응답의 변경된 일정과 마감 시각을 상세에 함께 반영한다", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-15T22:00:00+09:00"));
+  const operations = ops({
+    load: vi.fn(async () =>
+      post({ referenceTime: "2026-11-15T23:00:00+09:00" }),
+    ),
+    join: vi.fn(async () => {
+      throw new ParticipationRejected("POST_FULL", {
+        status: "FULL",
+        recruitmentStatus: "FULL",
+        currentMemberCount: 4,
+        joinable: false,
+        referenceTime: "2026-11-16T00:05:00+09:00",
+        participationDeadline: "2026-11-15T23:55:00+09:00",
+      });
+    }),
+  });
+  await setup(operations);
+  fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
+  await act(async () => {});
+  expect(screen.getByText("내일 00:05")).toBeVisible();
+  expect(screen.getByText("오늘 23:55")).toBeVisible();
+  expect(screen.queryByText("오늘 23:00")).not.toBeInTheDocument();
+  expect(operations.load).toHaveBeenCalledTimes(1);
+});
 
 describe("상세 댓글 영역", () => {
   const comments = (

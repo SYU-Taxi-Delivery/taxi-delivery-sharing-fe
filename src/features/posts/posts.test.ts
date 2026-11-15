@@ -176,6 +176,13 @@ describe("postStatusLabel", () => {
   const card = (patch: Partial<PostSummary>) =>
     ({ ...taxi, id: "1", ...patch }) as PostSummary;
 
+  it("이전 서버의 작성자 마감은 신청 기한 이후에도 유지하고 일정 정각에 완료로 바뀐다", () => {
+    const post = card({ status: "CLOSED", joinable: false });
+    const end = Date.parse(post.referenceTime);
+    expect(postStatusLabel(post, end - 1).label).toBe("모집 마감");
+    expect(postStatusLabel(post, end).label).toBe("모집 완료");
+  });
+
   it("AC-DISC-003-03: OPEN·joinable이면 모집 중이다", () => {
     expect(postStatusLabel(card({}))).toEqual({
       label: "모집 중",

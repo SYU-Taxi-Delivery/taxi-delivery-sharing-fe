@@ -44,6 +44,7 @@
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
+  min-height: 2.75rem;
   color: var(--text);
   font-size: 1.25rem;
   font-weight: 700;
@@ -371,6 +372,7 @@
   text-underline-offset: 3px;
 }
 
+.brand:focus-visible,
 .noticeTitle:focus-visible,
 .textLink:focus-visible,
 .check input:focus-visible,

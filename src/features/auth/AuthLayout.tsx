@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./auth.module.css";
 
@@ -13,10 +14,10 @@ export function AuthLayout({
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <p className={styles.brand}>
+        <Link href="/" className={styles.brand}>
           <Image src="/auth/logo.svg" width={32} height={32} alt="" />
           두유팟
-        </p>
+        </Link>
         <p className={styles.tagline}>삼육대학교 재학생 커뮤니티</p>
       </header>
       <main className={intro ? styles.landing : styles.main}>
