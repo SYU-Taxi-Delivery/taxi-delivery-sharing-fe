@@ -145,6 +145,33 @@ describe("PostListScreen", () => {
     },
   );
 
+  it("서버 시각이 오면 기기 시계가 60분 빨라도 서버 기준으로 모집 중을 유지한다", async () => {
+    const evaluatedAt = Date.parse(taxi.referenceTime) - 30 * 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(evaluatedAt + 60 * 60_000);
+    await setup(async () =>
+      pageOf([{ ...taxi, recruitmentStatus: "RECRUITING" }], {
+        serverTime: new Date(evaluatedAt).toISOString(),
+      }),
+    );
+    const card = cards()[0];
+    expect(card).toHaveAttribute("data-available", "true");
+    expect(within(card).getByText("모집 중")).toBeVisible();
+  });
+
+  it("서버 시각으로 신청 마감이 지났으면 기기 시계가 늦어도 상세와 같이 마감으로 보인다", async () => {
+    // Server: 5 minutes before T (past the 10-minute cutoff). Device: 30 minutes slow.
+    const evaluatedAt = Date.parse(taxi.referenceTime) - 5 * 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(evaluatedAt - 30 * 60_000);
+    await setup(async () =>
+      pageOf([{ ...taxi, recruitmentStatus: "RECRUITING" }], {
+        serverTime: new Date(evaluatedAt).toISOString(),
+      }),
+    );
+    const card = cards()[0];
+    expect(card).toHaveAttribute("data-available", "false");
+    expect(card).not.toHaveTextContent("모집 중");
+  });
+
   it("AC-DELIVERY-003-01, AC-DISC-003-04: 배달 카드는 음식점·수령 장소·주문 마감과 참여 마감을 보여 준다", async () => {
     await setup(async () => pageOf([delivery]));
     const card = cards()[0];

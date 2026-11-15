@@ -69,8 +69,14 @@ export function PostCard({
   now,
   preview = false,
   hideStatus = false,
+  statusNow,
 }: {
   post: PostSummary;
+  /**
+   * Server-aligned time from the list. With it the status follows the cutoff
+   * and T the way the detail page does; without it, the saved status stays.
+   */
+  statusNow?: number | null;
   /** Current time from the list screen; the card reads its own otherwise. */
   now?: number | null;
   /** Form preview: the same card as a plain block, not a link. */
@@ -81,9 +87,12 @@ export function PostCard({
   const path = useAppPath();
   const ownNow = useClientNow();
   const clock = now === undefined ? ownNow : now;
-  // The list has no server clock: retain its authoritative status until reload.
-  // The device clock only supplies relative date text below.
-  const { label, reason, available } = postStatusLabel(post);
+  // The device clock only supplies relative date text below; the status
+  // moves only with the list's server-aligned clock.
+  const { label, reason, available } = postStatusLabel(
+    post,
+    statusNow ?? undefined,
+  );
   const reference = Date.parse(post.referenceTime);
   const remaining = post.capacity - post.currentMemberCount;
   const taxi = post.type === "TAXI";

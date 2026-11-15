@@ -18,8 +18,13 @@ const fromKey = (key: string) =>
   parsePostQuery(Object.fromEntries(new URLSearchParams(key.slice(1))));
 
 type Result =
-  | { key: string; page: PostPage; error?: undefined }
-  | { key: string; error: string; page?: undefined };
+  | {
+      key: string;
+      page: PostPage;
+      clockOffset: number | null;
+      error?: undefined;
+    }
+  | { key: string; error: string; page?: undefined; clockOffset?: undefined };
 
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.name === "PostsNotConnectedError") {
@@ -44,7 +49,15 @@ export function usePostList(query: PostQuery, operations: PostListOperations) {
     operations
       .list(fromKey(queryKey))
       .then((raw) => {
-        if (active) setResult({ key, page: toPostPage(raw) });
+        if (!active) return;
+        const page = toPostPage(raw);
+        // Server clock minus device clock, so the cards can tell when a
+        // cutoff passes by the server's time (same as the detail page).
+        // Without a server time the saved status stays as it is.
+        const clockOffset = page.serverTime
+          ? Date.parse(page.serverTime) - Date.now()
+          : null;
+        setResult({ key, page, clockOffset });
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -63,6 +76,7 @@ export function usePostList(query: PostQuery, operations: PostListOperations) {
   return {
     loading: current === null,
     page: current?.page ?? null,
+    clockOffset: current?.clockOffset ?? null,
     error: current?.error ?? null,
     retry: () => setAttempt((value) => value + 1),
   };
