@@ -48,6 +48,8 @@ export type PostPage = {
   /** 0-based page index. */
   number: number;
   size: number;
+  /** The server's clock when it built this page (meta.evaluatedAt). */
+  serverTime?: string;
 };
 
 export type PostFilter = "ALL" | PostType;
@@ -214,7 +216,20 @@ export function toPostPage(value: unknown): PostPage {
   const content = raw.content.map(toPostSummary);
   const ids = new Set(content.map((post) => post.id));
   if (ids.size !== content.length) throw new InvalidPostData();
-  return { content, totalElements, totalPages, number, size };
+  const serverTime =
+    typeof raw.serverTime === "string" &&
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(raw.serverTime) &&
+    Number.isFinite(Date.parse(raw.serverTime))
+      ? raw.serverTime
+      : undefined;
+  return {
+    content,
+    totalElements,
+    totalPages,
+    number,
+    size,
+    ...(serverTime ? { serverTime } : {}),
+  };
 }
 
 /** Default list view: every type, only pods you can still join, first page. */

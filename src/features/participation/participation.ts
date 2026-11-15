@@ -97,15 +97,31 @@ export function recruitmentStatusAt(
   return server;
 }
 
-/** Codes of a 409 join/cancel refusal the screen explains in its own words. */
+/**
+ * Codes of a join/cancel refusal the screen explains in its own words. Most
+ * are 409s carrying the post's latest state; the author rules are 403, a
+ * cancel with no record is 404, and a lock timeout is 503. Each one means the
+ * write did not happen.
+ */
 export const REJECTION_MESSAGES: Record<string, string> = {
   POST_FULL: "방금 정원이 찼어요.",
   JOIN_TIME_CLOSED: "신청 기한이 지났어요.",
-  CANCEL_TIME_CLOSED: "신청 기한이 지났어요.",
+  CANCEL_TIME_CLOSED: "취소 기한이 지났어요.",
   POST_CLOSED: "작성자가 모집을 마감했어요.",
   POST_CANCELLED: "모집이 취소됐어요.",
   POST_FINISHED: "일정이 끝났어요.",
+  ALREADY_JOINED: "이미 참여 중이에요.",
+  ALREADY_CANCELLED: "이미 참여를 취소했어요.",
+  PARTICIPATION_NOT_FOUND: "취소할 참여 기록이 없어요.",
+  SELF_PARTICIPATION_NOT_ALLOWED: "작성자는 자기 모집에 참여할 수 없어요.",
+  AUTHOR_CANNOT_CANCEL_PARTICIPATION:
+    "작성자는 참여를 취소할 수 없어요. 모집을 취소하려면 모집 관리를 이용해 주세요.",
+  PARTICIPATION_TEMPORARILY_UNAVAILABLE:
+    "신청이 몰려 잠시 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
 };
+
+/** Statuses a REJECTION_MESSAGES code can arrive with. */
+export const REJECTION_STATUSES = [403, 404, 409, 503];
 
 /** The post's latest public state sent with a refusal (`error.details.post`). */
 export type LatestPublicState = Partial<

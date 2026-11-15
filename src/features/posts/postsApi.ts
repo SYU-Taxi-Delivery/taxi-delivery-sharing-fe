@@ -62,7 +62,7 @@ export const postListOperations: PostListOperations = {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (search.sort === "RECENT") params.set("sort", "RECENT");
-    const { data } = await backendGet<Record<string, unknown>>(
+    const { data, evaluatedAt } = await backendGet<Record<string, unknown>>(
       `/api/posts?${params}`,
     );
     if (typeof data !== "object" || data === null || !Array.isArray(data.items))
@@ -73,6 +73,7 @@ export const postListOperations: PostListOperations = {
       totalPages: data.totalPages,
       number: data.page,
       size: data.size,
+      serverTime: evaluatedAt,
     };
   },
 };

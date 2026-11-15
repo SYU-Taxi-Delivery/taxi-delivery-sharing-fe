@@ -262,7 +262,7 @@ describe("참여 신청·취소 연동", () => {
     fakeBackend({
       "DELETE /api/posts/1/participants": () =>
         failure(409, "CANCEL_TIME_CLOSED"),
-      "POST /api/posts/1/participants": () => failure(409, "ALREADY_JOINED"),
+      "POST /api/posts/1/participants": () => failure(409, "SOMETHING_NEW"),
     });
     await expect(postDetailOperations.leave("1")).rejects.toMatchObject({
       name: "ParticipationRejected",
@@ -271,6 +271,43 @@ describe("참여 신청·취소 연동", () => {
     });
     await expect(postDetailOperations.join("1")).rejects.toMatchObject({
       kind: "conflict",
+    });
+  });
+
+  it.each([
+    [409, "ALREADY_JOINED"],
+    [403, "SELF_PARTICIPATION_NOT_ALLOWED"],
+    [503, "PARTICIPATION_TEMPORARILY_UNAVAILABLE"],
+  ])("참여 신청이 %s %s로 거절되면 그 이유를 넘긴다", async (status, code) => {
+    fakeBackend({
+      "POST /api/posts/1/participants": () => failure(status, code),
+    });
+    await expect(postDetailOperations.join("1")).rejects.toMatchObject({
+      name: "ParticipationRejected",
+      code,
+    });
+  });
+
+  it.each([
+    [403, "AUTHOR_CANNOT_CANCEL_PARTICIPATION"],
+    [404, "PARTICIPATION_NOT_FOUND"],
+    [409, "ALREADY_CANCELLED"],
+  ])("참여 취소가 %s %s로 거절되면 그 이유를 넘긴다", async (status, code) => {
+    fakeBackend({
+      "DELETE /api/posts/1/participants": () => failure(status, code),
+    });
+    await expect(postDetailOperations.leave("1")).rejects.toMatchObject({
+      name: "ParticipationRejected",
+      code,
+    });
+  });
+
+  it("삭제된 모집글(404 POST_NOT_FOUND)은 거절 이유가 아니라 notFound다", async () => {
+    fakeBackend({
+      "POST /api/posts/1/participants": () => failure(404, "POST_NOT_FOUND"),
+    });
+    await expect(postDetailOperations.join("1")).rejects.toMatchObject({
+      kind: "notFound",
     });
   });
 

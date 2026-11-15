@@ -509,7 +509,7 @@ describe("409 refusals with the latest public state", () => {
   });
 
   it.each([
-    ["CANCEL_TIME_CLOSED", "신청 기한이 지났어요."],
+    ["CANCEL_TIME_CLOSED", "취소 기한이 지났어요."],
     ["POST_CANCELLED", "모집이 취소됐어요."],
     ["POST_FINISHED", "일정이 끝났어요."],
   ])("취소 거절 %s도 이유를 보여 준다", async (code, message) => {
@@ -528,6 +528,26 @@ describe("409 refusals with the latest public state", () => {
       `${message} 참여 취소가 처리되지 않았어요.`,
     );
     expect(operations.refresh).not.toHaveBeenCalled();
+  });
+
+  it("이미 참여 중(ALREADY_JOINED)이면 최신 상태가 와도 내 참여 상태를 다시 조회한다", async () => {
+    const { result, operations } = setup({ ...initial, currentMemberCount: 2 });
+    vi.mocked(operations.join).mockRejectedValue(
+      new ParticipationRejected("ALREADY_JOINED", { currentMemberCount: 2 }),
+    );
+    vi.mocked(operations.refresh).mockResolvedValue({
+      ...initial,
+      currentMemberCount: 2,
+      viewerRelation: "JOINED",
+    });
+    await act(async () => {
+      await result.current.join();
+    });
+    expect(operations.refresh).toHaveBeenCalledTimes(1);
+    expect(result.current.snapshot.viewerRelation).toBe("JOINED");
+    expect(result.current.feedback?.message).toBe(
+      "현재 이 모집에 참여 중이에요. 최신 참여 상태를 확인했어요.",
+    );
   });
 
   it("최신 상태가 없으면 다시 조회하되 서버의 이유를 그대로 쓴다", async () => {

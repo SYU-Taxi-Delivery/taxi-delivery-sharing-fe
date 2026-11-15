@@ -326,10 +326,25 @@ function DetailView({
     if (reportNotice) reportNoticeRef.current?.focus();
   }, [reportNotice]);
 
-  const participationOps = useMemo(
-    () => ({
-      join: () => operations.join(id),
-      cancel: () => operations.leave(id),
+  const participationOps = useMemo(() => {
+    const signedIn = async (request: () => Promise<void>) => {
+      try {
+        await request();
+      } catch (error) {
+        if (
+          mounted.current &&
+          error instanceof ApiError &&
+          error.status === 401
+        )
+          handleUnauthorized();
+        throw error;
+      }
+    };
+    return {
+      // An expired session shows the sign-in card at once instead of waiting
+      // for the follow-up refresh to run into the same 401.
+      join: () => signedIn(() => operations.join(id)),
+      cancel: () => signedIn(() => operations.leave(id)),
       refresh: async () => {
         try {
           const next = toPostDetail(await operations.load(id));
@@ -351,9 +366,8 @@ function DetailView({
           throw error;
         }
       },
-    }),
-    [operations, id, handleUnauthorized, onReload],
-  );
+    };
+  }, [operations, id, handleUnauthorized, onReload]);
   const participation = useParticipation(toSnapshot(initial), participationOps);
   const nowMs = participation.nowMs;
   const serverNow = participation.serverNow;

@@ -127,7 +127,11 @@ function PostList({
   const router = useRouter();
   const headingId = useId();
   const now = useClientNow();
-  const { loading, page, error, retry } = usePostList(query, operations);
+  const { loading, page, error, retry, clockOffset } = usePostList(
+    query,
+    operations,
+  );
+  const statusNow = useServerTick(clockOffset);
   const desktop = useDesktop();
   const [sheetOpen, setSheetOpen] = useState(false);
   const filterButton = useRef<HTMLButtonElement>(null);
@@ -403,7 +407,11 @@ function PostList({
                       >
                         {group.posts.map((post) => (
                           <li key={post.id}>
-                            <PostCard post={post} now={now} />
+                            <PostCard
+                              post={post}
+                              now={now}
+                              statusNow={statusNow}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -569,4 +577,21 @@ function FilterIcon() {
       />
     </svg>
   );
+}
+
+/**
+ * Server-aligned time for the cards' status, refreshed every 30 seconds, so a
+ * card turns to 신청 마감 when the cutoff passes instead of on reload. Null
+ * until mounted (server render and hydration show the saved status) and when
+ * the page came without a server time.
+ */
+function useServerTick(offset: number | null): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return offset === null || now === null ? null : now + offset;
 }
