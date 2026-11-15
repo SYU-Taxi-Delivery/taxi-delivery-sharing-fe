@@ -10,6 +10,7 @@ import {
 import {
   ParticipationRejected,
   REJECTION_MESSAGES,
+  REJECTION_STATUSES,
   toRecruitmentStatus,
   type LatestPublicState,
 } from "@/features/participation/participation";
@@ -152,14 +153,16 @@ export function latestPublicState(
 }
 
 /**
- * Join/cancel failures: a 409 with a known reason becomes ParticipationRejected
- * carrying the post's latest public state; the rest as toDetailError.
+ * Join/cancel failures: a refusal with a known reason (409 conflicts, the
+ * 403 author rules, 404 no record, 503 busy) becomes ParticipationRejected,
+ * carrying the post's latest public state when the server sent it; the rest
+ * as toDetailError.
  */
 export function toParticipationError(error: unknown): unknown {
   const code = errorCode(error);
   if (
     error instanceof ApiError &&
-    error.status === 409 &&
+    REJECTION_STATUSES.includes(error.status) &&
     code &&
     code in REJECTION_MESSAGES
   ) {

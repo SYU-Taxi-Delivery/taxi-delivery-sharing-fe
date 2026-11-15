@@ -19,6 +19,11 @@ export type ParticipationOperations = {
 };
 
 type Action = "join" | "cancel";
+const VIEWER_CODES = new Set([
+  "ALREADY_JOINED",
+  "ALREADY_CANCELLED",
+  "PARTICIPATION_NOT_FOUND",
+]);
 const DAY_MS = 86_400_000;
 const SEOUL_OFFSET_MS = 9 * 3_600_000;
 
@@ -265,7 +270,10 @@ export function useParticipation(
       }
       if (!mounted.current || sequence.current !== requestId) return;
       const reason = rejected && REJECTION_MESSAGES[rejected.code];
-      if (rejected?.latest && reason) {
+      // Post-state refusals carry everything the panel needs. The others
+      // (already joined/cancelled, no record) are about the viewer, whom
+      // details.post does not describe, so they ask the server again below.
+      if (rejected?.latest && reason && !VIEWER_CODES.has(rejected.code)) {
         // The refusal carries the post's latest state: show it right away
         // instead of asking the server again.
         const now = serverNow();
