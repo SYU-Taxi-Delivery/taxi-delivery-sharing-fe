@@ -86,6 +86,19 @@ Playwright의 `bringToFront()`는 이 환경에서 focus/visibilitychange 이벤
 - [참여 후 모바일](../output/playwright/week8-fe-20261115/joined-mobile.png)
 - [재참여 후 데스크톱](../output/playwright/week8-fe-20261115/rejoined-desktop.png)
 
+## 인증 화면 로고 후속 수정
+
+`src/features/auth/AuthLayout.tsx`의 로고가 일반 문단이라 클릭·키보드 이동이 없었다.
+공통 헤더를 `/` 링크로 바꿔 로그인·가입·비밀번호 재설정에서 첫 화면으로 돌아가게 했다.
+데모 인증 화면에서도 로고는 실제 첫 화면으로 연결한다. 첫 화면에서는 같은 경로를 유지한다.
+`src/features/auth/auth.module.css`에 44px 클릭 영역과 기존 색상의 키보드 포커스 표시를 적용했다.
+
+- `pnpm typecheck`, `pnpm build`: 통과
+- `pnpm test src/features/auth src/app/page.test.tsx --maxWorkers=2 --reporter=dot`: 10파일 / 209개 통과
+- 수정한 TSX·CSS의 Prettier 검사, TSX의 ESLint 검사: 통과
+- 로컬 브라우저: `/login` 로고 클릭 → `/` 소개 화면 확인, `/signup` Tab → 로고 초점·44px 영역·포커스 테두리 확인 → Enter → `/` 복귀
+- 최초 sandbox 실행은 Corepack 다운로드 DNS 오류로 검사를 시작하지 못했다. 권한이 있는 실행에서 위 검사를 완료했다.
+
 ## 남은 확인과 담당 경계
 
 - 운영 MySQL의 락·트랜잭션 롤백·데이터 마이그레이션·기존 사용자 데이터는 확인하지 않았다.
