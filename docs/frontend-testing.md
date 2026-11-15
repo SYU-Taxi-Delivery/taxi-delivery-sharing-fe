@@ -83,6 +83,25 @@ API 어댑터의 DTO·오류 매핑은 각 기능의 `*Api.test.ts`와
 - 요소는 label·role·사용자에게 보이는 이름으로 찾는다. 오류 설명·알림, 중복 제출,
   확인창의 초기 포커스·취소·복귀는 컴포넌트 assertion과 실제 브라우저 조작을 구분한다.
 
+## FE·BE 통합 점검
+
+백엔드 demo 프로필(일회성 H2)과 Next 개발 서버의 `/api` 프록시를 함께 띄운 뒤 API 단계의
+계약을 한 번에 확인한다. 실제 계정·운영 서버에는 실행하지 않는다.
+
+```bash
+# 백엔드 저장소
+./gradlew bootJar && java -jar build/libs/taxi-delivery-sharing-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo
+# 이 저장소
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000 BACKEND_ORIGIN=http://localhost:8080 pnpm dev
+node scripts/fe-be-integration.mjs http://localhost:3000
+```
+
+확인 항목: 비로그인 401, 세션 로그인·CSRF, 작성자 본인 참여·취소 거절, 비참여자 명단·링크 차단,
+같은 학생 동시 중복 참여, 마지막 자리 동시 경쟁(성공 1건·나머지 `POST_FULL`과 최신 상태),
+같은 모집 ID의 목록·상세·내 참여·내 모집 값 일치, 취소 후 명단·링크 회수, 재참여
+(`REJOIN`, 같은 participationId), 기록 없는 취소, 작성자 마감 후 참여 거절, 로그아웃 후 401.
+demo 계정으로 세션 로그인하려면 백엔드에 demo 계정 `LOCAL_CREDENTIAL`이 있어야 한다.
+
 ## API·수동 검증 대기
 
 | 항목                     | 이 테스트 준비에서 확인하는 부분                  | 남겨 둔 검증                                                                     |
