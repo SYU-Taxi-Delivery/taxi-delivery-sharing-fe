@@ -19,7 +19,7 @@ import {
   type CurrentUser,
   type LoginCredentials,
 } from "./auth";
-import { authOperations } from "./authApi";
+import { authOperations, USER_KEY } from "./authApi";
 
 type Notice = { tone: "info" | "error"; message: string } | null;
 
@@ -140,13 +140,20 @@ export function AuthProvider({
     const restored = (event: PageTransitionEvent) => {
       if (event.persisted) void check();
     };
+    // Signing in or out in another tab changes the stored user there; this
+    // tab rechecks at once instead of on its next focus.
+    const otherTab = (event: StorageEvent) => {
+      if (event.key === null || event.key === USER_KEY) void check();
+    };
     window.addEventListener("focus", recheck);
     document.addEventListener("visibilitychange", recheck);
     window.addEventListener("pageshow", restored);
+    window.addEventListener("storage", otherTab);
     return () => {
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", recheck);
       window.removeEventListener("pageshow", restored);
+      window.removeEventListener("storage", otherTab);
     };
   }, [check]);
 

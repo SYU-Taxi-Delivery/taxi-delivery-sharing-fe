@@ -132,6 +132,34 @@ describe("AuthProvider 재확인", () => {
     expect(auth.current.notice?.message).toContain("만료");
   });
 
+  it("다른 탭에서 로그아웃하거나 다른 계정으로 로그인하면 바로 다시 확인한다", async () => {
+    const me = vi.fn<AuthOperations["me"]>(async () => student);
+    const { state } = setup({ me });
+    await flush();
+    me.mockResolvedValue(other);
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: "syu-session-user" }),
+      );
+    });
+    expect(state()).toHaveTextContent("authenticated:다른 학생");
+
+    // Unrelated keys do not trigger a check.
+    me.mockClear();
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent("storage", { key: "theme" }));
+    });
+    expect(me).not.toHaveBeenCalled();
+
+    me.mockResolvedValue(null);
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: "syu-session-user" }),
+      );
+    });
+    expect(state()).toHaveTextContent("expired:-");
+  });
+
   it("일시적인 재확인 실패는 로그인 사용자를 유지한다", async () => {
     const me = vi.fn<AuthOperations["me"]>(async () => student);
     const { state } = setup({ me });

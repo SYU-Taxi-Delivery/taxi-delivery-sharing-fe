@@ -24,7 +24,7 @@ const notConnected = async (): Promise<never> => {
  * in this browser and every me() confirms the session with an authenticated
  * read. Only id, display name and role are stored, never credentials.
  */
-const USER_KEY = "syu-session-user";
+export const USER_KEY = "syu-session-user";
 let fallbackUser: unknown;
 let fallbackStored: string | null | undefined;
 
