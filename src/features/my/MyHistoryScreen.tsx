@@ -24,7 +24,7 @@ import { useMyHistory } from "./useMyHistory";
 import styles from "./my.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { SpotArt } from "@/features/ui/SpotArt";
-import { InfoIcon } from "@/features/ui/art";
+import { BeanArt, InfoIcon } from "@/features/ui/art";
 
 const tabs: { tab: MyTab; label: string }[] = [
   { tab: "participated", label: "참여한 글" },
@@ -47,8 +47,12 @@ export function MyHistoryScreen({
           row; everything after spans the full width (my.module.css .page). */}
       <div className={styles.page}>
         <div className={styles.pageTitle}>
-          <h1 className={common.title}>내 참여 · 모집</h1>
-          <p className={common.lead}>참여한 글·작성한 글 관리</p>
+          {/* Same bean slot as the list heading, so both tabs open alike. */}
+          <BeanArt className={common.headingBean} face="happy" />
+          <div className={styles.titleText}>
+            <h1 className={common.title}>내 참여 · 모집</h1>
+            <p className={common.lead}>참여한 글·작성한 글 관리</p>
+          </div>
         </div>
         <RequireAuth loginLabel="로그인하고 내 내역 보기">
           <Link
