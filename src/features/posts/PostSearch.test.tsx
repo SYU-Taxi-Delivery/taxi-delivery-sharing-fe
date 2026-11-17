@@ -228,9 +228,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
   it("바꾼 조건이 아직 적용 전이면 적용 안 됨을 알리고, 위 칩은 적용된 조건만 보여 준다", async () => {
     setDesktop(true);
     await setup({ ...taxiQuery, destination: "석계" });
-    const sidebar = within(
-      screen.getByRole("complementary", { name: "검색 조건" }),
-    );
+    const sidebar = within(screen.getByRole("complementary", { name: "검색" }));
     const chips = screen.getByRole("group", { name: "적용된 검색 조건" });
     expect(sidebar.queryByText("적용 안 됨")).not.toBeInTheDocument();
     // Nothing to apply yet: the list beside it already shows these results.
@@ -474,7 +472,7 @@ describe("모집 검색 (데스크톱: 왼쪽 조건)", () => {
   it("넓은 화면에서는 같은 조건을 목록 옆에 두고 필터 버튼은 없다", async () => {
     setDesktop(true);
     const operations = await setup({ ...taxiQuery, departure: "석계" });
-    const sidebar = screen.getByRole("complementary", { name: "검색 조건" });
+    const sidebar = screen.getByRole("complementary", { name: "검색" });
     expect(within(sidebar).getByLabelText("출발지")).toHaveValue("석계");
     expect(
       screen.queryByRole("button", { name: /^필터/ }),

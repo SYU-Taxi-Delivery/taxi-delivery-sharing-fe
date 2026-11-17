@@ -209,7 +209,8 @@ function PostList({
         <aside className={styles.sidebar} aria-labelledby={sidebarTitleId}>
           {panel(
             <h2 id={sidebarTitleId} className={styles.panelTitle}>
-              검색 조건
+              <SearchIcon />
+              검색
             </h2>,
             "sidebar",
           )}
@@ -565,6 +566,29 @@ function clearedSearch(query: PostQuery): PostQuery {
     type: query.type,
     joinableOnly: query.joinableOnly,
   };
+}
+
+/** Magnifier drawn like FilterIcon: 20 grid, 1.8 round strokes. */
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={styles.searchIcon}>
+      <circle
+        cx="8.75"
+        cy="8.75"
+        r="5.25"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m12.75 12.75 4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function FilterIcon() {
