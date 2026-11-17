@@ -13,5 +13,19 @@ export const TAXI_PLACES = [
   "화랑대역 2번 출구",
 ] as const;
 
+/**
+ * Taxi suggestions in the list search: station names only, since a search
+ * for 석계역 already matches every exit (the form keeps exits to meet at).
+ */
+export const TAXI_SEARCH_PLACES = [
+  "삼육대학교 정문",
+  "삼육대학교 후문",
+  "기숙사",
+  "석계역",
+  "태릉입구역",
+  "화랑대역",
+  "별내역",
+] as const;
+
 /** Delivery pickup suggestions. */
 export const PICKUP_PLACES = ["정문", "후문", "기숙사", "학생회관"] as const;

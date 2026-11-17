@@ -190,7 +190,7 @@ describe("적용된 조건 칩과 글쓰기 연결", () => {
     });
     expect(chips.map((chip) => chip.label)).toEqual([
       "출발 석계역",
-      "학교행",
+      "학교 도착",
       "오늘 밤",
       "최근 등록 순",
     ]);
@@ -258,7 +258,7 @@ describe("noResultsText", () => {
         direction: "FROM_SCHOOL",
         q: "막차",
       }),
-    ).toBe("‘석계 도착 · 학교발 · 막차’ 택시 모집이 아직 없어요.");
+    ).toBe("‘석계 도착 · 학교 출발 · 막차’ 택시 모집이 아직 없어요.");
     expect(
       noResultsText({
         type: "DELIVERY",
