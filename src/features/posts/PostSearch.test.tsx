@@ -135,7 +135,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(button).toHaveFocus();
   });
 
-  it("택시 조건(추천 장소, 바꾸기, 학교행, 시간대, 정렬)을 주소로 적용한다", async () => {
+  it("택시 조건(추천 장소, 바꾸기, 학교 도착, 시간대, 정렬)을 주소로 적용한다", async () => {
     const operations = await setup(taxiQuery);
     fireEvent.click(screen.getByRole("button", { name: "필터" }));
     const sheet = within(screen.getByRole("dialog", { name: "필터" }));
@@ -144,6 +144,20 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(sheet.getAllByRole("group", { name: /추천 장소/ })).toHaveLength(1);
     const suggestions = () => sheet.getByRole("group", { name: /추천 장소/ });
     expect(suggestions()).toHaveAccessibleName("추천 장소 출발지에 넣기");
+    // Station names only (no exits), with 별내역.
+    expect(
+      within(suggestions())
+        .getAllByRole("button")
+        .map((chip) => chip.textContent),
+    ).toEqual([
+      "삼육대학교 정문",
+      "삼육대학교 후문",
+      "기숙사",
+      "석계역",
+      "태릉입구역",
+      "화랑대역",
+      "별내역",
+    ]);
     fireEvent.click(
       within(suggestions()).getByRole("button", { name: "삼육대학교 정문" }),
     );
@@ -158,22 +172,22 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     );
     expect(sheet.getByLabelText("출발지")).toHaveValue("석계");
     expect(sheet.getByLabelText("도착지")).toHaveValue("삼육대학교 정문");
-    // 방향 is its own radio group, apart from the place suggestions.
-    const direction = sheet.getByRole("radiogroup", { name: "방향" });
+    // 학교 출발·도착 is its own radio group, apart from the place suggestions.
+    const direction = sheet.getByRole("radiogroup", { name: "학교" });
     expect(
       within(direction)
         .getAllByRole("radio")
         .map((radio) => radio.closest("label")?.textContent),
-    ).toEqual(["전체", "학교행", "학교발"]);
+    ).toEqual(["전체", "출발", "도착"]);
     expect(
       within(direction).getByRole("radio", { name: "전체" }),
     ).toBeChecked();
     expect(
-      within(suggestions()).queryByRole("button", { name: "학교행" }),
+      within(suggestions()).queryByRole("button", { name: "도착" }),
     ).toBeNull();
-    fireEvent.click(within(direction).getByRole("radio", { name: "학교행" }));
+    fireEvent.click(within(direction).getByRole("radio", { name: "도착" }));
     expect(
-      within(direction).getByRole("radio", { name: "학교행" }),
+      within(direction).getByRole("radio", { name: "도착" }),
     ).toBeChecked();
     fireEvent.click(sheet.getByRole("button", { name: "오늘 밤" }));
     fireEvent.click(sheet.getByRole("radio", { name: "최근 등록 순" }));

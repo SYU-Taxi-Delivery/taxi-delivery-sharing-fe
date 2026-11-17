@@ -9,7 +9,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { PICKUP_PLACES, TAXI_PLACES } from "./places";
+import { PICKUP_PLACES, TAXI_SEARCH_PLACES } from "./places";
 import {
   cleanSearch,
   postQueryHref,
@@ -37,8 +37,8 @@ const TIME_CHOICES: TimeWindow[] = ["hour", "tonight", "morning", "custom"];
 const SORTS: PostSort[] = ["TIME", "RECENT"];
 const DIRECTIONS: [Direction | undefined, string][] = [
   [undefined, "전체"],
-  ["TO_SCHOOL", "학교행"],
-  ["FROM_SCHOOL", "학교발"],
+  ["FROM_SCHOOL", "출발"],
+  ["TO_SCHOOL", "도착"],
 ];
 
 /** Search conditions only; type, 참여 가능만 and page come from the list. */
@@ -182,7 +182,7 @@ export function SearchPanel({
               aria-labelledby={`${id}-direction`}
             >
               <span id={`${id}-direction`} className={styles.directionLabel}>
-                방향
+                학교
               </span>
               <span className={styles.segmented}>
                 {DIRECTIONS.map(([value, label]) => (
@@ -200,7 +200,7 @@ export function SearchPanel({
               </span>
             </div>
             <Suggestions
-              places={TAXI_PLACES}
+              places={TAXI_SEARCH_PLACES}
               target={ROUTE_LABELS[target]}
               value={draft[target] ?? ""}
               onPick={suggest}
@@ -211,16 +211,22 @@ export function SearchPanel({
         {delivery && (
           <fieldset className={styles.panelSection}>
             <legend className={styles.srOnly}>음식점·수령 장소</legend>
-            <PlaceField
-              label="음식점"
-              value={draft.restaurant ?? ""}
-              onChange={(restaurant) => set({ restaurant })}
-            />
-            <PlaceField
-              label="수령 장소"
-              value={draft.pickup ?? ""}
-              onChange={(pickup) => set({ pickup })}
-            />
+            {/* Same label-beside-input rows as the taxi route. */}
+            <div className={styles.route}>
+              <PlaceField
+                label="음식점"
+                placeholder="어느 가게"
+                value={draft.restaurant ?? ""}
+                onChange={(restaurant) => set({ restaurant })}
+              />
+              <PlaceField
+                label="수령 장소"
+                placeholder="어디서 받을지"
+                target
+                value={draft.pickup ?? ""}
+                onChange={(pickup) => set({ pickup })}
+              />
+            </div>
             <Suggestions
               places={PICKUP_PLACES}
               target="수령 장소"
@@ -488,28 +494,30 @@ function RangeEnd({
 /** Labelled text input (음식점, 수령 장소). */
 function PlaceField({
   label,
+  placeholder,
+  target = false,
   value,
   onChange,
 }: {
   label: string;
+  placeholder: string;
+  /** The field the suggestion chips fill, marked like the taxi route. */
+  target?: boolean;
   value: string;
   onChange: (value: string) => void;
 }) {
-  const id = useId();
   return (
-    <div className={styles.placeField}>
-      <label className={styles.fieldLabel} htmlFor={id}>
-        {label}
-      </label>
+    <label className={styles.routeField} data-target={target}>
+      <span className={styles.routeLabel}>{label}</span>
       <input
-        id={id}
         className={styles.searchInput}
         value={value}
         maxLength={100}
         autoComplete="off"
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
       />
-    </div>
+    </label>
   );
 }
 

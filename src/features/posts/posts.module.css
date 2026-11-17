@@ -1332,17 +1332,6 @@
   font-weight: 600;
 }
 
-.placeField {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.fieldLabel {
-  color: var(--posts-muted);
-  font-size: var(--type-label);
-  font-weight: 600;
-}
-
 .searchInput {
   width: 100%;
   min-height: var(--touch-target);
@@ -1472,7 +1461,7 @@
   background: var(--primary-tint);
 }
 
-/* Route direction: a labelled segmented switch (전체 · 학교행 · 학교발),
+/* Route direction: a labelled segmented switch (학교: 전체 · 출발 · 도착),
    a different shape from the place chips so it reads as a setting. */
 .direction {
   display: grid;

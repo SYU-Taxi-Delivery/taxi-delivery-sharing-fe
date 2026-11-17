@@ -216,7 +216,7 @@ export function noResultsText(query: PostQuery): string {
   if (clean.departure) parts.push(`${clean.departure} 출발`);
   if (clean.destination) parts.push(`${clean.destination} 도착`);
   if (clean.direction)
-    parts.push(clean.direction === "TO_SCHOOL" ? "학교행" : "학교발");
+    parts.push(clean.direction === "TO_SCHOOL" ? "학교 도착" : "학교 출발");
   if (clean.restaurant) parts.push(clean.restaurant);
   if (clean.pickup) parts.push(`${clean.pickup} 수령`);
   if (clean.q) parts.push(clean.q);
@@ -261,7 +261,7 @@ export function searchChips(
   if (clean.direction)
     chips.push({
       key: "direction",
-      label: clean.direction === "TO_SCHOOL" ? "학교행" : "학교발",
+      label: clean.direction === "TO_SCHOOL" ? "학교 도착" : "학교 출발",
       clear: { direction: undefined },
     });
   text("restaurant", `음식점 ${clean.restaurant}`);
