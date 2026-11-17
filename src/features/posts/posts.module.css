@@ -1273,13 +1273,23 @@
 }
 
 .sidebar .panelTitle {
-  padding: var(--space-3) var(--space-4) 0;
+  padding: var(--space-5) var(--space-4) 0;
 }
 
 .panelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--type-heading);
   font-weight: 700;
   letter-spacing: var(--tracking-heading);
+}
+
+.searchIcon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--primary-text);
 }
 
 .panelBody {
