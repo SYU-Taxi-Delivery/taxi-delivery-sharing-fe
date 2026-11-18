@@ -424,6 +424,7 @@ export function SignupScreen({
           </p>
         )}
         <form
+          method="post"
           className={styles.form}
           noValidate
           aria-busy={submitting}

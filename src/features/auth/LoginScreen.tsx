@@ -129,6 +129,7 @@ export function LoginScreen({
             )}
           </div>
           <form
+            method="post"
             className={styles.form}
             noValidate
             aria-busy={busy}

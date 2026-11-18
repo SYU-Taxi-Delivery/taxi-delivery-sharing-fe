@@ -119,7 +119,12 @@ export function safeNextPath(value: unknown): string {
     return "/";
   }
   const url = new URL(value, "https://same-origin.invalid");
-  if (url.origin !== "https://same-origin.invalid") return "/";
+  if (
+    url.origin !== "https://same-origin.invalid" ||
+    url.pathname.startsWith("//")
+  ) {
+    return "/";
+  }
   if (url.pathname === "/login" || url.pathname.startsWith("/login/")) {
     return "/";
   }

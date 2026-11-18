@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
+import ResetPasswordPage from "@/app/reset-password/page";
+import { demoPath } from "@/features/demo/demoPaths";
 import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./ResetPasswordScreen";
 import type { PasswordResetOperations } from "./passwordReset";
@@ -32,6 +34,48 @@ const fill = (
 afterEach(() => vi.useRealTimers());
 
 describe("비밀번호 재설정", () => {
+  it.each([
+    [
+      "/my?tab=created",
+      "/reset-password?next=%2Fmy%3Ftab%3Dcreated",
+      "/password-reset-preview?next=%2Fmy%3Ftab%3Dcreated&mode=reset",
+    ],
+    [
+      "//outside.example",
+      "/reset-password",
+      "/password-reset-preview?mode=reset",
+    ],
+  ])(
+    "받은 코드 입력 링크가 안전한 복귀 경로만 유지한다 (%s)",
+    (next, live, demo) => {
+      render(<ForgotPasswordScreen operations={operations()} next={next} />);
+      const href = screen
+        .getByRole("link", { name: "이미 받은 인증번호 입력하기" })
+        .getAttribute("href")!;
+      expect(href).toBe(live);
+      expect(demoPath(href)).toBe(demo);
+    },
+  );
+  it.each([
+    ["/my?tab=created", "/login?next=%2Fmy%3Ftab%3Dcreated"],
+    [["/my", "//outside.example"], "/login?next=%2Fmy"],
+    ["https://outside.example", "/login"],
+    ["//outside.example", "/login"],
+    [undefined, "/login"],
+  ])(
+    "재설정 직접 진입에도 안전한 로그인 복귀 경로를 사용한다 (%s)",
+    async (next, href) => {
+      render(
+        await ResetPasswordPage({
+          searchParams: Promise.resolve({ next }),
+        }),
+      );
+      expect(screen.getByLabelText("인증번호")).toBeVisible();
+      expect(
+        screen.getByRole("link", { name: "로그인으로 돌아가기" }),
+      ).toHaveAttribute("href", href);
+    },
+  );
   it("발송부터 변경까지 이메일을 이어받고 원문 비밀번호와 앞자리 0을 보존한다", async () => {
     const api = operations();
     render(<ForgotPasswordScreen operations={api} next="/my" />);

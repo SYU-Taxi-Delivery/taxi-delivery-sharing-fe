@@ -80,6 +80,7 @@ describe("LoginScreen", () => {
     ).toBeVisible();
     const email = screen.getByLabelText("학교 이메일");
     const password = screen.getByLabelText("비밀번호");
+    expect(password.closest("form")).toHaveAttribute("method", "post");
     expect(email).toHaveAttribute("type", "email");
     expect(email).toHaveAttribute("autocomplete", "username");
     expect(email).toHaveAccessibleDescription(/@syuin\.ac\.kr/);

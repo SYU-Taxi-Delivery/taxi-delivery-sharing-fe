@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { loginHref, schoolEmailError, SCHOOL_EMAIL_LABEL } from "./auth";
+import {
+  loginHref,
+  safeNextPath,
+  schoolEmailError,
+  SCHOOL_EMAIL_LABEL,
+} from "./auth";
 import { AuthLayout } from "./AuthLayout";
 import {
   passwordResetErrorMessage,
@@ -31,6 +36,7 @@ export function ResetPasswordScreen({
   next?: string;
 }) {
   const path = useAppPath();
+  const destination = safeNextPath(next);
   const id = useId();
   const [step, setStep] = useState<"request" | "confirm" | "done">(
     requestFirst ? "request" : "confirm",
@@ -274,7 +280,14 @@ export function ResetPasswordScreen({
               )}
             </form>
             {step === "request" && (
-              <Link href={path("/reset-password")} className={styles.textLink}>
+              <Link
+                href={path(
+                  destination === "/"
+                    ? "/reset-password"
+                    : `/reset-password?next=${encodeURIComponent(destination)}`,
+                )}
+                className={styles.textLink}
+              >
                 이미 받은 인증번호 입력하기
               </Link>
             )}

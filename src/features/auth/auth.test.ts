@@ -52,6 +52,7 @@ describe("safeNextPath", () => {
   it.each([
     ["/posts/1?tab=comments#c2", "/posts/1?tab=comments#c2"],
     ["/admin", "/admin"],
+    ["/posts/../my", "/my"],
   ])("같은 출처의 경로 %s를 유지한다", (value, expected) => {
     expect(safeNextPath(value)).toBe(expected);
   });
@@ -62,6 +63,8 @@ describe("safeNextPath", () => {
     "posts",
     "https://evil.example/",
     "//evil.example/",
+    "/posts/..//my",
+    "/%2e%2e//my",
     "/\\evil.example",
     "/a\nb",
     "/login",

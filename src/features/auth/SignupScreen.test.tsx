@@ -100,6 +100,9 @@ describe("SignupScreen", () => {
     );
     await act(async () => {});
     expect(screen.getByLabelText("학교 이메일")).toBeVisible();
+    expect(
+      screen.getByLabelText("학교 이메일").closest("form"),
+    ).toHaveAttribute("method", "post");
     expect(screen.getByText("기존 회원이세요?")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "가입 데모 보기" }),
