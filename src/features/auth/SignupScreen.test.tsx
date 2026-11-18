@@ -86,7 +86,7 @@ const currentStep = () =>
     .querySelector('[aria-current="step"]');
 
 describe("SignupScreen", () => {
-  it("운영 가입 화면은 인증과 약관 준비 상태를 입력 전에 알린다", async () => {
+  it("가입 화면에 학교 이메일 입력, 데모와 로그인 경로를 제공한다", async () => {
     render(
       <AuthProvider
         operations={{
@@ -99,7 +99,6 @@ describe("SignupScreen", () => {
       </AuthProvider>,
     );
     await act(async () => {});
-    expect(screen.getByText(/현재 이메일 인증과 가입 요청/)).toBeVisible();
     expect(screen.getByLabelText("학교 이메일")).toBeVisible();
     expect(screen.getByText("기존 회원이세요?")).toBeVisible();
     expect(
@@ -183,7 +182,7 @@ describe("SignupScreen", () => {
 
   it("AC-AUTH-001-08: 학교 도메인이 아니면 인증번호를 요청하지 않는다", async () => {
     const operations = await setup();
-    type("학교 이메일", "a@syu.ac.kr");
+    type("학교 이메일", "a@example.com");
     await click("인증번호 받기");
     expect(operations.requestCode).not.toHaveBeenCalled();
     expect(screen.getByLabelText("학교 이메일")).toHaveAccessibleDescription(
@@ -203,7 +202,7 @@ describe("SignupScreen", () => {
     );
   });
 
-  it("AC-AUTH-001-09: 인증번호 발송 후 가입 여부와 무관한 안내와 입력칸을 제공한다", async () => {
+  it("인증번호 발송 성공 후 안내와 입력칸을 제공한다", async () => {
     const operations = await setup();
     type("학교 이메일", "  a@syuin.ac.kr ");
     await click("인증번호 받기");
@@ -514,7 +513,7 @@ describe("SignupScreen", () => {
     const password = screen.getByLabelText("비밀번호");
     expect(password).toHaveFocus();
     expect(password).toHaveAttribute("aria-invalid", "true");
-    expect(password).toHaveAccessibleDescription(/15~128자로 입력해/);
+    expect(password).toHaveAccessibleDescription(/8~64자로 입력해/);
     type("비밀번호", "a long enough password");
     expect(password).not.toHaveAttribute("aria-invalid");
   });
@@ -557,7 +556,7 @@ describe("SignupScreen", () => {
     });
     await fillAll();
     await click("회원가입");
-    expect(screen.getByRole("alert")).toHaveTextContent("유출된 비밀번호");
+    expect(screen.getByRole("alert")).toHaveTextContent("비밀번호 조건");
     expect(screen.queryByText(/CompromisedPass/)).not.toBeInTheDocument();
     expect(currentStep()).toHaveTextContent("계정 정보");
     expect(screen.getByLabelText("비밀번호")).toHaveFocus();
@@ -567,7 +566,14 @@ describe("SignupScreen", () => {
 
   it("인증이 만료되어 거절되면 주소를 남긴 채 인증을 다시 받게 한다", async () => {
     await setup({
-      register: vi.fn(async () => Promise.reject(new ApiError(403, ""))),
+      register: vi.fn(async () =>
+        Promise.reject(
+          new ApiError(
+            403,
+            JSON.stringify({ error: { code: "EMAIL_NOT_VERIFIED" } }),
+          ),
+        ),
+      ),
     });
     await fillAll();
     await click("회원가입");
@@ -578,6 +584,24 @@ describe("SignupScreen", () => {
     );
     expect(screen.getByLabelText("학교 이메일")).toHaveValue("a@syuin.ac.kr");
     expect(screen.getByLabelText("학교 이메일")).toHaveFocus();
+  });
+
+  it("가입 요청의 CSRF 오류는 이메일 인증을 취소하지 않는다", async () => {
+    await setup({
+      register: vi.fn(async () =>
+        Promise.reject(
+          new ApiError(
+            403,
+            JSON.stringify({ error: { code: "CSRF_INVALID" } }),
+          ),
+        ),
+      ),
+    });
+    await fillAll();
+    await click("회원가입");
+    expect(screen.getByRole("alert")).toHaveTextContent("새로고침");
+    expect(currentStep()).toHaveTextContent("약관 동의");
+    expect(screen.getByRole("button", { name: "회원가입" })).toBeEnabled();
   });
 
   it("요청 중에는 중복 가입 요청을 보내지 않는다", async () => {

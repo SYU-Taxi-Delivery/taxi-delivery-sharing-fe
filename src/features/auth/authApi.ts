@@ -15,10 +15,6 @@ export class AuthNotConnectedError extends Error {
   }
 }
 
-const notConnected = async (): Promise<never> => {
-  throw new AuthNotConnectedError();
-};
-
 /**
  * The backend has no current-user endpoint yet, so the login response is kept
  * in this browser and every me() confirms the session with an authenticated
@@ -108,12 +104,46 @@ export const authOperations: AuthOperations = {
   },
 };
 
-/**
- * Fields match the backend, but signup remains disconnected until text success
- * responses and verification/password policies are adapted. See docs/backend-integration.md.
- */
+/** School email verification uses plain text; registration returns a numeric ID. */
 export const signupOperations: SignupOperations = {
-  requestCode: notConnected,
-  verifyCode: notConnected,
-  register: notConnected,
+  requestCode: async (email) => {
+    await backendSend(
+      "POST",
+      "/api/auth/school-email/send-code",
+      {
+        schoolEmail: email.trim().toLowerCase(),
+      },
+      { responseType: "text" },
+    );
+  },
+  verifyCode: async (email, code) => {
+    await backendSend(
+      "POST",
+      "/api/auth/school-email/verify-code",
+      {
+        schoolEmail: email.trim().toLowerCase(),
+        code,
+      },
+      { responseType: "text" },
+    );
+  },
+  register: async ({ studentNo, name, schoolEmail, password }) => {
+    const userId = await backendSend(
+      "POST",
+      "/api/auth/school-email/register",
+      {
+        studentNo: studentNo.trim(),
+        name: name.trim(),
+        schoolEmail: schoolEmail.trim().toLowerCase(),
+        password,
+      },
+    );
+    if (
+      typeof userId !== "number" ||
+      !Number.isSafeInteger(userId) ||
+      userId <= 0
+    ) {
+      throw new InvalidBackendResponse();
+    }
+  },
 };

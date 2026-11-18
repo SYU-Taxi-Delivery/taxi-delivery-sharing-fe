@@ -1,5 +1,5 @@
 import { errorCode } from "@/lib/backend";
-import { SCHOOL_EMAIL_DOMAIN } from "./auth";
+import { SCHOOL_EMAIL_LABEL } from "./auth";
 
 export type SignupRequest = {
   studentNo: string;
@@ -8,9 +8,9 @@ export type SignupRequest = {
   password: string;
 };
 
-// UI callbacks; API transport and email verification are connected separately in #18.
+// UI callbacks; the API adapter owns the transport and response contracts.
 export type SignupOperations = {
-  /** Sends a 6-digit code. Same answer whether or not the email is registered. */
+  /** Sends a 6-digit code. Already-registered emails are rejected by the server. */
   requestCode: (email: string) => Promise<void>;
   /** Confirms the code for this email. Resolve only on success. */
   verifyCode: (email: string, code: string) => Promise<void>;
@@ -18,15 +18,18 @@ export type SignupOperations = {
   register: (request: SignupRequest) => Promise<void>;
 };
 
-export const PASSWORD_MIN = 15;
-export const PASSWORD_MAX = 128;
+export const PASSWORD_MIN = 8;
+export const PASSWORD_MAX = 64;
+export const PASSWORD_UTF8_MAX = 72;
 export const NAME_MAX = 50;
 export const STUDENT_NO_MAX = 20;
 export const RESEND_INTERVAL_MS = 60_000;
 /** Matches the backend EmailVerificationStore.CODE_TTL. */
 export const CODE_TTL_MS = 5 * 60_000;
 
-const codePoints = (value: string) => Array.from(value).length;
+// Matches Java String.isBlank(), including its Unicode whitespace definition.
+const blankPassword =
+  /^[\u0009-\u000d\u001c-\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]*$/u;
 
 /** Names keep inner spaces; only the ends are trimmed after NFC. */
 export function normalizeName(value: string): string {
@@ -51,12 +54,16 @@ export function studentNoError(value: string): string | null {
   return null;
 }
 
-/** Length is counted in code points after NFC; the password is never trimmed. */
+/** Matches PasswordPolicy: raw UTF-16 length and UTF-8 bytes, without normalization. */
 export function passwordError(value: string): string | null {
   if (value === "") return "비밀번호를 입력해 주세요.";
-  const length = codePoints(value.normalize("NFC"));
+  if (blankPassword.test(value)) return "공백이 아닌 비밀번호를 입력해 주세요.";
+  const length = value.length;
   if (length < PASSWORD_MIN || length > PASSWORD_MAX) {
     return `비밀번호는 ${PASSWORD_MIN}~${PASSWORD_MAX}자로 입력해 주세요.`;
+  }
+  if (new TextEncoder().encode(value).length > PASSWORD_UTF8_MAX) {
+    return `비밀번호는 UTF-8 기준 ${PASSWORD_UTF8_MAX}바이트 이하로 입력해 주세요. 한글·이모지는 여러 바이트를 사용해요.`;
   }
   return null;
 }
@@ -92,9 +99,15 @@ export function requestCodeErrorMessage(error: unknown): string {
   if (notConnected(error)) return connectionMessage;
   switch (statusOf(error)) {
     case 400:
-      return `삼육대학교 이메일(@${SCHOOL_EMAIL_DOMAIN})을 확인해 주세요.`;
+      return `삼육대학교 이메일(${SCHOOL_EMAIL_LABEL})을 확인해 주세요.`;
+    case 403:
+      return "요청을 확인할 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.";
+    case 409:
+      return "이미 가입된 학교 이메일이에요. 로그인하거나 비밀번호를 재설정해 주세요.";
     case 429:
       return "인증번호는 1분에 한 번 받을 수 있어요. 잠시 후 다시 요청해 주세요.";
+    case 503:
+      return "인증 메일을 보내지 못했어요. 잠시 후 다시 요청해 주세요.";
     default:
       return networkMessage;
   }
@@ -121,6 +134,8 @@ export function verifyCodeErrorMessage(
     }
     case 429:
       return "입력 실패가 많아 이 인증번호는 더 쓸 수 없어요. '인증번호 다시 받기'로 새 번호를 받아 주세요.";
+    case 403:
+      return "요청을 확인할 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.";
     default:
       return networkMessage;
   }
@@ -130,12 +145,18 @@ export function registerErrorMessage(error: unknown): string {
   if (notConnected(error)) return connectionMessage;
   switch (statusOf(error)) {
     case 400:
-      return "입력한 정보를 확인해 주세요. 흔히 쓰이거나 유출된 비밀번호는 사용할 수 없어요.";
+      return errorCode(error) === "INVALID_PASSWORD"
+        ? `비밀번호는 ${PASSWORD_MIN}~${PASSWORD_MAX}자, UTF-8 ${PASSWORD_UTF8_MAX}바이트 이하로 입력해 주세요.`
+        : "입력한 이름·학번·학교 이메일과 비밀번호 조건을 확인해 주세요.";
     case 401:
     case 403:
-      return "학교 이메일 인증이 만료됐어요. 인증번호를 다시 받아 주세요.";
+      return errorCode(error) === "EMAIL_NOT_VERIFIED"
+        ? "학교 이메일 인증이 만료됐어요. 인증번호를 다시 받아 주세요."
+        : "요청을 확인할 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.";
     case 409:
-      return "가입을 완료하지 못했어요. 이미 가입했다면 로그인해 주세요.";
+      return errorCode(error) === "STUDENT_NO_ALREADY_REGISTERED"
+        ? "이미 등록된 학번이에요. 학번을 확인하고, 이미 가입했다면 로그인해 주세요."
+        : "가입을 완료하지 못했어요. 이미 가입했다면 로그인해 주세요.";
     case 429:
       return "요청이 많아 잠시 제한됐어요. 잠시 후 다시 시도해 주세요.";
     default:

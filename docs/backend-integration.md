@@ -1,8 +1,6 @@
 # 백엔드 연동 (#18)
 
-기준 백엔드: [SYU-Taxi-Delivery/taxi-delivery-sharing](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing)
-`main` 커밋 `b79ca2a66a0a4475a349e11695896bee680878ef`(2026-10-28 확인)의 `docs/post-api.md`,
-`docs/participation-api.md`, `docs/running.md`.
+기준 백엔드 [main 97b5b43](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing/tree/97b5b432c6f3f95ef5fad85ae444fd543ba76093). 날짜별 기록은 당시 환경 기준이다.
 
 ## 구조
 
@@ -19,7 +17,7 @@
 | ---------------- | ----------------------------------------------------------------------------------------- |
 | 로그인           | `POST /api/auth/local/login` `{ identifier: 학교 이메일, password }`                      |
 | 로그인 상태 확인 | 로그인 응답 사용자 + `GET /api/users/me/participations?size=1`로 세션 확인                |
-| 로그아웃         | `POST /logout` (브라우저 요청은 204, 리다이렉트는 따라가지 않음)                          |
+| 로그아웃         | `POST /logout` (서버 302, 리다이렉트는 따라가지 않음)                                     |
 | 목록             | `GET /api/posts?page&size=20&type` · "참여 가능한 글만"은 `status=OPEN`                   |
 | 상세             | `GET /api/posts/{id}` + 작성자·JOINED는 `GET /api/posts/{id}/participants`(명단)          |
 | 작성·수정        | `POST /api/posts`, `PATCH /api/posts/{id}` (`description`→`content`, 수정 시 `type` 제외) |
@@ -45,10 +43,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
 BACKEND_ORIGIN=http://localhost:8080
 ```
 
-demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로그인 API로 로그인할 수
-없다. 2026-10-27 통합 확인은 백엔드 로컬 사본의 `DemoConfiguration`에서 계정 이메일을
-`<name>@syuin.ac.kr`로 바꾸고 `demo-pass` 비밀번호를 저장해 진행했다(백엔드 저장소에는
-반영하지 않음). 백엔드에 같은 demo 데이터를 요청한다.
+demo 프로필은 일회성 H2를 사용한다. 로그인 화면에서 demo-author@syuin.ac.kr, demo-student1@syuin.ac.kr 등의 계정과 로컬 demo 비밀번호로 접속한다.
 
 ## 2026-10-27 통합 확인
 
@@ -94,7 +89,7 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 - 내 참여 카드의 "기준시각 10분 전"을 "출발 10분 전"·"주문 마감 10분 전"으로 바꿨고, 마이페이지
   안내의 "모집 마감·모집 취소가 가능해요"를 실제 기능에 맞게 고쳤다.
 
-## 2026-11-12 회원가입 항목 정합성
+## 2026-11-12 회원가입 항목 정합성 (당시 기록)
 
 백엔드 `main` [`c55054f`](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing/tree/c55054f00e3ac9ce740f63e17406aa94ea649a3b)의
 `SchoolRegisterRequest`, `SchoolEmailAuthController`, `SchoolEmailPolicy`, `PasswordPolicy`를
@@ -136,7 +131,11 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
   - 마감 요청의 409 `POST_CLOSED`, 일정 취소 요청의 409 `POST_CANCELLED`: 성공과 같이 처리한다. 다른 종료 상태(예: 마감 요청에 `POST_CANCELLED`)는 지금처럼 상태 변경 안내다.
 - 글 작성은 `Idempotency-Key` 헤더를 보낸다. 같은 내용을 다시 보내면 같은 키, 내용을 바꾸거나 서버가 4xx로 거절하면 새 키, 등록에 성공하면 키를 버린다. 서버 지원 전에는 헤더가 무시된다.
 
-## 프론트·백엔드 불일치와 요청 목록
+## 인증 연동 (2026-11-18)
+
+가입은 CSRF를 포함해 학교 이메일 인증번호 발송, 확인, 가입 순서로 요청한다. 발송·확인은 문자열, 최종 가입은 숫자 ID를 반환한다. 비밀번호 재설정은 이메일로 코드를 요청하고 이메일·6자리 코드·새 비밀번호를 제출한다. 재설정 요청의 200은 계정 존재나 새 메일 발송을 보장하지 않는다. 비밀번호 원문은 8~64 UTF-16 코드 단위, UTF-8 최대 72바이트로 검사한다.
+
+## 초기 연동 당시의 불일치와 요청 목록
 
 | 항목                       | 현재                                                    | 요청                                                         |
 | -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |

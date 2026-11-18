@@ -7,15 +7,6 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-export default async function ResetPasswordPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const { token } = await searchParams;
-  return (
-    <ResetPasswordScreen
-      token={typeof token === "string" ? token : undefined}
-    />
-  );
+export default function ResetPasswordPage() {
+  return <ResetPasswordScreen />;
 }
