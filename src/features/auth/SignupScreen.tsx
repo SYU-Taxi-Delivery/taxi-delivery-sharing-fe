@@ -41,7 +41,12 @@ import styles from "./auth.module.css";
 import { errorCode } from "@/lib/backend";
 import { useAppPath } from "@/features/demo/AppProviders";
 
-type EmailStep = "idle" | "sending" | "sent" | "verifying" | "verified";
+type EmailStep =
+  | "idle"
+  | "sending"
+  | "sent"
+  | "verifying"
+  | { schoolEmail: string; verificationToken: string };
 type Page = 1 | 2 | 3;
 type Field = "email" | "code" | "name" | "studentNo" | "password" | "confirm";
 type FocusTarget = Field | "verified" | "terms";
@@ -124,7 +129,7 @@ export function SignupScreen({
       ? 0
       : Math.max(0, Math.ceil((RESEND_INTERVAL_MS - (now - sentAt)) / 1000));
 
-  const verified = step === "verified";
+  const verified = typeof step === "object";
   const codeStage = step === "sent" || step === "verifying";
   const allAgreed = consents.every(({ key }) => agreed[key]);
   const someAgreed = consents.some(({ key }) => agreed[key]);
@@ -223,9 +228,9 @@ export function SignupScreen({
     setStep("verifying");
     setEmailMessage(null);
     try {
-      await operations.verifyCode(sentTo, code);
+      const verificationToken = await operations.verifyCode(sentTo, code);
       focusLater("name");
-      setStep("verified");
+      setStep({ schoolEmail: sentTo, verificationToken });
       setCode("");
       setPage(2);
       setEmailMessage({ tone: "info", text: "학교 이메일 인증이 완료됐어요." });
@@ -282,9 +287,10 @@ export function SignupScreen({
       await operations.register({
         studentNo: studentNo.trim(),
         name: normalizedName,
-        schoolEmail: email.trim(),
         password,
+        ...step,
       });
+      setStep("idle");
       setPassword("");
       setConfirm("");
       setDone(normalizedName);
@@ -294,13 +300,8 @@ export function SignupScreen({
           ? failure.status
           : undefined;
       setSubmitError(registerErrorMessage(failure));
-      if (errorCode(failure) === "EMAIL_NOT_VERIFIED") {
-        // Verification expired: back to step 1, address kept.
-        setStep("idle");
-        setSentAt(null);
-        setSentTo(null);
-        setEmailMessage(null);
-        focusLater("email");
+      if (status === 403 && errorCode(failure) === "EMAIL_NOT_VERIFIED") {
+        resetVerification();
         setPage(1);
       } else if (status === 400) {
         // Rejected input (usually the password): back to the account step.
@@ -579,6 +580,7 @@ export function SignupScreen({
                       <button
                         type="button"
                         className={styles.secondary}
+                        disabled={step === "sending"}
                         onClick={resumeCode}
                       >
                         받은 인증번호 입력하기

@@ -35,6 +35,7 @@ export function SignupPreview() {
             if (email !== sentTo.current || code !== CODE) {
               throw new ApiError(400, "");
             }
+            return "signup-preview-token";
           },
           register: async ({ password }) => {
             await pause();

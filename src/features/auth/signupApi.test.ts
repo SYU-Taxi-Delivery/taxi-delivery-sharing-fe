@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvalidBackendResponse, errorCode } from "@/lib/backend";
 import { failure, fakeBackend } from "@/test/fakeBackend";
-import { signupOperations, USER_KEY } from "./authApi";
+import { signupOperations } from "./authApi";
 
 const prefix = "/api/auth/school-email";
 const signup = {
@@ -9,6 +9,7 @@ const signup = {
   name: " 삼육 학생 ",
   schoolEmail: " Student@SYU.AC.KR ",
   password: " e\u0301abc123 ",
+  verificationToken: "opaque-ticket-from-server",
 };
 
 afterEach(() => {
@@ -18,18 +19,22 @@ afterEach(() => {
 });
 
 describe("학교 이메일 회원가입 연동", () => {
-  it("세 단계의 DTO·CSRF를 보내고 문자/숫자 응답을 받아도 자동 로그인하지 않는다", async () => {
+  it("인증 응답의 증표를 가입 DTO에 보내고 자동 로그인하거나 증표를 저장하지 않는다", async () => {
     const { calls } = fakeBackend({
       [`POST ${prefix}/send-code`]: () =>
         new Response("학교 이메일로 인증 코드가 발송되었습니다."),
       [`POST ${prefix}/verify-code`]: () =>
-        new Response("학교 이메일 인증이 성공적으로 완료되었습니다."),
+        Response.json({ verificationToken: signup.verificationToken }),
       [`POST ${prefix}/register`]: () => Response.json(7),
     });
     await signupOperations.requestCode(signup.schoolEmail);
-    await signupOperations.verifyCode(signup.schoolEmail, "012345");
+    const verificationToken = await signupOperations.verifyCode(
+      signup.schoolEmail,
+      "012345",
+    );
     await signupOperations.register({
       ...signup,
+      verificationToken,
       role: "ADMIN",
     } as typeof signup);
 
@@ -50,6 +55,7 @@ describe("학교 이메일 회원가입 연동", () => {
           name: "삼육 학생",
           schoolEmail: "student@syu.ac.kr",
           password: signup.password,
+          verificationToken: signup.verificationToken,
         },
       },
     ]);
@@ -61,7 +67,23 @@ describe("학교 이메일 회원가입 연동", () => {
     expect(calls.some(({ path }) => path === "/api/auth/local/login")).toBe(
       false,
     );
-    expect(window.localStorage.getItem(USER_KEY)).toBeNull();
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it.each([
+    null,
+    "인증 완료",
+    {},
+    { verificationToken: 7 },
+    { verificationToken: " " },
+  ])("유효한 인증 증표가 없는 응답 %j은 거부한다", async (response) => {
+    fakeBackend({
+      [`POST ${prefix}/verify-code`]: () => Response.json(response),
+    });
+    await expect(
+      signupOperations.verifyCode(signup.schoolEmail, "012345"),
+    ).rejects.toBeInstanceOf(InvalidBackendResponse);
   });
 
   it.each(["7", { userId: 7 }, null, 0, -1, 1.5])(

@@ -14,6 +14,8 @@ export type LoginCredentials = { email: string; password: string };
 
 // UI callbacks; the URI, DTO and session transport belong to the API adapter (#18).
 export type AuthOperations = {
+  /** An earlier logout on this browser still needs server confirmation. */
+  isLogoutPending?: () => boolean;
   /** Current user, or null when the server reports no valid session (401). */
   me: () => Promise<unknown>;
   /** School email login. Resolve only when the server issued a session. */

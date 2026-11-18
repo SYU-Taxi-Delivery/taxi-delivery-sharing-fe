@@ -6,14 +6,15 @@ export type SignupRequest = {
   name: string;
   schoolEmail: string;
   password: string;
+  verificationToken: string;
 };
 
 // UI callbacks; the API adapter owns the transport and response contracts.
 export type SignupOperations = {
   /** Sends a 6-digit code. Already-registered emails are rejected by the server. */
   requestCode: (email: string) => Promise<void>;
-  /** Confirms the code for this email. Resolve only on success. */
-  verifyCode: (email: string, code: string) => Promise<void>;
+  /** Returns the single-use proof issued for this email. */
+  verifyCode: (email: string, code: string) => Promise<string>;
   /** Creates the account for the verified email. Never sends a role. */
   register: (request: SignupRequest) => Promise<void>;
 };
@@ -151,7 +152,7 @@ export function registerErrorMessage(error: unknown): string {
     case 401:
     case 403:
       return errorCode(error) === "EMAIL_NOT_VERIFIED"
-        ? "학교 이메일 인증이 만료됐어요. 인증번호를 다시 받아 주세요."
+        ? "학교 이메일 인증을 확인할 수 없어요. 인증번호를 다시 받아 주세요."
         : "요청을 확인할 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.";
     case 409:
       return errorCode(error) === "STUDENT_NO_ALREADY_REGISTERED"
