@@ -39,6 +39,7 @@ import {
   type FieldName,
   type PostDraft,
   type PostFormOperations,
+  type PostRequest,
   type TaxiDraft,
 } from "./postDraft";
 import styles from "./form.module.css";
@@ -134,6 +135,8 @@ export function PostForm({
     DELIVERY: readRecentPlaces("DELIVERY"),
   }));
   const locked = useRef(false);
+  /** One Idempotency-Key per content: resending the same draft reuses it. */
+  const createKey = useRef<{ body: string; key: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const pendingLeave = useRef<{ trigger: HTMLElement; href: string } | null>(
@@ -369,7 +372,20 @@ export function PostForm({
     setPhase({ kind: "submitting" });
     try {
       if (mode === "create") {
-        const created = await operations.create(toPostRequest(draft));
+        const request = toPostRequest(draft);
+        const body = JSON.stringify(request);
+        if (createKey.current?.body !== body)
+          createKey.current = { body, key: newIdempotencyKey() };
+        const created = await createOrFind(
+          operations,
+          request,
+          createKey.current.key,
+          () => {
+            // The server answered "no": nothing was made, so a resend is new.
+            createKey.current = null;
+          },
+        );
+        createKey.current = null;
         rememberPlaces(draft.type, usedPlaces(draft));
         router.push(path(`/posts/${encodeURIComponent(created)}`));
         return; // stay locked while leaving the page
@@ -1450,4 +1466,51 @@ function TextField({
       {children}
     </div>
   );
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * Whether the server's answer proves nothing was saved: a 4xx (including
+ * mapped form errors) or the not-connected adapter. A lost response, a 5xx or
+ * a broken body proves nothing (#34).
+ */
+function rejected(error: unknown): boolean {
+  if (error instanceof PostFormError) return true;
+  if (error instanceof ApiError) return error.status < 500;
+  return error instanceof Error && error.name === "PostFormNotConnectedError";
+}
+
+/**
+ * Creates once. When the result is unknown, never resends: my posts are read
+ * instead, and a matching post counts as created. Otherwise the original
+ * error is thrown.
+ */
+async function createOrFind(
+  operations: PostFormOperations,
+  request: PostRequest,
+  idempotencyKey: string,
+  onRejected: () => void,
+): Promise<string> {
+  try {
+    return await operations.create(request, { idempotencyKey });
+  } catch (error) {
+    if (rejected(error)) {
+      onRejected();
+      throw error;
+    }
+    if (!operations.findCreated) throw error;
+    let found: string | null = null;
+    try {
+      found = await operations.findCreated(request);
+    } catch {
+      // The check failed too; report the original unknown result.
+    }
+    if (found) return found;
+    throw error;
+  }
 }

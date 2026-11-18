@@ -304,16 +304,19 @@ describe("작성 폼", () => {
     fillTaxi();
     await submit();
     expect(operations.findSimilar).toHaveBeenCalledTimes(1);
-    expect(operations.create).toHaveBeenCalledWith({
-      type: "TAXI",
-      title: "정문에서 석계역까지",
-      description: "정문 앞에서 만나요",
-      communicationUrl: null,
-      departure: "삼육대학교 정문",
-      destination: "석계역 1번 출구",
-      referenceTime: "2026-10-05T18:00:00+09:00",
-      capacity: 4,
-    });
+    expect(operations.create).toHaveBeenCalledWith(
+      {
+        type: "TAXI",
+        title: "정문에서 석계역까지",
+        description: "정문 앞에서 만나요",
+        communicationUrl: null,
+        departure: "삼육대학교 정문",
+        destination: "석계역 1번 출구",
+        referenceTime: "2026-10-05T18:00:00+09:00",
+        capacity: 4,
+      },
+      { idempotencyKey: expect.any(String) },
+    );
     expect(router.push).toHaveBeenCalledWith("/posts/new-1");
   });
 
@@ -338,6 +341,7 @@ describe("작성 폼", () => {
     await submit();
     expect(operations.create).toHaveBeenCalledWith(
       expect.objectContaining({ referenceTime: "2026-10-07T18:00:00+09:00" }),
+      { idempotencyKey: expect.any(String) },
     );
   });
 
@@ -495,6 +499,67 @@ describe("작성 폼", () => {
     ).toHaveAttribute("href", "/my?tab=created");
     expect(operations.create).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
+  });
+
+  it("#34: 응답이 끊긴 작성은 다시 보내지 않고 내 글에서 찾아 상세로 간다", async () => {
+    const create = vi
+      .fn<PostFormOperations["create"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    const findCreated = vi.fn(async () => "found-7");
+    await setup(ops({ create, findCreated }));
+    fillTaxi();
+    await submit();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(findCreated).toHaveBeenCalledExactlyOnceWith(
+      create.mock.calls[0]?.[0],
+    );
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/found-7");
+  });
+
+  it("#34: 내 글에도 없거나 확인에 실패하면 결과를 모른다고 안내한다", async () => {
+    const findCreated = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await setup(
+      ops({
+        create: vi.fn(async () => Promise.reject(new TypeError("offline"))),
+        findCreated,
+      }),
+    );
+    fillTaxi();
+    await submit();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "등록 결과를 확인하지 못했어요",
+    );
+    await submit();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "등록 결과를 확인하지 못했어요",
+    );
+    expect(findCreated).toHaveBeenCalledTimes(2);
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("#34: 같은 내용으로 다시 등록하면 같은 Idempotency-Key, 내용을 바꾸거나 서버가 거절하면 새 키를 쓴다", async () => {
+    const create = vi
+      .fn<PostFormOperations["create"]>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockRejectedValueOnce(new PostFormError("duplicate"))
+      .mockResolvedValue("new-1");
+    await setup(ops({ create, findCreated: vi.fn(async () => null) }));
+    fillTaxi();
+    const keys = () => create.mock.calls.map((call) => call[1]?.idempotencyKey);
+    await submit();
+    await submit(); // same content after a lost response
+    expect(keys()[0]).toEqual(expect.any(String));
+    expect(keys()[1]).toBe(keys()[0]);
+    type("제목", "정문에서 석계역까지 같이");
+    await submit(); // changed content → new key; the server says duplicate
+    expect(keys()[2]).not.toBe(keys()[1]);
+    await submit(); // rejected → nothing was made, so a fresh key
+    expect(keys()[3]).not.toBe(keys()[2]);
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/new-1");
   });
 
   it("AC-POST-002-09: 응답 대기 중 추가 제출을 막는다", async () => {
@@ -684,6 +749,7 @@ describe("작성 도우미", () => {
     await submit();
     expect(operations.create).toHaveBeenCalledWith(
       expect.objectContaining({ referenceTime: "2026-10-06T00:15:00+09:00" }),
+      { idempotencyKey: expect.any(String) },
     );
   });
 

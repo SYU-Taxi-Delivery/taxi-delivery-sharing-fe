@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api";
 import {
   InvalidBackendResponse,
+  backendGet,
   backendSendData,
   errorCode,
 } from "@/lib/backend";
@@ -100,21 +101,51 @@ export function toFormError(error: unknown): unknown {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
+/** Same type, title, reference time and places as the request. */
+export function matchesRequest(item: unknown, request: PostRequest): boolean {
+  if (typeof item !== "object" || item === null) return false;
+  const post = item as Record<string, unknown>;
+  const same = (a: unknown, b: string) => text(a).trim() === b.trim();
+  if (post.type !== request.type || !same(post.title, request.title))
+    return false;
+  const at = Date.parse(text(post.referenceTime));
+  if (!Number.isFinite(at) || at !== Date.parse(request.referenceTime))
+    return false;
+  return request.type === "TAXI"
+    ? same(post.departure, request.departure) &&
+        same(post.destination, request.destination)
+    : same(post.restaurantName, request.restaurantName) &&
+        same(post.pickupLocation, request.pickupLocation);
+}
+
 export const postFormOperations: PostFormOperations = {
   // No similar-post search API yet; an empty result lets writing continue.
   findSimilar: async () => [],
-  create: async (request) => {
+  create: async (request, options) => {
     try {
       const { data } = await backendSendData<{ postId?: unknown }>(
         "POST",
         "/api/posts",
         toBackendBody(request, { includeType: true }),
+        options?.idempotencyKey
+          ? { "Idempotency-Key": options.idempotencyKey }
+          : undefined,
       );
       if (typeof data?.postId !== "string") throw new InvalidBackendResponse();
       return data.postId;
     } catch (error) {
       throw toFormError(error);
     }
+  },
+  /** GET /api/users/me/posts first page: did the lost create go through? */
+  findCreated: async (request) => {
+    const { data } = await backendGet<{ items?: unknown }>(
+      "/api/users/me/posts?page=0&size=50",
+    );
+    if (!Array.isArray(data?.items)) throw new InvalidBackendResponse();
+    const found = data.items.find((item) => matchesRequest(item, request));
+    const id = (found as { postId?: unknown } | undefined)?.postId;
+    return typeof id === "string" ? id : null;
   },
   load: async (id) => {
     let loaded;
