@@ -17,7 +17,7 @@
 | ---------------- | ----------------------------------------------------------------------------------------- |
 | 로그인           | `POST /api/auth/local/login` `{ identifier: 학교 이메일, password }`                      |
 | 로그인 상태 확인 | 로그인 응답 사용자 + `GET /api/users/me/participations?size=1`로 세션 확인                |
-| 로그아웃         | `POST /logout` (서버 302, 리다이렉트는 따라가지 않음)                                     |
+| 로그아웃         | `POST /logout` (BE HTTP 테스트 302, 로컬 브라우저 204, 이후 보호 API 401)                 |
 | 목록             | `GET /api/posts?page&size=20&type` · "참여 가능한 글만"은 `status=OPEN`                   |
 | 상세             | `GET /api/posts/{id}` + 작성자·JOINED는 `GET /api/posts/{id}/participants`(명단)          |
 | 작성·수정        | `POST /api/posts`, `PATCH /api/posts/{id}` (`description`→`content`, 수정 시 `type` 제외) |
