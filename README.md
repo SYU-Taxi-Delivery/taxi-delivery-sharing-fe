@@ -77,7 +77,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
 BACKEND_ORIGIN=http://localhost:8080
 ```
 
-`NEXT_PUBLIC_API_BASE_URL`은 브라우저에서 여는 **프론트엔드 origin**입니다. 어댑터가 이미
+`NEXT_PUBLIC_API_BASE_URL`은 선택 사항이며, 비우면 브라우저에서 연 **프론트엔드 origin**을 사용합니다. 어댑터가 이미
 `/api/...` 경로를 사용하므로 끝에 `/api`를 붙이지 않습니다. `BACKEND_ORIGIN`은 Next.js가
 `/api/*`와 `/logout`을 전달할 **백엔드 origin**이며 서버에서만 사용합니다.
 위 주소는 로컬 실행 예시로, 실제 사용 환경의 주소로 바꿉니다. 백엔드 주소가 없으면 프록시를 만들지 않습니다.
@@ -86,7 +86,7 @@ BACKEND_ORIGIN=http://localhost:8080
 배포 환경에서는 다시 빌드·배포합니다.
 
 - `apiFetch` 경로는 `/`로 시작하며, 브라우저 요청은 기본적으로 세션 쿠키를 포함합니다.
-- JSON 응답을 반환하고, 204 등 빈 성공 응답은 `undefined`를 반환합니다.
+- 가입 인증번호 발송과 비밀번호 재설정 API는 일반 문자열을 반환합니다. 가입 인증번호 확인은 JSON의 `verificationToken`을 받아 최종 가입 요청에 포함하며, 가입 성공 응답은 숫자 ID입니다. 204 등 빈 성공 응답은 `undefined`를 반환합니다.
 - HTTP 실패는 상태 코드와 응답 원문을 담은 `ApiError`를 발생시킵니다.
 - 잘못된 JSON, 네트워크 오류, 요청 취소는 원래 오류를 그대로 전달합니다.
 - 기본 `Accept`는 `application/json`, 캐시는 `no-store`이며 호출자가 변경할 수 있습니다.
@@ -94,8 +94,7 @@ BACKEND_ORIGIN=http://localhost:8080
 - `backendGet`은 성공 envelope와 서버 시각을 확인하고, `backendSend`는 변경 요청에 CSRF 토큰을 붙입니다.
   서버가 `CSRF_INVALID`로 거절한 요청만 토큰 재조회 후 한 번 재시도하며 네트워크 실패는 재전송하지 않습니다.
 - 같은 출처의 프록시를 사용하면 브라우저의 백엔드 직접 호출과 CORS 허용 설정이 필요하지 않습니다.
-- 현재 사용자 조회 API가 없어 로그인 응답을 브라우저에 기억하고 인증 요청으로 세션 유효 여부만 확인합니다.
-  현재 서버 사용자의 ID·역할을 재조회하는 기능은 남아 있습니다.
+- `GET /api/users/me`로 현재 세션의 사용자 ID·이름·역할을 확인합니다. 이 API와 일회용 가입 증표는 백엔드가 공유한 새 계약이며, Render에 반영된 뒤 검증할 예정입니다.
 - 제네릭 타입은 런타임 응답 검증을 대신하지 않습니다. 각 기능의 어댑터와 화면 모델에서 검증합니다.
 
 엔드포인트·응답 형식과 미연결 기능은 [백엔드 연동 안내](docs/backend-integration.md)를 참고하세요.
@@ -105,7 +104,7 @@ BACKEND_ORIGIN=http://localhost:8080
 인증·모집 목록/상세·작성/수정·참여·마이페이지·댓글·관리자 기본 화면의 상태·권한·입력·오류 대응을
 Vitest와 React Testing Library로 테스트합니다. API 어댑터와 요청 유틸은 네트워크를
 모킹하며 실제 백엔드나 비밀 환경변수가 필요하지 않습니다.
-댓글·비밀번호 재설정·관리자 화면은 실제 API 연결을 보류하고 화면 콜백의 모의 응답으로
+댓글·관리자 화면은 실제 API 연결을 보류하고 화면 콜백의 모의 응답으로
 검증합니다. 관리자 화면 테스트 통과는 실제 서버 인가·soft delete·감사 기록의 증거가 아닙니다.
 Vitest는 비동기 Server Component 테스트를 지원하지 않으므로, 해당 화면이 추가되면 E2E 검증을 따로 구성합니다.
 
@@ -222,7 +221,7 @@ Install Command와 Output Directory는 자동 감지 기본값을 유지하고, 
 Vercel Git 연동이 Preview와 Production 배포를 담당하고, GitHub Actions는 검증을 담당합니다.
 CI 통과를 배포나 병합의 필수 조건으로 만들려면 GitHub 브랜치 규칙과 Vercel 배포 검사 설정을 별도로 구성합니다.
 
-Development / Preview / Production별로 `NEXT_PUBLIC_API_BASE_URL`에는 해당 프론트엔드 origin을,
+Preview에서는 `NEXT_PUBLIC_API_BASE_URL`을 비워 브라우저가 연 주소를 사용합니다. 각 환경의
 `BACKEND_ORIGIN`에는 연결할 백엔드 origin을 등록합니다. `/api` 접두 경로는 어댑터가 붙입니다.
 환경변수를 변경하면 새로 배포해야 프록시 설정과 브라우저 번들에 반영됩니다.
 

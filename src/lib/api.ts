@@ -8,12 +8,25 @@ export class ApiError extends Error {
   }
 }
 
-/** JSON REST request. Empty responses return undefined; cookies are sent by default. */
+/** Parse JSON by default. Only the code-based auth operations expect plain text. */
 export async function apiFetch<T = unknown>(
   path: string,
+  options?: RequestInit,
+  responseType?: "json",
+): Promise<T | undefined>;
+export async function apiFetch(
+  path: string,
+  options: RequestInit,
+  responseType: "text",
+): Promise<string>;
+export async function apiFetch(
+  path: string,
   options: RequestInit = {},
-): Promise<T | undefined> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  responseType: "json" | "text" = "json",
+): Promise<unknown> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : undefined);
 
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL을 설정해 주세요.");
@@ -38,7 +51,12 @@ export async function apiFetch<T = unknown>(
 
   const headers = new Headers(options.headers);
   if (!headers.has("Accept")) {
-    headers.set("Accept", "application/json");
+    headers.set(
+      "Accept",
+      responseType === "text"
+        ? "text/plain, application/json;q=0.9"
+        : "application/json",
+    );
   }
 
   const response = await fetch(`${base.href.replace(/\/+$/, "")}${path}`, {
@@ -54,5 +72,20 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(response.status, body);
   }
 
-  return body ? (JSON.parse(body) as T) : undefined;
+  if (responseType === "text") {
+    if (
+      response.status !== 200 ||
+      response.redirected ||
+      !body.trim() ||
+      response.headers
+        .get("content-type")
+        ?.split(";")[0]
+        .trim()
+        .toLowerCase() !== "text/plain"
+    ) {
+      throw new Error("인증 요청의 응답 형식을 확인할 수 없습니다.");
+    }
+    return body;
+  }
+  return body ? JSON.parse(body) : undefined;
 }

@@ -6,7 +6,7 @@ import { SignupScreen } from "@/features/auth/SignupScreen";
 import { DevTools } from "@/features/demo/DevTools";
 
 const CODE = "123456";
-const BLOCKED = "compromised-password";
+const REJECTED = "server-reject-demo";
 
 const pause = () =>
   new Promise<void>((resolve) => window.setTimeout(resolve, 500));
@@ -18,8 +18,8 @@ export function SignupPreview() {
     <>
       <DevTools>
         <p className="text-xs">
-          회원가입 데모: 인증번호는 {CODE}, 비밀번호 {BLOCKED}는 차단 목록으로
-          거절돼요.
+          회원가입 데모: 인증번호는 {CODE}, 비밀번호 {REJECTED}로 서버의 입력
+          거절 안내를 확인할 수 있어요.
           <br />
           새로고침하면 초기화돼요.
         </p>
@@ -35,10 +35,11 @@ export function SignupPreview() {
             if (email !== sentTo.current || code !== CODE) {
               throw new ApiError(400, "");
             }
+            return "signup-preview-token";
           },
           register: async ({ password }) => {
             await pause();
-            if (password === BLOCKED) throw new ApiError(400, "");
+            if (password === REJECTED) throw new ApiError(400, "");
           },
         }}
       />

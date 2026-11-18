@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
+import { safeNextPath } from "@/features/auth/auth";
 
 export const metadata: Metadata = {
   title: "새 비밀번호 설정 | 두유팟",
@@ -12,10 +13,10 @@ export default async function ResetPasswordPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { token } = await searchParams;
+  const { next } = await searchParams;
   return (
     <ResetPasswordScreen
-      token={typeof token === "string" ? token : undefined}
+      next={safeNextPath(Array.isArray(next) ? next[0] : next)}
     />
   );
 }

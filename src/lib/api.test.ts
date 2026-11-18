@@ -101,6 +101,29 @@ describe("apiFetch", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("브라우저에서는 환경변수가 비어 있어도 같은 출처의 프록시를 호출한다", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
+    vi.stubGlobal("window", {
+      location: { origin: "https://preview.example.test" },
+    });
+    fetchMock.mockResolvedValue(Response.json({ ok: true }));
+    await apiFetch("/api/posts");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://preview.example.test/api/posts",
+    );
+  });
+
+  it("인증 요청에서만 문자열 응답을 허용하고 HTML 성공 응답을 거절한다", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("완료"));
+    await expect(apiFetch("/auth", {}, "text")).resolves.toBe("완료");
+    fetchMock.mockResolvedValueOnce(
+      new Response("<html>로그인</html>", {
+        headers: { "Content-Type": "text/html" },
+      }),
+    );
+    await expect(apiFetch("/auth", {}, "text")).rejects.toThrow("응답 형식");
+  });
+
   it.each([
     "ftp://api.example.test",
     "https://user:secret@api.example.test",

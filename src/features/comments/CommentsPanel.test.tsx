@@ -16,6 +16,7 @@ import {
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/posts/p1",
+  useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 

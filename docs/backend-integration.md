@@ -1,8 +1,6 @@
 # 백엔드 연동 (#18)
 
-기준 백엔드: [SYU-Taxi-Delivery/taxi-delivery-sharing](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing)
-`main` 커밋 `b79ca2a66a0a4475a349e11695896bee680878ef`(2026-10-28 확인)의 `docs/post-api.md`,
-`docs/participation-api.md`, `docs/running.md`.
+모집글·참여 API의 기준은 [백엔드 main 97b5b43](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing/tree/97b5b432c6f3f95ef5fad85ae444fd543ba76093)이다. 가입·세션은 백엔드가 공유한 계약을 기준으로 연동한다. 날짜별 검증 기록은 당시 환경에서 관측한 결과다.
 
 ## 구조
 
@@ -18,8 +16,8 @@
 | 화면             | 백엔드                                                                                    |
 | ---------------- | ----------------------------------------------------------------------------------------- |
 | 로그인           | `POST /api/auth/local/login` `{ identifier: 학교 이메일, password }`                      |
-| 로그인 상태 확인 | 로그인 응답 사용자 + `GET /api/users/me/participations?size=1`로 세션 확인                |
-| 로그아웃         | `POST /logout` (브라우저 요청은 204, 리다이렉트는 따라가지 않음)                          |
+| 로그인 상태 확인 | `GET /api/users/me` (세션 쿠키 사용, 백엔드 배포 후 검증 예정)                            |
+| 로그아웃         | `POST /logout` (BE HTTP 테스트 302, 로컬 브라우저 204, 이후 보호 API 401)                 |
 | 목록             | `GET /api/posts?page&size=20&type` · "참여 가능한 글만"은 `status=OPEN`                   |
 | 상세             | `GET /api/posts/{id}` + 작성자·JOINED는 `GET /api/posts/{id}/participants`(명단)          |
 | 작성·수정        | `POST /api/posts`, `PATCH /api/posts/{id}` (`description`→`content`, 수정 시 `type` 제외) |
@@ -45,10 +43,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
 BACKEND_ORIGIN=http://localhost:8080
 ```
 
-demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로그인 API로 로그인할 수
-없다. 2026-10-27 통합 확인은 백엔드 로컬 사본의 `DemoConfiguration`에서 계정 이메일을
-`<name>@syuin.ac.kr`로 바꾸고 `demo-pass` 비밀번호를 저장해 진행했다(백엔드 저장소에는
-반영하지 않음). 백엔드에 같은 demo 데이터를 요청한다.
+demo 프로필은 일회성 H2를 사용한다. 로그인 화면에서 demo-author@syuin.ac.kr, demo-student1@syuin.ac.kr 등의 계정과 로컬 demo 비밀번호로 접속한다.
 
 ## 2026-10-27 통합 확인
 
@@ -94,7 +89,7 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 - 내 참여 카드의 "기준시각 10분 전"을 "출발 10분 전"·"주문 마감 10분 전"으로 바꿨고, 마이페이지
   안내의 "모집 마감·모집 취소가 가능해요"를 실제 기능에 맞게 고쳤다.
 
-## 2026-11-12 회원가입 항목 정합성
+## 2026-11-12 회원가입 항목 정합성 (당시 기록)
 
 백엔드 `main` [`c55054f`](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing/tree/c55054f00e3ac9ce740f63e17406aa94ea649a3b)의
 `SchoolRegisterRequest`, `SchoolEmailAuthController`, `SchoolEmailPolicy`, `PasswordPolicy`를
@@ -136,7 +131,29 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
   - 마감 요청의 409 `POST_CLOSED`, 일정 취소 요청의 409 `POST_CANCELLED`: 성공과 같이 처리한다. 다른 종료 상태(예: 마감 요청에 `POST_CANCELLED`)는 지금처럼 상태 변경 안내다.
 - 글 작성은 `Idempotency-Key` 헤더를 보낸다. 같은 내용을 다시 보내면 같은 키, 내용을 바꾸거나 서버가 4xx로 거절하면 새 키, 등록에 성공하면 키를 버린다. 서버 지원 전에는 헤더가 무시된다.
 
-## 프론트·백엔드 불일치와 요청 목록
+## 가입·세션 연동 계약 (2026-11-19 갱신)
+
+가입 요청 세 건은 모두 CSRF 헤더를 보낸다. 아래 경로의 접두사는 `/api/auth/school-email`이다.
+
+| 요청                | 요청 본문                                                           | 성공 응답                       |
+| ------------------- | ------------------------------------------------------------------- | ------------------------------- |
+| `POST /send-code`   | `schoolEmail`                                                       | 200 문자열                      |
+| `POST /verify-code` | `schoolEmail`, `code`                                               | 200 `{"verificationToken":"…"}` |
+| `POST /register`    | `studentNo`, `name`, `schoolEmail`, `password`, `verificationToken` | 200 숫자 사용자 ID              |
+
+인증번호는 발급 후 5분간 유효하다. 발급된 가입 증표는 해당 이메일에 대해 30분간 한 번만 쓸 수 있다. 프론트는 증표를 가입 화면의 메모리에만 보관한다. 이메일을 바꾸거나 가입 시 `403 EMAIL_NOT_VERIFIED`를 받으면 다시 인증한다. 서버 재시작으로 인증 상태가 사라지는 경우에도 새 인증번호를 요청한다.
+
+`GET /api/users/me`는 세션 쿠키만 보내고 CSRF 토큰을 요구하지 않는다. 성공 응답은 `{"userId":"123","name":"홍길동","role":"STUDENT"}`다. 비로그인·만료·정지·탈퇴 계정에는 `401 AUTHENTICATION_REQUIRED`가 온다. 프론트는 새로고침과 사용자 전환 시 서버가 반환한 사용자 정보로 갱신한다.
+
+비밀번호 재설정은 이메일·6자리 코드·새 비밀번호를 제출한다. 발송 요청의 200은 계정 존재나 새 메일 도착을 보장하지 않는다. 비밀번호 원문은 8~64 UTF-16 코드 단위, UTF-8 최대 72바이트로 검사한다. 백엔드는 비밀번호 변경 후 다른 기기의 기존 세션을 다음 보호 요청에서 401로 종료할 예정이다.
+
+### Render 검증과 운영 병합
+
+백엔드는 11월 25일경 작업을 예정한다고 회신했다. Render 반영일은 확인 대기 중이다. PR #95는 Vercel Preview에서 Render의 실제 학교 메일 수신 → 증표 발급 → 가입 → 로그인 → 새로고침 후 사용자 확인을 검증할 때까지 운영 병합을 보류한다. 실제 배포 계정, SMTP, 단일 인스턴스 여부, 쿠키 속성과 로그 확인 일정도 백엔드 회신을 기다린다. 비밀번호 재설정은 다른 기기의 다음 보호 요청에서 401까지 확인한다.
+
+테스트 데이터 정리를 위해 FE는 계정의 학번 또는 학교 이메일과 생성 일시, 모집글 ID와 생성 일시를 기록한다. 참여 기록은 모집글과 함께 정리하므로 별도 기록이 필요 없다. 테스트 종료 후 팀 채널에 정리 대상 목록을 올리면 배포 담당자가 해당 항목만 삭제하고 완료 답글을 남긴다. 비밀번호·인증번호·가입 증표·쿠키는 목록에 포함하지 않는다.
+
+## 초기 연동 당시의 불일치와 요청 목록
 
 | 항목                       | 현재                                                    | 요청                                                         |
 | -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
