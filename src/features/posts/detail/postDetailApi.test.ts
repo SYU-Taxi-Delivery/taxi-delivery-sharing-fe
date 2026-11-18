@@ -345,6 +345,24 @@ describe("참여 신청·취소 연동", () => {
     });
   });
 
+  it("#34: 다시 보낸 마감·취소가 이미 처리됨(POST_CLOSED·POST_CANCELLED)으로 오면 성공으로 본다", async () => {
+    fakeBackend({
+      "POST /api/posts/1/close": () => failure(409, "POST_CLOSED"),
+      "POST /api/posts/2/cancel": () => failure(409, "POST_CANCELLED"),
+      // A different end state is still a conflict, not "already done".
+      "POST /api/posts/3/close": () => failure(409, "POST_CANCELLED"),
+      "POST /api/posts/4/cancel": () => failure(409, "POST_CLOSED"),
+    });
+    await expect(postDetailOperations.close!("1")).resolves.toBeUndefined();
+    await expect(postDetailOperations.cancel!("2")).resolves.toBeUndefined();
+    await expect(postDetailOperations.close!("3")).rejects.toMatchObject({
+      kind: "conflict",
+    });
+    await expect(postDetailOperations.cancel!("4")).rejects.toMatchObject({
+      kind: "conflict",
+    });
+  });
+
   it("신고는 백엔드 API가 없어 제공하지 않는다", () => {
     expect(postDetailOperations.report).toBeUndefined();
   });

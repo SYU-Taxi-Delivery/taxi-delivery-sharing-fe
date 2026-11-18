@@ -33,6 +33,55 @@ describe("모집글 작성·수정 연동", () => {
     expect(calls.at(-1)?.body).toEqual({ ...rest, content: description });
   });
 
+  it("#34: 작성 요청에 Idempotency-Key 헤더를 함께 보낸다", async () => {
+    const { calls } = fakeBackend({
+      "POST /api/posts": () =>
+        Response.json(envelope({ ...taxiDetail, postId: "3" }), {
+          status: 201,
+        }),
+    });
+    await postFormOperations.create(taxiRequest, { idempotencyKey: "key-1" });
+    const call = calls.at(-1)!;
+    expect(call.headers.get("Idempotency-Key")).toBe("key-1");
+    expect(call.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
+    await postFormOperations.create(taxiRequest);
+    expect(calls.at(-1)!.headers.has("Idempotency-Key")).toBe(false);
+  });
+
+  it("#34: 응답이 끊긴 작성은 내 작성 글 첫 페이지에서 같은 글을 찾는다", async () => {
+    const mine = {
+      postId: "9",
+      type: "TAXI",
+      title: " 통합 테스트 택시 ",
+      referenceTime: "2026-10-27T05:30:00Z", // same instant, other offset
+      departure: "삼육대학교 정문",
+      destination: "태릉입구역",
+    };
+    const { calls } = fakeBackend({
+      "GET /api/users/me/posts?page=0&size=50": () =>
+        Response.json(
+          envelope({
+            items: [
+              { ...mine, postId: "8", title: "다른 글" },
+              { ...mine, postId: "7", destination: "석계역" },
+              mine,
+            ],
+          }),
+        ),
+    });
+    await expect(postFormOperations.findCreated!(taxiRequest)).resolves.toBe(
+      "9",
+    );
+    expect(calls.at(-1)?.method).toBe("GET");
+    fakeBackend({
+      "GET /api/users/me/posts?page=0&size=50": () =>
+        Response.json(envelope({ items: [{ ...mine, title: "다른 글" }] })),
+    });
+    await expect(
+      postFormOperations.findCreated!(taxiRequest),
+    ).resolves.toBeNull();
+  });
+
   it("AC-POST-004: PATCH는 바꿀 수 없는 type을 빼고 보낸다", async () => {
     const { calls } = fakeBackend({
       "PATCH /api/posts/3": () => Response.json(envelope(taxiDetail)),

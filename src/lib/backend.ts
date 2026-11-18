@@ -108,14 +108,16 @@ export async function backendSend(
   method: "POST" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
-  init: Pick<RequestInit, "redirect"> = {},
+  init: { redirect?: RequestRedirect; headers?: Record<string, string> } = {},
 ): Promise<unknown> {
+  const { headers: extra, ...rest } = init;
   const send = async () => {
     const { headerName, token } = await loadCsrfToken();
-    const headers = new Headers({ [headerName]: token });
+    const headers = new Headers(extra);
+    headers.set(headerName, token);
     if (body !== undefined) headers.set("Content-Type", "application/json");
     return apiFetch(path, {
-      ...init,
+      ...rest,
       method,
       headers,
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -135,6 +137,9 @@ export async function backendSendData<T>(
   method: "POST" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
+  headers?: Record<string, string>,
 ): Promise<Envelope<T>> {
-  return toEnvelope<T>(await backendSend(method, path, body));
+  return toEnvelope<T>(
+    await backendSend(method, path, body, headers ? { headers } : {}),
+  );
 }

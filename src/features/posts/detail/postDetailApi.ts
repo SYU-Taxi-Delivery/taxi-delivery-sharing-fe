@@ -189,6 +189,26 @@ function toManageError(error: unknown): unknown {
   return toDetailError(error);
 }
 
+/**
+ * A repeated close/cancel whose first response was lost comes back as 409 with
+ * the state it asked for (POST_CLOSED / POST_CANCELLED). That is "already
+ * done", not a failure (#34), so it resolves like the first success.
+ */
+async function manage(id: string, action: "close" | "cancel") {
+  try {
+    await backendSend("POST", `${path(id)}/${action}`);
+  } catch (error) {
+    const done = action === "close" ? "POST_CLOSED" : "POST_CANCELLED";
+    if (
+      error instanceof ApiError &&
+      error.status === 409 &&
+      errorCode(error) === done
+    )
+      return;
+    throw toManageError(error);
+  }
+}
+
 export const postDetailOperations: PostDetailOperations = {
   load: async (id) => {
     const { detail, evaluatedAt } = await loadBackendDetail(id);
@@ -205,21 +225,9 @@ export const postDetailOperations: PostDetailOperations = {
     return fromBackendDetail(detail, serverTime, participants?.names);
   },
   /** POST /api/posts/{id}/close: OPEN/FULL → CLOSED with the current members. */
-  close: async (id) => {
-    try {
-      await backendSend("POST", `${path(id)}/close`);
-    } catch (error) {
-      throw toManageError(error);
-    }
-  },
+  close: (id) => manage(id, "close"),
   /** POST /api/posts/{id}/cancel: the whole schedule, every member cancelled. */
-  cancel: async (id) => {
-    try {
-      await backendSend("POST", `${path(id)}/cancel`);
-    } catch (error) {
-      throw toManageError(error);
-    }
-  },
+  cancel: (id) => manage(id, "cancel"),
   // There is no report API yet, so report is omitted and the screen says so.
   join: async (id) => {
     try {
