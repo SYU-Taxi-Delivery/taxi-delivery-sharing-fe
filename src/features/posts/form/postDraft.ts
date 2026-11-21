@@ -404,14 +404,7 @@ export class PostFormError extends Error {
 export type PostFormOperations = {
   /** Server-side similar search (same date/type, OPEN, ±30 min, exact match). */
   findSimilar: (request: PostRequest) => Promise<unknown>;
-  /**
-   * Resolves with the created post id. `idempotencyKey` stays the same while
-   * the same content is resent, so a lost response never makes a second post.
-   */
-  create: (
-    request: PostRequest,
-    options?: { idempotencyKey?: string },
-  ) => Promise<string>;
+  create: (request: PostRequest) => Promise<string>;
   /**
    * After a lost create response: the id of my post matching the request
    * (type, title, reference time, places), or null when there is none.

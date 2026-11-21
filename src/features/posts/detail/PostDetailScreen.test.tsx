@@ -878,7 +878,8 @@ describe("작성자 관리", () => {
     const close = vi.fn(
       () => new Promise<void>((_, reject) => (fail = reject)),
     );
-    await setup({ ...author(), close });
+    const operations = { ...author(), close };
+    await setup(operations);
     fireEvent.click(screen.getByRole("button", { name: "모집 마감하기" }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "모집 마감" }));
@@ -893,6 +894,13 @@ describe("작성자 관리", () => {
       "마감 결과를 확인하지 못했어요",
     );
     expect(screen.queryByText(/모집을 마감했어요/)).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "최신 정보 다시 불러오기" }),
+      );
+    });
+    expect(operations.load).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it("상태가 바뀌어 거절되면 최신 정보로 다시 불러와 안내한다", async () => {

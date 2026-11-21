@@ -121,15 +121,12 @@ export function matchesRequest(item: unknown, request: PostRequest): boolean {
 export const postFormOperations: PostFormOperations = {
   // No similar-post search API yet; an empty result lets writing continue.
   findSimilar: async () => [],
-  create: async (request, options) => {
+  create: async (request) => {
     try {
       const { data } = await backendSendData<{ postId?: unknown }>(
         "POST",
         "/api/posts",
         toBackendBody(request, { includeType: true }),
-        options?.idempotencyKey
-          ? { "Idempotency-Key": options.idempotencyKey }
-          : undefined,
       );
       if (typeof data?.postId !== "string") throw new InvalidBackendResponse();
       return data.postId;

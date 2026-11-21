@@ -126,7 +126,12 @@ export async function backendSend(
   try {
     return await send();
   } catch (error) {
-    if (errorCode(error) !== "CSRF_INVALID") throw error;
+    if (!(
+      error instanceof ApiError &&
+      error.status === 403 &&
+      errorCode(error) === "CSRF_INVALID"
+    ))
+      throw error;
     resetCsrfToken();
     return send();
   }

@@ -31,21 +31,8 @@ describe("모집글 작성·수정 연동", () => {
     await expect(postFormOperations.create(taxiRequest)).resolves.toBe("3");
     const { description, ...rest } = taxiRequest;
     expect(calls.at(-1)?.body).toEqual({ ...rest, content: description });
-  });
-
-  it("#34: 작성 요청에 Idempotency-Key 헤더를 함께 보낸다", async () => {
-    const { calls } = fakeBackend({
-      "POST /api/posts": () =>
-        Response.json(envelope({ ...taxiDetail, postId: "3" }), {
-          status: 201,
-        }),
-    });
-    await postFormOperations.create(taxiRequest, { idempotencyKey: "key-1" });
-    const call = calls.at(-1)!;
-    expect(call.headers.get("Idempotency-Key")).toBe("key-1");
-    expect(call.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
-    await postFormOperations.create(taxiRequest);
     expect(calls.at(-1)!.headers.has("Idempotency-Key")).toBe(false);
+    expect(calls.at(-1)!.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
   });
 
   it("#34: 응답이 끊긴 작성은 내 작성 글 첫 페이지에서 같은 글을 찾는다", async () => {

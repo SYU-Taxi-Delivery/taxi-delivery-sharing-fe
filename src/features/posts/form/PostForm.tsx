@@ -135,8 +135,6 @@ export function PostForm({
     DELIVERY: readRecentPlaces("DELIVERY"),
   }));
   const locked = useRef(false);
-  /** One Idempotency-Key per content: resending the same draft reuses it. */
-  const createKey = useRef<{ body: string; key: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const pendingLeave = useRef<{ trigger: HTMLElement; href: string } | null>(
@@ -165,6 +163,8 @@ export function PostForm({
   );
   const dirty = JSON.stringify(draft) !== initial;
   const busy = phase.kind === "checking" || phase.kind === "submitting";
+  const unresolvedCreate =
+    mode === "create" && phase.kind === "error" && !!phase.link;
   const blockLeave = useCallback(
     (trigger: HTMLElement, href: string) => {
       if (busy) return true;
@@ -344,6 +344,17 @@ export function PostForm({
       if (first) goTo(STEP_ONE.includes(first) ? 1 : 2, first);
       return;
     }
+    if (
+      error instanceof ApiError &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
+      setPhase({
+        kind: "error",
+        message: "요청이 거절됐어요. 입력 내용과 권한을 확인해 주세요.",
+      });
+      return;
+    }
     // A lost or broken response does not prove the write failed (AC-POST-002-11).
     setPhase(
       mode === "create"
@@ -372,20 +383,7 @@ export function PostForm({
     setPhase({ kind: "submitting" });
     try {
       if (mode === "create") {
-        const request = toPostRequest(draft);
-        const body = JSON.stringify(request);
-        if (createKey.current?.body !== body)
-          createKey.current = { body, key: newIdempotencyKey() };
-        const created = await createOrFind(
-          operations,
-          request,
-          createKey.current.key,
-          () => {
-            // The server answered "no": nothing was made, so a resend is new.
-            createKey.current = null;
-          },
-        );
-        createKey.current = null;
+        const created = await createOrFind(operations, toPostRequest(draft));
         rememberPlaces(draft.type, usedPlaces(draft));
         router.push(path(`/posts/${encodeURIComponent(created)}`));
         return; // stay locked while leaving the page
@@ -434,6 +432,7 @@ export function PostForm({
       next();
       return;
     }
+    if (unresolvedCreate) return;
     const now = Date.now();
     setNowMs(now);
     setSubmitted(true);
@@ -1147,7 +1146,11 @@ export function PostForm({
               다음
             </button>
           ) : (
-            <button type="submit" className={styles.primary} disabled={busy}>
+            <button
+              type="submit"
+              className={styles.primary}
+              disabled={busy || unresolvedCreate}
+            >
               {phase.kind === "checking"
                 ? "확인 중…"
                 : phase.kind === "submitting"
@@ -1468,12 +1471,6 @@ function TextField({
   );
 }
 
-function newIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
-    return crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
 /**
  * Whether the server's answer proves nothing was saved: a 4xx (including
  * mapped form errors) or the not-connected adapter. A lost response, a 5xx or
@@ -1481,7 +1478,8 @@ function newIdempotencyKey(): string {
  */
 function rejected(error: unknown): boolean {
   if (error instanceof PostFormError) return true;
-  if (error instanceof ApiError) return error.status < 500;
+  if (error instanceof ApiError)
+    return error.status >= 400 && error.status < 500;
   return error instanceof Error && error.name === "PostFormNotConnectedError";
 }
 
@@ -1493,17 +1491,11 @@ function rejected(error: unknown): boolean {
 async function createOrFind(
   operations: PostFormOperations,
   request: PostRequest,
-  idempotencyKey: string,
-  onRejected: () => void,
 ): Promise<string> {
   try {
-    return await operations.create(request, { idempotencyKey });
+    return await operations.create(request);
   } catch (error) {
-    if (rejected(error)) {
-      onRejected();
-      throw error;
-    }
-    if (!operations.findCreated) throw error;
+    if (rejected(error) || !operations.findCreated) throw error;
     let found: string | null = null;
     try {
       found = await operations.findCreated(request);

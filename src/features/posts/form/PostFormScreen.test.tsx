@@ -16,6 +16,8 @@ import {
   type PostFormOperations,
 } from "./postDraft";
 import { PostFormScreen } from "./PostFormScreen";
+import { postFormOperations } from "./postFormApi";
+import { envelope, fakeBackend } from "@/test/fakeBackend";
 import { parseInitialPlaces } from "./postDraft";
 
 const router = { push: vi.fn(), replace: vi.fn() };
@@ -49,7 +51,11 @@ beforeEach(() => {
     },
   });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 const auth = {
   me: vi.fn(async () => ({ id: "1", displayName: "김하늘", role: "STUDENT" })),
@@ -304,19 +310,16 @@ describe("작성 폼", () => {
     fillTaxi();
     await submit();
     expect(operations.findSimilar).toHaveBeenCalledTimes(1);
-    expect(operations.create).toHaveBeenCalledWith(
-      {
-        type: "TAXI",
-        title: "정문에서 석계역까지",
-        description: "정문 앞에서 만나요",
-        communicationUrl: null,
-        departure: "삼육대학교 정문",
-        destination: "석계역 1번 출구",
-        referenceTime: "2026-10-05T18:00:00+09:00",
-        capacity: 4,
-      },
-      { idempotencyKey: expect.any(String) },
-    );
+    expect(operations.create).toHaveBeenCalledWith({
+      type: "TAXI",
+      title: "정문에서 석계역까지",
+      description: "정문 앞에서 만나요",
+      communicationUrl: null,
+      departure: "삼육대학교 정문",
+      destination: "석계역 1번 출구",
+      referenceTime: "2026-10-05T18:00:00+09:00",
+      capacity: 4,
+    });
     expect(router.push).toHaveBeenCalledWith("/posts/new-1");
   });
 
@@ -341,7 +344,6 @@ describe("작성 폼", () => {
     await submit();
     expect(operations.create).toHaveBeenCalledWith(
       expect.objectContaining({ referenceTime: "2026-10-07T18:00:00+09:00" }),
-      { idempotencyKey: expect.any(String) },
     );
   });
 
@@ -501,66 +503,54 @@ describe("작성 폼", () => {
     expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
   });
 
-  it("#34: 응답이 끊긴 작성은 다시 보내지 않고 내 글에서 찾아 상세로 간다", async () => {
-    const create = vi
-      .fn<PostFormOperations["create"]>()
-      .mockRejectedValue(new TypeError("Failed to fetch"));
-    const findCreated = vi.fn(async () => "found-7");
-    await setup(ops({ create, findCreated }));
-    fillTaxi();
-    await submit();
-    expect(create).toHaveBeenCalledTimes(1);
-    expect(findCreated).toHaveBeenCalledExactlyOnceWith(
-      create.mock.calls[0]?.[0],
-    );
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/found-7");
-  });
-
-  it("#34: 내 글에도 없거나 확인에 실패하면 결과를 모른다고 안내한다", async () => {
-    const findCreated = vi
-      .fn<() => Promise<string | null>>()
-      .mockResolvedValueOnce(null)
-      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    await setup(
-      ops({
-        create: vi.fn(async () => Promise.reject(new TypeError("offline"))),
-        findCreated,
-      }),
-    );
-    fillTaxi();
-    await submit();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "등록 결과를 확인하지 못했어요",
-    );
-    await submit();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "등록 결과를 확인하지 못했어요",
-    );
-    expect(findCreated).toHaveBeenCalledTimes(2);
-    expect(router.push).not.toHaveBeenCalled();
-  });
-
-  it("#34: 같은 내용으로 다시 등록하면 같은 Idempotency-Key, 내용을 바꾸거나 서버가 거절하면 새 키를 쓴다", async () => {
-    const create = vi
-      .fn<PostFormOperations["create"]>()
-      .mockRejectedValueOnce(new TypeError("offline"))
-      .mockRejectedValueOnce(new TypeError("offline"))
-      .mockRejectedValueOnce(new PostFormError("duplicate"))
-      .mockResolvedValue("new-1");
-    await setup(ops({ create, findCreated: vi.fn(async () => null) }));
-    fillTaxi();
-    const keys = () => create.mock.calls.map((call) => call[1]?.idempotencyKey);
-    await submit();
-    await submit(); // same content after a lost response
-    expect(keys()[0]).toEqual(expect.any(String));
-    expect(keys()[1]).toBe(keys()[0]);
-    type("제목", "정문에서 석계역까지 같이");
-    await submit(); // changed content → new key; the server says duplicate
-    expect(keys()[2]).not.toBe(keys()[1]);
-    await submit(); // rejected → nothing was made, so a fresh key
-    expect(keys()[3]).not.toBe(keys()[2]);
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/new-1");
-  });
+  it.each(["found", "missing", "lookup failed"] as const)(
+    "#34: 작성 응답 유실 후 POST 한 번과 내 글 조회 한 번으로 확인한다 (%s)",
+    async (outcome) => {
+      const lookup = "/api/users/me/posts?page=0&size=50";
+      const { calls } = fakeBackend({
+        "POST /api/posts": () => {
+          throw new TypeError("connection closed");
+        },
+        [`GET ${lookup}`]: () => {
+          if (outcome === "lookup failed") throw new TypeError("offline");
+          const items =
+            outcome === "found"
+              ? [
+                  {
+                    postId: "found-7",
+                    type: "TAXI",
+                    title: "정문에서 석계역까지",
+                    referenceTime: "2026-10-05T18:00:00+09:00",
+                    departure: "삼육대학교 정문",
+                    destination: "석계역 1번 출구",
+                  },
+                ]
+              : [];
+          return Response.json(envelope({ items }));
+        },
+      });
+      await setup(postFormOperations);
+      fillTaxi();
+      await submit();
+      if (outcome === "found") {
+        expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts/found-7");
+      } else {
+        const submitButton = screen.getByRole("button", { name: "등록하기" });
+        expect(submitButton).toBeDisabled();
+        fireEvent.submit(submitButton.closest("form")!);
+        expect(
+          screen.getByRole("link", { name: "내 참여 · 모집 확인" }),
+        ).toHaveAttribute("href", "/my?tab=created");
+        expect(router.push).not.toHaveBeenCalled();
+      }
+      expect(calls.map(({ method, path }) => `${method} ${path}`)).toEqual([
+        "GET /api/csrf",
+        "POST /api/posts",
+        `GET ${lookup}`,
+      ]);
+      expect(calls[1].headers.has("Idempotency-Key")).toBe(false);
+    },
+  );
 
   it("AC-POST-002-09: 응답 대기 중 추가 제출을 막는다", async () => {
     let finish!: (id: string) => void;
@@ -749,7 +739,6 @@ describe("작성 도우미", () => {
     await submit();
     expect(operations.create).toHaveBeenCalledWith(
       expect.objectContaining({ referenceTime: "2026-10-06T00:15:00+09:00" }),
-      { idempotencyKey: expect.any(String) },
     );
   });
 
@@ -921,6 +910,23 @@ describe("수정 폼", () => {
       expect.objectContaining({ departure: "화랑대역", capacity: 4 }),
     );
     expect(router.push).toHaveBeenCalledWith("/posts/p1");
+  });
+
+  it("수정 응답 유실 시 PATCH를 반복하지 않고 최신 상세의 조회 경로를 안내한다", async () => {
+    const operations = ops({
+      load: vi.fn(async () => post()),
+      update: vi.fn(async () => {
+        throw new TypeError("connection closed");
+      }),
+    });
+    await edit(operations);
+    type("제목", "변경할 제목");
+    await save();
+    expect(operations.update).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("link", { name: "모집 상세 확인" }),
+    ).toHaveAttribute("href", "/posts/p1");
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("AC-POST-004-02~03: 다른 참여자가 있으면 장소·시각·정원을 잠그고 비핵심만 보낸다", async () => {
