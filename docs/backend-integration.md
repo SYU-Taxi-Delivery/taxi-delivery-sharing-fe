@@ -134,7 +134,7 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 - 이미 처리됨은 성공으로 본다.
   - 참여 `ALREADY_JOINED`, 취소 `ALREADY_CANCELLED`·`PARTICIPATION_NOT_FOUND`: 내 참여 상태를 다시 읽어 맞춘다.
   - 마감 요청의 409 `POST_CLOSED`, 일정 취소 요청의 409 `POST_CANCELLED`: 성공과 같이 처리한다. 다른 종료 상태(예: 마감 요청에 `POST_CANCELLED`)는 지금처럼 상태 변경 안내다.
-- 글 작성은 `Idempotency-Key` 헤더를 보낸다. 같은 내용을 다시 보내면 같은 키, 내용을 바꾸거나 서버가 4xx로 거절하면 새 키, 등록에 성공하면 키를 버린다. 서버 지원 전에는 헤더가 무시된다.
+- 글 작성에는 `Idempotency-Key`를 사용하지 않는다. 결과를 확인할 수 없으면 같은 입력으로 재등록하는 대신 내 작성 글 목록에서 확인한다.
 
 ## 프론트·백엔드 불일치와 요청 목록
 
