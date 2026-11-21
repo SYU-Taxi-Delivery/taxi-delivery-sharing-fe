@@ -92,13 +92,28 @@ describe("apiFetch", () => {
     expect(new ApiError(500, "")).toBeInstanceOf(Error);
   });
 
-  it("주소가 미정이면 네트워크 요청 전에 실패한다", async () => {
+  it("브라우저 밖에서 주소가 미정이면 네트워크 요청 전에 실패한다", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
 
     await expect(apiFetch("/rooms")).rejects.toThrow(
       "NEXT_PUBLIC_API_BASE_URL",
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("브라우저에서 기본 주소가 비어 있으면 현재 출처로 세션 쿠키를 보낸다", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
+    vi.stubGlobal("window", {
+      location: { origin: "https://preview.example.test" },
+    });
+    fetchMock.mockResolvedValue(Response.json({ ok: true }));
+
+    await apiFetch("/api/csrf");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://preview.example.test/api/csrf",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 
   it.each([

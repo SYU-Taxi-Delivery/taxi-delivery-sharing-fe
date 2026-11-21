@@ -13,7 +13,9 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T | undefined> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : undefined);
 
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL을 설정해 주세요.");
