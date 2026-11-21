@@ -222,8 +222,8 @@ Install Command와 Output Directory는 자동 감지 기본값을 유지하고, 
 Vercel Git 연동이 Preview와 Production 배포를 담당하고, GitHub Actions는 검증을 담당합니다.
 CI 통과를 배포나 병합의 필수 조건으로 만들려면 GitHub 브랜치 규칙과 Vercel 배포 검사 설정을 별도로 구성합니다.
 
-Development / Preview / Production별로 `NEXT_PUBLIC_API_BASE_URL`에는 해당 프론트엔드 origin을,
-`BACKEND_ORIGIN`에는 연결할 백엔드 origin을 등록합니다. `/api` 접두 경로는 어댑터가 붙입니다.
+환경별로 `BACKEND_ORIGIN`에 연결할 백엔드 origin을 등록합니다. Preview에서는
+`NEXT_PUBLIC_API_BASE_URL`을 비워 두면 브라우저가 현재 Preview 주소의 `/api/*`를 호출합니다.
 환경변수를 변경하면 새로 배포해야 프록시 설정과 브라우저 번들에 반영됩니다.
 
 ## 참고 문서
