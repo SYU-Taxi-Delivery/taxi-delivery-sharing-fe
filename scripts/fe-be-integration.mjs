@@ -242,9 +242,11 @@ const code = (r) => r.json?.error?.code;
     (
       await c.req("GET", "/api/posts?type=TAXI&page=0&size=50")
     ).json.data.items.find((x) => x.postId === id)?.viewer;
+  // "Other" must be someone who lost the race; the winner is a member.
+  const outsider = [s2, s3, admin][race.findIndex((x) => x.status !== 201)];
   const [asMember, asOther, asAuthor] = [
     await row(s1),
-    await row(admin),
+    await row(outsider),
     await row(author),
   ];
   ok(
