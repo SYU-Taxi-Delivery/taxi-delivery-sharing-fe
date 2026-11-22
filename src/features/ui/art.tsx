@@ -541,7 +541,7 @@ const BEAN_LEGS: Record<BeanPose, [string, string]> = {
  * "full" adds arms, feet and a tiny green backpack (motion, large scenes).
  * `pose` changes only arms and feet; `face` "happy" closes the eyes into
  * arcs and opens the smile, "neutral" keeps the dot eyes over a short flat
- * mouth (nothing found, no fuss).
+ * mouth (nothing found, no fuss). Every face has the same rosy cheeks.
  */
 export function Bean({
   look = "ivory",
@@ -624,6 +624,9 @@ export function Bean({
           />
         </>
       )}
+      {/* rosy cheeks, the same on every face */}
+      <ellipse cx={11.6} cy={14.6} rx={1.4} ry={0.9} fill={BLUSH} />
+      <ellipse cx={20.6} cy={14.4} rx={1.3} ry={0.9} fill={BLUSH} />
     </g>
   );
 }
