@@ -181,11 +181,11 @@ describe("my history screen", () => {
     expect(first).toHaveTextContent("오늘 18:00 출발");
     expect(first).toHaveTextContent("오늘 17:50까지 가능");
     expect(first).toHaveTextContent("3 / 4명 · 작성자 포함");
-    // Seats left and headcount share one secondary line, seats first, in
-    // the list's status colour (last seat: the warn tone).
+    // Seats left sit on the time row (the list's status colour, last
+    // seat in the warn tone); the headcount is its own plain line.
     const summary = within(first).getByTestId("seat-summary");
-    expect(summary).toHaveTextContent(/^1자리 남음현재 3 \/ 4명 · 작성자 포함/);
-    expect(within(summary).getByText("1자리 남음")).toHaveAttribute(
+    expect(summary).toHaveTextContent(/^현재 3 \/ 4명 · 작성자 포함$/);
+    expect(within(first).getByText("1자리 남음")).toHaveAttribute(
       "data-last",
       "true",
     );
@@ -215,10 +215,11 @@ describe("my history screen", () => {
     );
     const [first, second] = upcoming();
     expect(first).toHaveTextContent("정문 김밥");
-    // The schedule and place come before the seat summary.
+    // Same order as the board: time, place, pickup, then the headcount.
     const text = first.textContent ?? "";
-    expect(text.indexOf("주문 마감")).toBeLessThan(text.indexOf("자리 남음"));
-    expect(text.indexOf("학생회관")).toBeLessThan(text.indexOf("자리 남음"));
+    expect(text.indexOf("주문 마감")).toBeLessThan(text.indexOf("정문 김밥"));
+    expect(text.indexOf("정문 김밥")).toBeLessThan(text.indexOf("학생회관"));
+    expect(text.indexOf("학생회관")).toBeLessThan(text.indexOf("현재 "));
     expect(first).toHaveTextContent("오늘 18:00 주문 마감");
     expect(first).toHaveTextContent("수령 장소 · 학생회관");
     expect(second).toHaveTextContent("내일 18:00 출발");
@@ -517,9 +518,7 @@ describe("my history screen", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("참여 취소가 처리되지 않았어요.");
-    expect(alert).toHaveTextContent(
-      "출발 10분 전부터 참여 신청과 취소가 마감됩니다.",
-    );
+    expect(alert).toHaveTextContent("출발 10분 전부터 참여와 취소가 마감돼요.");
   });
 
   it("모집 취소의 최신 상태가 담긴 409도 부모 이력을 갱신해 링크와 취소 버튼을 없앤다", async () => {
@@ -658,9 +657,7 @@ describe("my history screen", () => {
     expect(operations.leave).not.toHaveBeenCalled();
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("참여 취소를 보내지 않았어요.");
-    expect(alert).toHaveTextContent(
-      "출발 10분 전부터 참여 신청과 취소가 마감됩니다.",
-    );
+    expect(alert).toHaveTextContent("출발 10분 전부터 참여와 취소가 마감돼요.");
   });
 
   it("느린 취소 응답은 사용자가 옮긴 포커스를 빼앗지 않는다", async () => {

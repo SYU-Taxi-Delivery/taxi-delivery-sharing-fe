@@ -345,7 +345,7 @@ function Comments({
         >
           모집 문의
         </h2>
-        <span className={styles.publicTag}>공개</span>
+        <span className={styles.publicTag}>공개 댓글</span>
       </div>
       {notConnected ? (
         <p className={common.help}>
@@ -453,6 +453,9 @@ function Comments({
                         busy === "create" ? "댓글 등록 중" : "댓글 등록"
                       }
                       disabled={pending || needsReview || !writable}
+                      // Nothing typed yet: looks off, and a press only says
+                      // what is missing (the form's own check).
+                      aria-disabled={draft.trim() === "" || undefined}
                     >
                       {busy === "create" ? "등록 중…" : "등록"}
                     </button>
@@ -460,7 +463,7 @@ function Comments({
                   <div className={styles.composerMeta}>
                     <p id={`${id}-help`} className={styles.hint}>
                       {writable
-                        ? "참여하지 않아도 댓글을 남길 수 있어요. 개인정보는 적지 말아 주세요."
+                        ? "모든 이용자에게 보여요. 개인정보는 적지 말아 주세요."
                         : "끝난 모집에는 새 댓글을 등록할 수 없어요. 작성 중이던 내용은 복사할 수 있어요."}
                     </p>
                     <span

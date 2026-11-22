@@ -105,7 +105,7 @@ export function recruitmentStatusAt(
  */
 export const REJECTION_MESSAGES: Record<string, string> = {
   POST_FULL: "방금 정원이 찼어요.",
-  JOIN_TIME_CLOSED: "신청 기한이 지났어요.",
+  JOIN_TIME_CLOSED: "참여 기한이 지났어요.",
   CANCEL_TIME_CLOSED: "취소 기한이 지났어요.",
   POST_CLOSED: "작성자가 모집을 마감했어요.",
   POST_CANCELLED: "모집이 취소됐어요.",
@@ -117,7 +117,7 @@ export const REJECTION_MESSAGES: Record<string, string> = {
   AUTHOR_CANNOT_CANCEL_PARTICIPATION:
     "작성자는 참여를 취소할 수 없어요. 모집을 취소하려면 모집 관리를 이용해 주세요.",
   PARTICIPATION_TEMPORARILY_UNAVAILABLE:
-    "신청이 몰려 잠시 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    "참여 요청이 몰려 잠시 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
 };
 
 /** Statuses a REJECTION_MESSAGES code can arrive with. */
@@ -227,7 +227,7 @@ export function getParticipationAvailability(
   if (nowMs >= deadline) {
     return {
       ...unavailable,
-      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(snapshot)}분 전부터 참여 신청과 취소가 마감됩니다.`,
+      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(snapshot)}분 전부터 참여와 취소가 마감돼요.`,
     };
   }
   if (snapshot.viewerRelation === "JOINED") {

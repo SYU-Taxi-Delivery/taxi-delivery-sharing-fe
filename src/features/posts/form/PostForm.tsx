@@ -94,7 +94,7 @@ const STEP_ONE: readonly FieldName[] = [
   "capacity",
 ];
 // Step 1 also holds the headcount, so its name says so.
-const STEPS = ["유형·장소·일정·정원", "안내·미리보기"] as const;
+const STEPS = ["기본 정보", "안내 및 확인"] as const;
 
 export function PostForm({
   mode,
@@ -268,7 +268,9 @@ export function PostForm({
     if (target === "step") {
       const heading = document.getElementById(id("step-heading"));
       heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView?.({ block: "start" });
+      // Back to the page top so the 목록 link, the title and the first field
+      // all sit below the sticky header, not half under it.
+      window.scrollTo({ top: 0, behavior: "instant" });
     } else focusField(target);
     // focusField reads the DOM of the step that just rendered.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -558,28 +560,40 @@ export function PostForm({
         </div>
       </div>
 
-      {/* One compact indicator: where you are, what comes next, and a
-          two-part bar. Focus lands on the heading on a step change. */}
+      {/* Two named steps: the current one marked (aria-current), the
+          finished one ticked. Focus lands on the heading on a step change. */}
       <div className={styles.progress}>
         <h2
           id={id("step-heading")}
           tabIndex={-1}
           className={styles.progressNow}
         >
-          <span className={styles.progressCount}>
-            {step}/{STEPS.length}
-            <span className="sr-only">단계</span>
-          </span>{" "}
-          {STEPS[step - 1]}
+          <span className="sr-only">
+            {STEPS.length}단계 중 {step}단계,{" "}
+          </span>
+          {step}. {STEPS[step - 1]}
         </h2>
-        <p className={styles.progressNext}>
-          {step === 1 ? `다음: ${STEPS[1]}` : "마지막 단계"}
-        </p>
-        <span className={styles.progressBar} aria-hidden="true">
-          {STEPS.map((label, index) => (
-            <span key={label} data-filled={index < step} />
-          ))}
-        </span>
+        <ol className={styles.steps} aria-label="작성 단계">
+          {STEPS.map((label, index) => {
+            const state =
+              index + 1 < step ? "done" : index + 1 === step ? "now" : "next";
+            return (
+              <li
+                key={label}
+                data-state={state}
+                aria-current={state === "now" ? "step" : undefined}
+              >
+                <span className={styles.stepDot} aria-hidden="true">
+                  {state === "done" ? "✓" : index + 1}
+                </span>
+                <span>
+                  {label}
+                  {state === "done" && <span className="sr-only"> (완료)</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
       <form
@@ -950,7 +964,7 @@ export function PostForm({
                 placeholder="장소를 고르면 자동으로 채워져요"
                 help={
                   titleIsSuggested
-                    ? "장소를 보고 채웠어요. 원하는 대로 고쳐 써도 돼요."
+                    ? "장소를 보고 자동으로 채웠어요. 바로 고쳐 써도 돼요."
                     : undefined
                 }
                 error={shown("title")}
@@ -965,7 +979,9 @@ export function PostForm({
                   label="주문 안내"
                   value={draft.delivery.orderGuide}
                   max={LIMITS.orderGuide}
-                  placeholder="메뉴 고르는 방법, 정산 방식 등"
+                  placeholder={
+                    "예: 메뉴는 오픈채팅에서 각자 골라요.\n배달비는 인원수대로 나눠서 정산해요."
+                  }
                   multiline
                   error={shown("orderGuide")}
                   onChange={(value) => setDelivery("orderGuide", value)}
@@ -982,8 +998,8 @@ export function PostForm({
                 max={LIMITS.description}
                 placeholder={
                   taxi
-                    ? "만날 장소, 요청사항 등을 적어 주세요"
-                    : "수령 방법, 요청사항 등을 적어 주세요"
+                    ? "예: 출발 5분 전 정문 앞 편의점에서 만나요.\n짐이 크면 미리 알려 주세요."
+                    : "예: 후문 경비실 앞에서 같이 받아요.\n도착하면 오픈채팅으로 알려 드릴게요."
                 }
                 multiline
                 error={shown("description")}
@@ -1118,10 +1134,12 @@ export function PostForm({
           </p>
         )}
 
-        <p className={styles.help}>
-          {mode === "edit"
-            ? "저장하면 모집글 목록과 상세에 바로 반영돼요."
-            : "등록하면 모집글 목록에 바로 공개돼요."}
+        <p className={styles.help} data-note="next">
+          {step === 1
+            ? "다음 단계에서 제목과 안내를 적고, 목록에 보일 모습을 확인해요."
+            : mode === "edit"
+              ? "저장하면 모집글 목록과 상세에 바로 반영돼요."
+              : "등록하면 모집글 목록에 바로 공개돼요."}
         </p>
         <div className={styles.actions} data-bottom-action="true">
           {step === 1 ? (
@@ -1437,10 +1455,13 @@ function TextField({
           </label>
           <Tag kind={required ? "required" : "optional"} />
         </span>
+        {/* Short fields show the count only near the limit; long text
+            always does. Screen readers always get it. */}
         <span
           id={`${id}-count`}
           className={styles.counter}
           data-over={used > max}
+          data-shown={multiline || used >= max * 0.8}
         >
           {used}/{max}자
         </span>
@@ -1448,6 +1469,7 @@ function TextField({
       {multiline ? (
         <textarea
           {...common}
+          rows={4}
           className={styles.textarea}
           onChange={(event) => onChange(event.target.value)}
         />

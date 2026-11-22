@@ -59,16 +59,21 @@ export function postDayText(time: number, now: number | null): string {
 }
 
 /*
- * One pod on the board, read top-down on a phone: where (route, or the
- * restaurant with a small "수령 · 후문" line), then when + seats left side by side, then type · status ·
- * author in small grey text. The whole row is one link. The post form's
- * preview renders the same card without the link (`preview`).
+ * One pod on the board, read top-down the same way as 내 참여 cards:
+ *   ① when (left) · seats left (right)
+ *   ② the route on two lines (출발 → 도착) or the restaurant
+ *   ③ the delivery pickup place
+ *   ④ type · status (left) · author (right), small and grey, at the bottom
+ * The whole row is one link. The post form's preview renders the same card
+ * without the link (`preview`).
  */
 export function PostCard({
   post,
   now,
   preview = false,
   hideStatus = false,
+  hideType = false,
+  showDay = true,
   statusNow,
 }: {
   post: PostSummary;
@@ -83,6 +88,10 @@ export function PostCard({
   preview?: boolean;
   /** Edit preview: the saved status is not known here, so leave it out. */
   hideStatus?: boolean;
+  /** A type tab is on: the icon already says it, so drop the word. */
+  hideType?: boolean;
+  /** A day heading above already says "오늘"; then only the time shows. */
+  showDay?: boolean;
 }) {
   const path = useAppPath();
   const ownNow = useClientNow();
@@ -98,6 +107,7 @@ export function PostCard({
   const taxi = post.type === "TAXI";
   const day = postDayText(reference, clock);
   const joined = post.viewerJoined === true && label !== "삭제된 모집";
+  const typeWord = taxi ? "택시" : "배달";
 
   const body = (
     <>
@@ -105,22 +115,41 @@ export function PostCard({
         {taxi ? <TaxiArt /> : <DeliveryArt />}
       </span>
       <span className={styles.cardBody}>
+        <span className={styles.facts}>
+          <span className={styles.when}>
+            {showDay ? `${day} ` : ""}
+            {timeFormat.format(reference)}{" "}
+            <span className={styles.whenVerb}>
+              {taxi ? "출발" : "주문 마감"}
+            </span>
+          </span>
+          {available ? (
+            <span className={styles.seats} data-last={remaining === 1}>
+              {remaining}자리 남음
+            </span>
+          ) : (
+            // The status in the bottom line already says it; add only detail.
+            reason &&
+            reason !== label && <span className={styles.reason}>{reason}</span>
+          )}
+        </span>
         <span className={styles.cardHead}>
-          <span className={styles.cardTitle}>
-            {taxi ? (
-              <>
+          {taxi ? (
+            <span className={styles.cardTitle} data-route="true">
+              <span className={styles.stop}>
+                <span className={styles.srOnly}>출발 </span>
                 {post.departure}
                 <span className={styles.srOnly}>에서</span>
-                <span className={styles.arrow} aria-hidden="true">
-                  {" → "}
-                </span>
+              </span>
+              <span className={styles.stop} data-end="true">
+                <span className={styles.srOnly}>도착 </span>
                 {post.destination}
                 <span className={styles.srOnly}>까지</span>
-              </>
-            ) : (
-              post.restaurantName
-            )}
-          </span>
+              </span>
+            </span>
+          ) : (
+            <span className={styles.cardTitle}>{post.restaurantName}</span>
+          )}
           {!taxi && (
             <span className={styles.pickup}>
               <span className={styles.srOnly}>, </span>
@@ -128,34 +157,24 @@ export function PostCard({
             </span>
           )}
         </span>
-        <span className={styles.facts}>
-          <span className={styles.when}>
-            {day} {timeFormat.format(reference)} {taxi ? "출발" : "주문 마감"}
-          </span>
-          {available ? (
-            <span className={styles.seats} data-last={remaining === 1}>
-              {remaining}자리 남음
-            </span>
-          ) : (
-            // The status in the line below already says it; add only detail.
-            reason &&
-            reason !== label && <span className={styles.reason}>{reason}</span>
-          )}
-        </span>
         <span className={styles.cardMeta}>
-          <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
-          {!hideStatus && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className={styles.status}>{label}</span>
-            </>
-          )}
-          {joined && <span className={styles.joinedChip}>참여 중</span>}
+          <span className={styles.metaMain}>
+            {hideType ? (
+              <span className={styles.srOnly}>{typeWord}, </span>
+            ) : (
+              <>
+                <span className={styles.chip}>{typeWord}</span>
+                {!hideStatus && <span aria-hidden="true">·</span>}
+              </>
+            )}
+            {!hideStatus && <span className={styles.status}>{label}</span>}
+            {joined && <span className={styles.joinedChip}>참여 중</span>}
+          </span>
           {post.authorName && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className={styles.author}>{post.authorName}</span>
-            </>
+            <span className={styles.author}>
+              <span className={styles.srOnly}>, 작성자 </span>
+              {post.authorName}
+            </span>
           )}
         </span>
       </span>

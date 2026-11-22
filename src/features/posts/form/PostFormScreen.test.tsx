@@ -635,10 +635,15 @@ describe("작성 도우미", () => {
   it("단계 표시는 지금 단계와 다음 단계를 한 번씩 보여 주고 필수/선택 안내를 보여 준다", async () => {
     await setup(ops());
     expect(
-      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정·정원" }),
+      screen.getByRole("heading", { name: /1단계.*1\. 기본 정보/ }),
     ).toBeVisible();
-    expect(screen.getByText("다음: 안내·미리보기")).toBeVisible();
-    expect(screen.getAllByText(/유형·장소·일정·정원/)).toHaveLength(1);
+    // Both steps are named once in the step row; the current one is marked.
+    const steps = screen.getByRole("list", { name: "작성 단계" });
+    expect(within(steps).getByText("기본 정보").closest("li")).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    expect(within(steps).getByText("안내 및 확인")).toBeVisible();
     expect(screen.getByRole("group", { name: "유형" })).toBeVisible();
     expect(screen.queryByText(/꼭 입력해요/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("출발지")).toHaveAttribute(
@@ -647,9 +652,9 @@ describe("작성 도우미", () => {
     );
     fillStepOne();
     goStep(2);
-    expect(screen.getByText("마지막 단계")).toBeVisible();
+    expect(within(steps).getByText(/\(완료\)/)).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "2/2단계 안내·미리보기" }),
+      screen.getByRole("heading", { name: /2단계,.*2\. 안내 및 확인/ }),
     ).toHaveFocus();
     expect(screen.getByLabelText("외부 소통 링크")).not.toHaveAttribute(
       "aria-required",
@@ -712,11 +717,11 @@ describe("작성 도우미", () => {
     expect(screen.getByLabelText("출발 시간")).toHaveTextContent("18:00");
     expect(
       screen.getByText(
-        "신청·취소 마감 오늘 17:50이 함께 정해져요 (출발 10분 전)",
+        "참여·취소 마감 오늘 17:50이 함께 정해져요 (출발 10분 전)",
       ),
     ).toBeVisible();
     expect(screen.getByLabelText("출발 시간")).toHaveAccessibleDescription(
-      /신청·취소 마감 오늘 17:50/,
+      /참여·취소 마감 오늘 17:50/,
     );
     fireEvent.click(chip("출발 날짜 빠르게 고르기", "내일"));
     expect(screen.getByLabelText("출발 날짜")).toHaveTextContent("10/6");
@@ -732,7 +737,7 @@ describe("작성 도우미", () => {
     expect(screen.getByLabelText("출발 시간")).toHaveTextContent("00:15");
     expect(
       screen.getByText(
-        "신청·취소 마감 내일 00:05가 함께 정해져요 (출발 10분 전)",
+        "참여·취소 마감 내일 00:05가 함께 정해져요 (출발 10분 전)",
       ),
     ).toBeVisible();
     type("함께할 학생에게 전할 말", "정문 앞에서 만나요");
@@ -753,7 +758,7 @@ describe("작성 도우미", () => {
     expect(card).not.toBeNull();
     expect(within(preview).queryByRole("link")).toBeNull();
     expect(card).toHaveTextContent(
-      /삼육대학교 정문에서 → 석계역 1번 출구까지.*오늘 18:00 출발.*3자리 남음.*택시·모집 중·김하늘/,
+      /오늘 18:00 출발.*3자리 남음.*출발 삼육대학교 정문에서.*도착 석계역 1번 출구까지.*택시·모집 중, 작성자 김하늘/,
     );
   });
 
@@ -764,7 +769,7 @@ describe("작성 도우미", () => {
       screen.getByRole("button", { name: "장소·일정·정원 고치기" }),
     );
     expect(
-      screen.getByRole("heading", { name: "1/2단계 유형·장소·일정·정원" }),
+      screen.getByRole("heading", { name: /1단계.*1\. 기본 정보/ }),
     ).toHaveFocus();
     expect(screen.getByLabelText("출발지")).toHaveValue("삼육대학교 정문");
     fireEvent.click(screen.getByRole("button", { name: "정원 1명 줄이기" }));

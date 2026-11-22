@@ -181,8 +181,8 @@ describe("상태와 작성자 관리", () => {
 describe("상세 상태 표시", () => {
   it.each([
     ["모집 중", { relation: "NONE" }, at("17:30:00")],
-    ["신청 마감", { relation: "NONE" }, at("17:50:00")],
-    ["신청 마감", { relation: "NONE", joinable: false }, at("17:30:00")],
+    ["참여 마감", { relation: "NONE" }, at("17:50:00")],
+    ["참여 마감", { relation: "NONE", joinable: false }, at("17:30:00")],
     ["정원 마감", { status: "FULL", currentMemberCount: 4 }, at("17:30:00")],
     ["정원 마감", { currentMemberCount: 4, joinable: false }, at("17:30:00")],
     ["작성자 마감", { status: "CLOSED" }, at("17:30:00")],
@@ -193,13 +193,13 @@ describe("상세 상태 표시", () => {
     expect(detailStatus(detail(patch), now).label).toBe(label);
   });
 
-  it("서버 마감 시각이 있으면 그 시각을 신청 마감 기준으로 쓴다", () => {
+  it("서버 마감 시각이 있으면 그 시각을 참여 마감 기준으로 쓴다", () => {
     const post = detail({
       relation: "NONE",
       participationDeadline: "2026-10-05T17:30:00+09:00",
     });
     expect(detailStatus(post, at("17:29:59")).label).toBe("모집 중");
-    expect(detailStatus(post, at("17:30:00")).label).toBe("신청 마감");
+    expect(detailStatus(post, at("17:30:00")).label).toBe("참여 마감");
   });
 
   it("참여 중이면 모집 상태와 함께 참여 완료를 표시하고, 취소된 모집에서는 표시하지 않는다", () => {
@@ -262,7 +262,7 @@ describe("recruitmentStatus", () => {
     ["RECRUITING", "모집 중"],
     ["FULL", "정원 마감"],
     ["CLOSED", "작성자 마감"],
-    ["APPLICATION_CLOSED", "신청 마감"],
+    ["APPLICATION_CLOSED", "참여 마감"],
     ["CANCELLED", "모집 취소"],
     ["FINISHED", "일정 종료"],
   ] as const)("서버 값 %s를 '%s'로 보여 준다", (value, label) => {
@@ -278,9 +278,9 @@ describe("recruitmentStatus", () => {
     ).toBe("작성자 마감");
   });
 
-  it("받은 뒤 시간이 지나면 신청 마감, 일정 종료로 넘어간다", () => {
+  it("받은 뒤 시간이 지나면 참여 마감, 일정 종료로 넘어간다", () => {
     const post = { ...base, recruitmentStatus: "RECRUITING" as const };
-    expect(detailStatus(post, at("17:50")).label).toBe("신청 마감");
+    expect(detailStatus(post, at("17:50")).label).toBe("참여 마감");
     expect(detailStatus(post, at("18:00")).label).toBe("일정 종료");
     expect(
       detailStatus({ ...base, recruitmentStatus: "CANCELLED" }, at("18:30"))
