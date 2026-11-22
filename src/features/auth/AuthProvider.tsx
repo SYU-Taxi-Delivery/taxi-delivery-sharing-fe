@@ -21,7 +21,12 @@ import {
 } from "./auth";
 import { authOperations, USER_KEY } from "./authApi";
 
-type Notice = { tone: "info" | "error"; message: string } | null;
+type Notice = {
+  tone: "info" | "error";
+  message: string;
+  /** Set when another tab signed out, so screens say so instead of "만료". */
+  kind?: "signedOutElsewhere";
+} | null;
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -45,6 +50,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const expiredNotice: Notice = {
   tone: "info",
   message: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+};
+
+const elsewhereNotice: Notice = {
+  tone: "info",
+  message: "다른 탭에서 로그아웃했어요. 계속하려면 다시 로그인해 주세요.",
+  kind: "signedOutElsewhere",
 };
 
 export function AuthProvider({
@@ -90,37 +101,46 @@ export function AuthProvider({
     [update],
   );
 
-  const check = useCallback(async () => {
-    // After an unconfirmed logout a successful me() must not sign the user back in.
-    if (checking.current || locked.current || pendingRef.current) return;
-    checking.current = true;
-    const requestId = ++sequence.current;
-    const current = () => mounted.current && sequence.current === requestId;
-    let result: CurrentUser | null;
-    try {
-      result = toCurrentUser(await operationsRef.current.me());
-    } catch (error) {
+  const check = useCallback(
+    async (signedOutElsewhere = false) => {
+      // After an unconfirmed logout a successful me() must not sign the user back in.
+      if (checking.current || locked.current || pendingRef.current) return;
+      checking.current = true;
+      const requestId = ++sequence.current;
+      const current = () => mounted.current && sequence.current === requestId;
+      let result: CurrentUser | null;
+      try {
+        result = toCurrentUser(await operationsRef.current.me());
+      } catch (error) {
+        if (!current()) return;
+        checking.current = false;
+        if (error instanceof ApiError && error.status === 401) {
+          result = null;
+        } else {
+          // A failed recheck keeps a signed-in user; protected APIs still answer 401.
+          if (statusRef.current !== "authenticated")
+            update("unavailable", null);
+          return;
+        }
+      }
       if (!current()) return;
       checking.current = false;
-      if (error instanceof ApiError && error.status === 401) {
-        result = null;
-      } else {
-        // A failed recheck keeps a signed-in user; protected APIs still answer 401.
-        if (statusRef.current !== "authenticated") update("unavailable", null);
-        return;
+      if (result) {
+        update("authenticated", result);
+      } else if (statusRef.current === "authenticated") {
+        if (signedOutElsewhere) {
+          update("anonymous", null);
+          setNotice(elsewhereNotice);
+        } else {
+          update("expired", null);
+          setNotice(expiredNotice);
+        }
+      } else if (statusRef.current !== "expired") {
+        update("anonymous", null);
       }
-    }
-    if (!current()) return;
-    checking.current = false;
-    if (result) {
-      update("authenticated", result);
-    } else if (statusRef.current === "authenticated") {
-      update("expired", null);
-      setNotice(expiredNotice);
-    } else if (statusRef.current !== "expired") {
-      update("anonymous", null);
-    }
-  }, [update]);
+    },
+    [update],
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -143,7 +163,9 @@ export function AuthProvider({
     // Signing in or out in another tab changes the stored user there; this
     // tab rechecks at once instead of on its next focus.
     const otherTab = (event: StorageEvent) => {
-      if (event.key === null || event.key === USER_KEY) void check();
+      // The stored user removed (or storage cleared) means a sign-out there.
+      if (event.key === null || event.key === USER_KEY)
+        void check(event.newValue === null);
     };
     window.addEventListener("focus", recheck);
     document.addEventListener("visibilitychange", recheck);
@@ -229,7 +251,8 @@ export function AuthProvider({
       notice,
       loggingOut,
       serverLogoutPending,
-      check,
+      // Public check never means "signed out elsewhere" (e.g. onClick={check}).
+      check: () => check(),
       login,
       logout,
       handleUnauthorized,

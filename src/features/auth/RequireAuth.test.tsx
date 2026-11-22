@@ -38,6 +38,33 @@ function renderWith(me: AuthOperations["me"], ui: ReactNode) {
 }
 
 describe("RequireAuth", () => {
+  it("다른 탭에서 로그아웃하면 만료가 아니라 로그아웃했다고 안내한다", async () => {
+    const me = vi.fn<AuthOperations["me"]>(async () => student);
+    renderWith(
+      me,
+      <RequireAuth>
+        <p>참가자 명단</p>
+      </RequireAuth>,
+    );
+    await act(async () => {});
+    expect(screen.getByText("참가자 명단")).toBeVisible();
+    me.mockResolvedValue(null);
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "syu-session-user",
+          newValue: null,
+        }),
+      );
+    });
+    expect(screen.queryByText("참가자 명단")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "다른 탭에서 로그아웃했어요",
+    );
+    expect(screen.queryByText(/만료/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "로그인하러 가기" })).toBeVisible();
+  });
+
   it("확인 중에는 보호 내용을 렌더링하지 않는다", () => {
     renderWith(
       () => new Promise(() => {}),
