@@ -13,6 +13,7 @@ import { AccountMenu } from "@/features/auth/AccountMenu";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BoardIcon, PersonIcon } from "@/features/ui/art";
+import { clearListScroll } from "./listScroll";
 import { useTypingFlag } from "./useTypingFlag";
 
 type LeaveGuard = (trigger: HTMLElement, href: string) => boolean;
@@ -22,7 +23,8 @@ export const AppShellLeaveGuard = createContext<
 
 /*
  * Signed-in service frame: logo, account menu, main navigation and footer.
- * The logo + name goes to the posts list, the same place as the 모집글 tab.
+ * The logo + name goes to the first screen: the posts list with no search,
+ * scrolled to the top. The 모집글 tab returns to the list as you left it.
  * The one main nav sits in the header on wide screens and becomes the phone's
  * bottom bar. A page's main action (participation button, form submit row,
  * marked data-bottom-action) stacks on top of that bar in the same bottom
@@ -43,6 +45,9 @@ export function AppShell({
 }) {
   const path = useAppPath();
   const typing = useTypingFlag();
+  // The logo is the first screen: the whole list with no search, at the top
+  // (the 모집글 tab keeps the list you were on).
+  const home = postsPath.split("?")[0] || "/posts";
   const leaveGuard = useRef<LeaveGuard>(null);
   const setLeaveGuard = useCallback((guard: LeaveGuard | null) => {
     leaveGuard.current = guard;
@@ -61,9 +66,12 @@ export function AppShell({
       <header className={styles.frameHeader}>
         <div className={styles.header}>
           <Link
-            href={path(postsPath)}
+            href={path(home)}
             className={styles.brand}
-            onClick={(event) => guardNavigation(event, postsPath)}
+            onClick={(event) => {
+              guardNavigation(event, home);
+              if (!event.defaultPrevented) clearListScroll();
+            }}
           >
             <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟

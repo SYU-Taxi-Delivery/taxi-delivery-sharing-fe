@@ -855,6 +855,26 @@ describe("수정 폼", () => {
     },
   );
 
+  it("두유팟 로고는 검색 없는 목록 맨 위로, 모집글 탭은 보던 목록으로 간다", async () => {
+    window.sessionStorage.setItem("posts:scroll:/posts", "640");
+    window.sessionStorage.setItem("posts:scroll:/posts?type=TAXI", "320");
+    window.sessionStorage.setItem("other", "keep");
+    await setup(ops(), { listPath: "/posts?type=TAXI&q=%EC%84%9D%EA%B3%84" });
+    const logo = screen.getByRole("link", { name: "두유팟" });
+    expect(logo).toHaveAttribute("href", "/posts");
+    expect(screen.getByRole("link", { name: "모집글" })).toHaveAttribute(
+      "href",
+      "/posts?type=TAXI&q=%EC%84%9D%EA%B3%84",
+    );
+    fireEvent.click(logo);
+    expect(window.sessionStorage.getItem("posts:scroll:/posts")).toBeNull();
+    expect(
+      window.sessionStorage.getItem("posts:scroll:/posts?type=TAXI"),
+    ).toBeNull();
+    expect(window.sessionStorage.getItem("other")).toBe("keep");
+    window.sessionStorage.clear();
+  });
+
   it("다른 모집 수정으로 이동하면 이전 초안을 지우고 새 모집의 값으로만 저장한다", async () => {
     let resolveNext!: (value: EditablePost) => void;
     const next = post({ id: "p2" });

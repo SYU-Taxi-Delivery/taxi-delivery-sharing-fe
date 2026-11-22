@@ -12,6 +12,7 @@ import {
 } from "react";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { participationDeadlineMs } from "@/features/participation/participation";
+import { readScroll, saveScroll } from "./listScroll";
 import { AppShell } from "./AppShell";
 import { Pagination } from "./Pagination";
 import { PostCard, postDayText, useClientNow } from "./PostCard";
@@ -44,7 +45,6 @@ const tabs: { type: PostFilter; label: string }[] = [
 ];
 
 const NEW_POST_PATH = "/posts/new";
-const SCROLL_KEY = "posts:scroll:";
 const DESKTOP = "(min-width: 64rem)";
 
 /** True on a desktop-wide window; false on the server and where unknown. */
@@ -58,27 +58,6 @@ function useDesktop(): boolean {
     () => window.matchMedia?.(DESKTOP).matches === true,
     () => false,
   );
-}
-
-/** sessionStorage can throw (private mode, blocked storage); never fatal. */
-function readScroll(key: string): number | null {
-  try {
-    const raw = window.sessionStorage.getItem(SCROLL_KEY + key);
-    if (raw === null) return null;
-    window.sessionStorage.removeItem(SCROLL_KEY + key);
-    const value = Number(raw);
-    return Number.isFinite(value) && value > 0 ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveScroll(key: string) {
-  try {
-    window.sessionStorage.setItem(SCROLL_KEY + key, String(window.scrollY));
-  } catch {
-    // Storage unavailable: coming back simply starts at the top.
-  }
 }
 
 export function PostListScreen({
