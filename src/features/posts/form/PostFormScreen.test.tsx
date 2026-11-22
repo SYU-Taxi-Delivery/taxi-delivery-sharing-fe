@@ -758,7 +758,7 @@ describe("작성 도우미", () => {
     expect(card).not.toBeNull();
     expect(within(preview).queryByRole("link")).toBeNull();
     expect(card).toHaveTextContent(
-      /오늘 18:00 출발.*3자리 남음.*출발 삼육대학교 정문에서.*도착 석계역 1번 출구까지.*택시·모집 중, 작성자 김하늘/,
+      /삼육대학교 정문에서 → 석계역 1번 출구까지.*오늘 18:00 출발.*3자리 남음.*택시·모집 중·작성자 김하늘/,
     );
   });
 

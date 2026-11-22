@@ -651,12 +651,13 @@
   }
 }
 
-/* One pod = one white card: thin light border, the app's card corners.
+/* One pod = one white card: thin light grey edge, the app's card corners,
+   no shadow. Three bands (place, time, meta) split by space and one rule.
    The whole card is the link to the detail page. */
 .card {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr);
-  align-items: start;
+  container: card / inline-size;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
@@ -671,7 +672,6 @@
 
 .card:hover {
   border-color: color-mix(in srgb, var(--primary) 45%, var(--posts-border));
-  background: var(--primary-tint);
 }
 
 .card:active {
@@ -684,13 +684,20 @@
   }
 }
 
-/* Small type icon tile; the drawing keeps its own outline. */
+/* Top: the type tile (same size and spot on every card) and the place */
+.cardTop {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+
 .sticker {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   background: var(--taxi-tile);
   box-shadow: inset 0 0 0 1.5px var(--taxi-tile-edge);
 }
@@ -702,7 +709,7 @@
 
 .sticker svg {
   flex: none;
-  width: 2.125rem;
+  width: 2rem;
   height: auto;
 }
 
@@ -710,16 +717,9 @@
   width: 1.75rem;
 }
 
-/* Both type icons are drawn on a 48×40 grid: a little narrower than the
-   tile, so it keeps the same air around them. */
-.sticker svg[data-art="taxi"],
-.sticker svg[data-art="scooter"] {
-  width: 1.8rem;
-}
-
 .card[data-available="false"] .sticker {
   background: var(--soft);
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1.5px var(--posts-border);
 }
 
 /* Closed (full, closed, past deadline, finished, cancelled): the whole card
@@ -728,76 +728,20 @@
   filter: grayscale(1);
 }
 
-.card[data-available="false"] .cardTitle,
-.card[data-available="false"] .when {
+.card[data-available="false"] .cardTitle {
   color: var(--posts-muted);
 }
 
-/* Four rows; the type · status · author row sits on the card's bottom edge
-   so cards side by side share one baseline whatever their titles. */
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  height: 100%;
-  min-width: 0;
-}
-
-/* ① when on the left, seats left on the right: the two things people
-   compare across cards line up in two columns. */
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0 var(--space-3);
-  min-height: 2.5rem;
-  align-content: center;
-  font-size: var(--type-subhead);
-  line-height: 1.35;
-  font-variant-numeric: tabular-nums;
-}
-
-.when {
-  color: var(--posts-text);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.whenVerb {
-  font-size: var(--type-body);
-  font-weight: 700;
-}
-
-.seats {
-  margin-left: auto;
-  color: var(--posts-primary-text);
-  font-size: var(--type-body);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Last seat: warm brown-orange (--warn, 5.5:1 on white) */
-.seats[data-last="true"] {
-  color: var(--posts-warn);
-}
-
-.reason {
-  margin-left: auto;
-  color: var(--posts-muted);
-  font-size: var(--type-label);
-  font-weight: 600;
-}
-
-/* ② the place, the biggest words after the time. Names break between
-   words (keep-all) and each stop keeps to two lines. */
 .cardHead {
   display: grid;
-  align-content: start;
-  gap: var(--space-1);
+  align-content: center;
+  gap: 0.125rem;
   min-width: 0;
+  min-height: 2.75rem;
 }
 
+/* The place, the biggest words on the card. Names break between words
+   only (keep-all); a taxi route wraps after the arrow when it is long. */
 .cardTitle {
   display: -webkit-box;
   overflow: hidden;
@@ -812,54 +756,12 @@
   overflow-wrap: break-word;
 }
 
-/* Taxi route: 출발 over 도착, a hollow and a filled dot joined by a short
-   dotted line, so a long route never runs together on one line. */
-.cardTitle[data-route="true"] {
-  display: grid;
-  gap: 0.125rem;
-  -webkit-line-clamp: unset;
-  line-clamp: none;
+.arrow {
+  color: var(--posts-muted);
+  font-weight: 600;
 }
 
-.stop {
-  position: relative;
-  display: -webkit-box;
-  overflow: hidden;
-  padding-left: 1.125rem;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.stop::before {
-  position: absolute;
-  top: 0.5em;
-  left: 0.125rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border: 2px solid var(--posts-primary-text);
-  border-radius: 50%;
-  background: var(--canvas);
-  content: "";
-}
-
-.stop[data-end="true"]::before {
-  background: var(--posts-primary-text);
-}
-
-/* The dotted joint from the 출발 dot down to the 도착 dot */
-.stop:not([data-end])::after {
-  position: absolute;
-  top: calc(0.5em + 0.6rem);
-  bottom: -0.45em;
-  left: calc(0.375rem - 1px);
-  border-left: 2px dotted
-    color-mix(in srgb, var(--posts-primary-text) 55%, transparent);
-  content: "";
-}
-
-/* ③ Delivery: where to pick the food up, its own small line under the
-   restaurant so the two places never read as one name. */
+/* Delivery: where to pick the food up, small and grey under the name */
 .pickup {
   color: var(--posts-muted);
   font-size: var(--type-label);
@@ -868,36 +770,97 @@
   overflow-wrap: break-word;
 }
 
-.arrow {
-  color: var(--posts-muted);
-  font-weight: 600;
-}
-
-/* ④ type · status on the left, author on the right, small and grey, on the
-   card's bottom edge. */
-.cardMeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+/* Middle: a light green band, the time on the left and a pale yellow
+   seats badge on the right with a faint rule between them. Quieter type
+   than the title so the place still reads first. */
+/* Spare height in a row goes above the band, so the bands and the
+   bottom lines of side-by-side cards both line up. */
+.timeBand {
   margin-top: auto;
-  padding-top: var(--space-1);
-  color: var(--posts-muted);
-  font-size: var(--type-label);
-  font-weight: 600;
-}
-
-.metaMain {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 0.375rem;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
+  font-variant-numeric: tabular-nums;
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   min-width: 0;
+  color: var(--posts-text);
+  font-size: var(--type-body);
+  font-weight: 600;
+}
+
+.whenIcon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--posts-primary-text);
+}
+
+.seats {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--round-pill);
+  background: var(--taxi-tile);
+  color: var(--posts-primary-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The faint rule between the time and the badge */
+.seats::before {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: calc(var(--space-3) * -0.5 - 0.5px);
+  border-left: 1px solid
+    color-mix(in srgb, var(--posts-primary-text) 18%, transparent);
+  content: "";
+}
+
+/* Last seat: warm brown-orange (--warn, 5.5:1 on the pale yellow) */
+.seats[data-last="true"] {
+  color: var(--posts-warn);
+}
+
+.seats[data-closed="true"] {
+  background: var(--soft);
+  color: var(--posts-muted);
+}
+
+/* Bottom: a thin rule, then 유형 · 모집 상태 · 작성자 on one line, on the
+   card's bottom edge so cards side by side share one baseline. */
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--posts-border);
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 500;
+}
+
+.dot {
+  color: color-mix(in srgb, var(--posts-muted) 70%, transparent);
 }
 
 .chip {
   color: var(--posts-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .status {
@@ -910,11 +873,8 @@
 }
 
 .author {
-  flex: none;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* The viewer's relation, next to the post status: its own small pill. */
@@ -929,6 +889,17 @@
   font-size: var(--type-micro);
   font-weight: 700;
   line-height: 1.5;
+}
+
+/* Narrow cards: the band stacks, the badge under the time, no rule. */
+@container card (max-width: 19rem) {
+  .seats {
+    margin-left: 0;
+  }
+
+  .seats::before {
+    display: none;
+  }
 }
 
 /* ───────── Loading, empty, error ───────── */
