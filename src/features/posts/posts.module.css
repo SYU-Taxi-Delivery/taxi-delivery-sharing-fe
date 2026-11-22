@@ -18,6 +18,13 @@
   --posts-focus: var(--primary-text);
   --bounce: var(--ease-out); /* state changes settle, no overshoot */
   --delivery-tint: color-mix(in srgb, var(--warn) 12%, white);
+  /* Type icon tiles: yellow for the taxi, light green for delivery, each
+     with a darker edge, so the two types part by colour as well as by
+     drawing. */
+  --taxi-tile: #fdf1c9;
+  --taxi-tile-edge: #efd27c;
+  --delivery-tile: #e4f2cc;
+  --delivery-tile-edge: #a9d26b;
 
   /* Bottom area (phones): nav bar, plus an action strip when a page has one */
   --nav-h: 3.75rem;
@@ -571,11 +578,13 @@
   height: 2.5rem;
   place-items: center;
   border-radius: 0.75rem;
-  background: var(--primary-soft);
+  background: var(--taxi-tile);
+  box-shadow: inset 0 0 0 1.5px var(--taxi-tile-edge);
 }
 
 .card[data-type="delivery"] .sticker {
-  background: var(--delivery-tint);
+  background: var(--delivery-tile);
+  box-shadow: inset 0 0 0 1.5px var(--delivery-tile-edge);
 }
 
 .sticker svg {
@@ -597,6 +606,7 @@
 
 .card[data-available="false"] .sticker {
   background: var(--soft);
+  box-shadow: none;
 }
 
 /* Closed (full, closed, past deadline, finished, cancelled): the whole card
