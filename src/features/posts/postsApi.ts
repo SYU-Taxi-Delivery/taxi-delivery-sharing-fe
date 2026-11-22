@@ -12,16 +12,23 @@ export class PostsNotConnectedError extends Error {
 /** Backend list item → the shape toPostSummary validates. */
 export function fromBackendSummary(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
-  const { postId, postStatus, author, ...rest } = value as Record<
+  const { postId, postStatus, author, viewer, ...rest } = value as Record<
     string,
     unknown
   >;
   const displayName = (author as { displayName?: unknown } | null | undefined)
     ?.displayName;
+  // Each row's relation to me (JOINED shows 참여 중), same as the detail's.
+  const mine = (
+    viewer as { myParticipationStatus?: unknown } | null | undefined
+  )?.myParticipationStatus;
   return {
     ...rest,
     id: postId,
     status: postStatus,
+    ...(rest.myParticipationStatus === undefined && typeof mine === "string"
+      ? { myParticipationStatus: mine }
+      : {}),
     ...(rest.authorName === undefined && typeof displayName === "string"
       ? { authorName: displayName }
       : {}),

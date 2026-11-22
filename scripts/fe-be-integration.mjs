@@ -237,6 +237,25 @@ const code = (r) => r.json?.error?.code;
     [pick(list), pick(detail), pick(mine?.post), pick(authored)].join(" | "),
   );
 
+  // The list row says how it relates to each viewer, like the detail.
+  const row = async (c) =>
+    (
+      await c.req("GET", "/api/posts?type=TAXI&page=0&size=50")
+    ).json.data.items.find((x) => x.postId === id)?.viewer;
+  const [asMember, asOther, asAuthor] = [
+    await row(s1),
+    await row(admin),
+    await row(author),
+  ];
+  ok(
+    "목록 viewer: 참여자 JOINED·남 NONE·작성자 isAuthor",
+    asMember?.myParticipationStatus === "JOINED" &&
+      asMember.myParticipationStatus === detail.viewer?.myParticipationStatus &&
+      asOther?.myParticipationStatus === "NONE" &&
+      asAuthor?.isAuthor === true,
+    JSON.stringify([asMember, asOther, asAuthor]),
+  );
+
   // Cancel, then cancelled member loses roster/link, then rejoin keeps the participation id.
   const before = (await s1.req("GET", `${P}/participants/me`)).json.data
     .participation.participationId;
