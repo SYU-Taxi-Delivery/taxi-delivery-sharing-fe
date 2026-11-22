@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   BAG_PLACE,
   BagShape,
   Bean,
-  GREEN,
   INK,
   Line,
-  TAXI,
-  TaxiLights,
-  TaxiSign,
-  TaxiWheels,
+  OpenTaxiBack,
+  OpenTaxiFront,
 } from "@/features/ui/art";
 import type { ParticipationMotion as Motion } from "./useParticipation";
 import styles from "./motion.module.css";
@@ -22,8 +19,8 @@ import styles from "./motion.module.css";
  * the seat row or the buttons. One controller runs both kinds:
  *
  * - rest: always shown, and 두유콩 is always in it.
- *   - taxi: the parked taxi with its driver and a 두유콩 waving beside it,
- *     or, once you have joined, that 두유콩 in the back window.
+ *   - taxi: the open taxi with its 두유콩 driver and a 두유콩 waving beside
+ *     it, or, once you have joined, that 두유콩 in the back seat.
  *   - delivery: a big delivery box (the one on the scooter icon) with a 두유콩 waving
  *     beside it, and your small bag on its lid once you have joined.
  * - enter: once, the first time the scene is on screen after the detail page
@@ -205,52 +202,23 @@ export function ParticipationMotion({
   );
 }
 
-const CAR = "translate(62 11.2) scale(1.5)";
+/* The open taxi on the 48 × 40 icon grid, wheels on the ground line. */
+const CAR = "translate(70 13.64) scale(1.3)";
 
 /**
- * A small 두유콩 seen through a window: the driver in front (green) or you
- * in the back once joined (ivory, happy).
+ * The open taxi with its 두유콩 driver. Once you have joined, you sit in the
+ * back seat; while a result plays, the rider hops in or out over the side
+ * (drawn between the two layers so the body hides its feet).
  */
-function WindowBean({ passenger = false }: { passenger?: boolean }) {
-  const clip = useId();
-  const pane = passenger ? TAXI.doorWindow : TAXI.frontWindow;
-  return (
-    <>
-      <clipPath id={clip}>
-        <path d={pane} />
-      </clipPath>
-      <g clipPath={`url(#${clip})`}>
-        <g className={styles.driver}>
-          <g
-            transform={
-              passenger
-                ? "translate(18.7 20.6) scale(0.36)"
-                : "translate(28.6 20.4) scale(0.34)"
-            }
-          >
-            <Bean
-              look={passenger ? "ivory" : "green"}
-              detail="face"
-              face={passenger ? "happy" : "dot"}
-            />
-          </g>
-        </g>
-      </g>
-      <Line d={pane} fill="none" />
-    </>
-  );
-}
-
 function TaxiScene({ rider, joined }: { rider: boolean; joined: boolean }) {
   return (
     <>
       <g className={styles.hop}>
-        <ellipse cx={98} cy={62.6} rx={30} ry={2} fill={INK} opacity={0.1} />
-        {/* cabin seen through the open rear door */}
+        <ellipse cx={101} cy={62.6} rx={28} ry={2} fill={INK} opacity={0.1} />
         <g transform={CAR}>
-          <path
-            d={TAXI.door}
-            fill="color-mix(in srgb, var(--primary-text) 45%, var(--text))"
+          <OpenTaxiBack
+            passenger={joined && !rider}
+            driverClassName={styles.driver}
           />
         </g>
         {rider && (
@@ -259,22 +227,7 @@ function TaxiScene({ rider, joined }: { rider: boolean; joined: boolean }) {
           </g>
         )}
         <g transform={CAR}>
-          <TaxiSign size="lg" />
-          <Line
-            d={`${TAXI.body} ${TAXI.door}`}
-            fillRule="evenodd"
-            fill={GREEN}
-          />
-          <Line d={TAXI.frontWindow} fill="#fff" />
-          <WindowBean />
-          <TaxiLights />
-          <TaxiWheels />
-          <g className={styles.door}>
-            <Line d={TAXI.door} fill={GREEN} />
-            <Line d={TAXI.doorWindow} fill="#fff" />
-            {joined && !rider && <WindowBean passenger />}
-            <Line d="M19.4 19.6H21.6" fill="none" />
-          </g>
+          <OpenTaxiFront size="lg" />
         </g>
       </g>
       {rider && (

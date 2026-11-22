@@ -42,7 +42,6 @@
    placement transforms (attributes) stay in the scene's coordinates. */
 .rider,
 .rider [data-leg],
-.door,
 .hop,
 .basket,
 .restBag,
@@ -148,7 +147,7 @@
 /* ───────── Taxi ───────── */
 
 /* 두유콩 keeps the same pose keyframes in both layers; only which
-   layer is visible changes, while they stand inside the door opening. */
+   layer is visible changes, at the top of the hop over the side. */
 .rider {
   transform-origin: 50% 100%;
 }
@@ -169,8 +168,8 @@
     layer-show-at-58 1s steps(1, end) both;
 }
 
-/* walk up beside the taxi → wait for the door → step onto the sill and
-   duck in through the opening */
+/* walk up behind the open taxi → crouch → hop over the side into the back
+   seat (the body hides the feet once inside) */
 @keyframes rider-join {
   0% {
     transform: translate(42px, 62px) scale(1);
@@ -181,11 +180,11 @@
     transform: translate(64px, 62px) scale(1);
   }
   48% {
-    transform: translate(82px, 58px) scale(0.86);
+    transform: translate(74px, 40px) scale(0.8);
   }
   58%,
   100% {
-    transform: translate(89.4px, 53.2px) scale(0.66);
+    transform: translate(81.2px, 40.2px) scale(0.65);
   }
 }
 
@@ -221,14 +220,14 @@
     layer-show-at-26 1s steps(1, end) both;
 }
 
-/* Facing left (mirrored) while getting out and walking away */
+/* Facing left (mirrored): hop out of the back seat and walk away */
 @keyframes rider-leave {
   0%,
   22% {
-    transform: translate(89.4px, 53.2px) scale(-0.66, 0.66);
+    transform: translate(81.2px, 40.2px) scale(-0.65, 0.65);
   }
   34% {
-    transform: translate(82px, 58px) scale(-0.86, 0.86);
+    transform: translate(74px, 40px) scale(-0.8, 0.8);
   }
   44% {
     transform: translate(64px, 62px) scale(-1, 1);
@@ -296,48 +295,6 @@
   }
   75% {
     transform: rotate(22deg);
-  }
-}
-
-/* Rear door hinges on its front edge */
-.door {
-  transform-origin: 100% 50%;
-}
-
-[data-scene="taxi-join"] .door {
-  animation: door-join 1s var(--curve-standard) both;
-}
-
-[data-scene="taxi-leave"] .door {
-  animation: door-leave 1s var(--curve-standard) both;
-}
-
-@keyframes door-join {
-  0%,
-  26% {
-    transform: scaleX(1);
-  }
-  40%,
-  66% {
-    transform: scaleX(0.12);
-  }
-  82%,
-  100% {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes door-leave {
-  0% {
-    transform: scaleX(1);
-  }
-  16%,
-  50% {
-    transform: scaleX(0.12);
-  }
-  68%,
-  100% {
-    transform: scaleX(1);
   }
 }
 

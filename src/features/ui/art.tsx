@@ -123,43 +123,50 @@ const OPEN_TAXI = {
 };
 
 /**
- * The taxi type's icon: an open-top taxi with its roof sign on a pole,
- * driven by 두유콩 in the green helmet, drawn on the scooter's grid so the
- * two type icons read as one set.
+ * Open taxi, back layer (48 × 40 grid): roof sign on its pole, the seats,
+ * the driving 두유콩 and its arm. Scenes put a boarding 두유콩 between this
+ * and OpenTaxiFront so the body hides its feet. `passenger` seats a happy
+ * 두유콩 in the back.
  */
-export function TaxiArt({
-  size = "sm",
-  className,
+export function OpenTaxiBack({
+  passenger = false,
+  driverClassName,
 }: {
-  size?: Size;
-  className?: string;
+  passenger?: boolean;
+  driverClassName?: string;
 }) {
+  return (
+    <>
+      {/* with a back-seat passenger the sign rides higher, above their head */}
+      <Line d={passenger ? "M9.6 19.6V5" : "M9.6 19.6V12.4"} fill="none" />
+      <g transform={passenger ? "translate(0 -7.4)" : undefined}>
+        <Line d={OPEN_TAXI.sign} fill={IVORY} />
+        <path
+          d="M8.2 10.4H11"
+          stroke={GREEN}
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+      </g>
+      {passenger && (
+        <g transform="translate(8.6 20.4) scale(0.5)">
+          <Bean look="ivory" detail="face" face="happy" />
+        </g>
+      )}
+      <Line d={OPEN_TAXI.seat} fill={SEAT} />
+      <g className={driverClassName}>
+        <Rider x={13.4} y={-1.2} />
+      </g>
+      <Line d="M27.6 12.6Q30.4 13 31.6 15" fill="none" />
+    </>
+  );
+}
+
+/** Open taxi, front layer: windshield, steering wheel, body and wheels. */
+export function OpenTaxiFront({ size = "sm" }: { size?: Size }) {
   const lg = size === "lg";
   return (
-    <svg
-      className={className}
-      viewBox="-1 -1 48 40"
-      data-art="taxi"
-      preserveAspectRatio="xMidYMid meet"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {lg && (
-        <ellipse cx={24} cy={37.6} rx={20} ry={1.2} fill={INK} opacity={0.1} />
-      )}
-      {/* roof sign on a pole */}
-      <Line d="M9.6 19.6V12.4" fill="none" />
-      <Line d={OPEN_TAXI.sign} fill={IVORY} />
-      <path
-        d="M8.2 10.4H11"
-        stroke={GREEN}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      />
-      <Line d={OPEN_TAXI.seat} fill={SEAT} />
-      <Rider x={13.4} y={-1.2} />
-      {/* arm to the wheel, then the windshield and steering wheel */}
-      <Line d="M27.6 12.6Q30.4 13 31.6 15" fill="none" />
+    <>
       <Line d={OPEN_TAXI.windshield} fill={WINDOW} />
       <Line d="M30.4 17.8L32 13.8" fill="none" />
       <ellipse
@@ -193,6 +200,37 @@ export function TaxiArt({
       {OPEN_TAXI.wheels.map((x) => (
         <ScooterWheel key={x} x={x} y={32.2} />
       ))}
+    </>
+  );
+}
+
+/**
+ * The taxi type's icon: an open-top taxi with its roof sign on a pole,
+ * driven by 두유콩 in the green helmet, drawn on the scooter's grid so the
+ * two type icons read as one set.
+ */
+export function TaxiArt({
+  size = "sm",
+  className,
+}: {
+  size?: Size;
+  className?: string;
+}) {
+  const lg = size === "lg";
+  return (
+    <svg
+      className={className}
+      viewBox="-1 -1 48 40"
+      data-art="taxi"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {lg && (
+        <ellipse cx={24} cy={37.6} rx={20} ry={1.2} fill={INK} opacity={0.1} />
+      )}
+      <OpenTaxiBack />
+      <OpenTaxiFront size={size} />
     </svg>
   );
 }
@@ -647,12 +685,9 @@ export function CampusScene({ className }: { className?: string }) {
       <g transform="translate(65 43.1) rotate(-5) scale(0.86)">
         <Bean look="green" />
       </g>
-      <g transform="translate(82 4) scale(1.18)">
-        <TaxiSign size="sm" />
-        <Line d={TAXI.body} fill={GREEN} />
-        <Line d={TAXI.doorWindow} fill={WINDOW} />
-        <Line d={TAXI.frontWindow} fill={WINDOW} />
-        <TaxiWheels />
+      <g transform="translate(85.5 3.1) scale(1.1)">
+        <OpenTaxiBack />
+        <OpenTaxiFront />
       </g>
     </svg>
   );
@@ -735,40 +770,28 @@ export function LoginScene({ className }: { className?: string }) {
         </g>
       </g>
 
-      {/* the taxi, a friend peeking from the rear window */}
+      {/* the open taxi: 두유콩 driving, a friend in the back seat */}
       <g data-motion="idle">
-        <g transform="translate(140 31) scale(1.8)">
+        <g transform="translate(140 25) scale(1.8)">
           <ellipse
             cx={24}
-            cy={34.4}
-            rx={19}
-            ry={1.5}
+            cy={37.6}
+            rx={20}
+            ry={1.2}
             fill={INK}
             opacity={0.1}
           />
-          <TaxiSign size="lg" />
-          <Line d={TAXI.body} fill={GREEN} />
-          <Line d={TAXI.doorWindow} fill={WINDOW} />
-          <Line
-            d="M16.4 16.2Q16.4 12.8 19.2 12.8Q22 12.8 22 16.2Z"
-            fill={IVORY}
-          />
-          <circle cx={18.4} cy={14.6} r={0.45} fill={INK} />
-          <circle cx={20.4} cy={14.6} r={0.45} fill={INK} />
-          <Line d={TAXI.frontWindow} fill={WINDOW} />
-          <Line d="M24 16.6V27.6" fill="none" opacity={0.55} />
-          <Line d="M19.4 19.6H21.6" fill="none" />
-          <TaxiLights />
-          <TaxiWheels />
+          <OpenTaxiBack passenger />
+          <OpenTaxiFront size="lg" />
         </g>
       </g>
       <Line
-        d="M154 14H198Q204 14 204 20V24Q204 30 198 30H178L172 36L170 30H154Q148 30 148 24V20Q148 14 154 14Z"
+        d="M154 0H198Q204 0 204 6V10Q204 16 198 16H178L172 22L170 16H154Q148 16 148 10V6Q148 0 154 0Z"
         fill="#fff"
       />
       <text
         x={176}
-        y={25}
+        y={11}
         textAnchor="middle"
         fontSize={8}
         fontWeight={700}
