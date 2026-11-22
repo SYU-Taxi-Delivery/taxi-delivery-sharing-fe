@@ -113,6 +113,9 @@ export function TaxiLights() {
   );
 }
 
+/** Taxi yellow: tells the taxi from the green delivery scooter at a glance. */
+const TAXI_YELLOW = "#f5c53d";
+
 /* Open-top taxi for the type icon (48 × 40 grid, same as the scooter). */
 const OPEN_TAXI = {
   body: "M3 25.2Q3 20.2 8 19.6H40.4Q45 20.2 45 24.6V26.6Q45 32 39.5 32H8.5Q3 32 3 26.6Z",
@@ -180,7 +183,14 @@ export function OpenTaxiFront({ size = "sm" }: { size?: Size }) {
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
-      <Line d={OPEN_TAXI.body} fill={GREEN} />
+      <Line d={OPEN_TAXI.body} fill={TAXI_YELLOW} />
+      {/* checker band: the taxi's own mark */}
+      <path
+        d="M6 26.4H42"
+        stroke={INK}
+        strokeWidth={2.4}
+        strokeDasharray="2.2 2.2"
+      />
       {lg && (
         <>
           <path
@@ -205,7 +215,7 @@ export function OpenTaxiFront({ size = "sm" }: { size?: Size }) {
 }
 
 /**
- * The taxi type's icon: an open-top taxi with its roof sign on a pole,
+ * The taxi type's icon: a yellow, checker-banded open-top taxi with its roof sign on a pole,
  * driven by 두유콩 in the green helmet, drawn on the scooter's grid so the
  * two type icons read as one set.
  */
@@ -308,7 +318,8 @@ export function BagArt({
  * taxi (Line), so both type icons read as one set at every size.
  */
 const SCOOTER = {
-  box: "M4 8.6H11.6Q13.6 8.6 13.6 10.6V17.6Q13.6 19.6 11.6 19.6H4Q2 19.6 2 17.6V10.6Q2 8.6 4 8.6Z",
+  // a big box: at list size the box is what says "delivery"
+  box: "M2.4 4.6H14.8Q16.8 4.6 16.8 6.6V17.6Q16.8 19.6 14.8 19.6H2.4Q0.4 19.6 0.4 17.6V6.6Q0.4 4.6 2.4 4.6Z",
   rear: "M6.5 29Q5 20.5 13.5 19.3H24.5Q27 19.3 27 21.8V27Q27 29 25 29Z",
   floor: "M22 26.2H31.5L33.5 29H22Z",
   shield:
@@ -384,22 +395,21 @@ export function DeliveryArt({
       )}
       {/* delivery box on the back, with the bean emblem */}
       <Line d={SCOOTER.box} fill={GREEN} />
-      <Line d="M2 11.46H13.6" fill="none" strokeWidth={1.2} />
+      <Line d="M0.4 8.5H16.8" fill="none" strokeWidth={1.2} />
       <rect
-        x={4.4}
-        y={12.78}
-        width={6.8}
-        height={5.06}
+        x={2.8}
+        y={10.3}
+        width={11.6}
+        height={6.9}
         rx={1.4}
         fill={IVORY}
         stroke={INK}
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
-      <g transform="translate(7.8 15.31) scale(0.185) translate(-12 -14.6)">
+      <g transform="translate(8.6 13.75) scale(0.25) translate(-12 -14.6)">
         <path d={BEAN.body} fill={GREEN} />
       </g>
-      <Line d="M13.4 12.6L17 13.2" fill="none" strokeWidth={1.2} />
       <ScooterWheel x={13} />
       <ScooterWheel x={38} />
       <Line d={SCOOTER.rear} fill={GREEN} />

@@ -245,11 +245,13 @@
   height: 4.25rem;
   place-items: center;
   border-radius: 1.125rem;
-  background: var(--primary-soft);
+  background: var(--taxi-tile);
+  box-shadow: inset 0 0 0 1.5px var(--taxi-tile-edge);
 }
 
 .sticker[data-type="delivery"] {
-  background: var(--delivery-tint);
+  background: var(--delivery-tile);
+  box-shadow: inset 0 0 0 1.5px var(--delivery-tile-edge);
 }
 
 .sticker svg {
@@ -835,6 +837,7 @@ p.stop::before {
 .boneLine {
   display: block;
   border-radius: 0.5rem;
+  box-shadow: none;
   background: linear-gradient(
       90deg,
       transparent 0%,
