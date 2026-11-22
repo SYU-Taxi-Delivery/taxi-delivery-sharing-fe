@@ -37,8 +37,8 @@
 
 /* Room for the scene (motion.module .stage) only beside what sits next to
    it: everything up to the headcount row. The notes below run full width. */
-.summary > :has(~ .seats),
-.summary > .seats {
+.summary > :has(~ .seatRow),
+.summary > .seatRow {
   padding-right: calc(var(--participation-scene-width) + var(--space-1));
 }
 
@@ -83,13 +83,31 @@
   height: 1.625rem;
 }
 
+/* Beans and "현재 3 / 4명" on one line, so the drawing reads with its count */
+.seatRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.seatCount {
+  color: var(--participation-text);
+  font-size: var(--type-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 25rem) {
   .panel {
     --participation-scene-width: 5.5rem;
   }
 
-  .summary > .seats {
+  .summary > .seatRow {
     padding-right: 0;
+  }
+
+  .seats {
     column-gap: 1px;
   }
 
@@ -259,14 +277,41 @@
   display: none;
 }
 
+/* Time left to join, right above the button: the one deadline people act
+   on. Under an hour it turns the warm colour and says "곧 마감" in words. */
 .deadline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-1) var(--space-2);
   color: var(--participation-text);
-  font-size: var(--type-label);
+  font-size: var(--type-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.deadline strong {
+  font-weight: 800;
+}
+
+.deadline[data-urgent="true"] {
+  color: var(--warn);
+}
+
+.deadline[data-urgent="true"] .deadlineIcon {
+  color: var(--warn);
+}
+
+.soonTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.4375rem;
+  border: 1px solid currentColor;
+  border-radius: var(--round-pill);
+  color: var(--warn);
+  font-size: var(--type-micro);
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .deadlineIcon {

@@ -16,7 +16,6 @@ import {
   type Direction,
   type PostListOperations,
   type PostQuery,
-  type PostSort,
   type TimeWindow,
 } from "./posts";
 import { useClientNow } from "./PostCard";
@@ -24,7 +23,6 @@ import {
   customRangeText,
   invalidCustomRange,
   presetRangeText,
-  SORT_LABELS,
   TIME_LABELS,
 } from "./search";
 import { usePostCount } from "./usePostList";
@@ -34,7 +32,6 @@ import { TimePicker } from "@/features/ui/pickers/TimePicker";
 import styles from "./posts.module.css";
 
 const TIME_CHOICES: TimeWindow[] = ["hour", "tonight", "morning", "custom"];
-const SORTS: PostSort[] = ["TIME", "RECENT"];
 const DIRECTIONS: [Direction | undefined, string][] = [
   [undefined, "전체"],
   ["FROM_SCHOOL", "출발"],
@@ -90,6 +87,15 @@ export function SearchPanel({
   // is empty, else 도착지.
   const [picked, setPicked] = useState<RouteKey | null>(null);
   const now = useClientNow();
+  // Place fields live under 상세 조건; open from the start when one is set.
+  const detailCount = [
+    draft.departure,
+    draft.destination,
+    draft.direction,
+    draft.restaurant,
+    draft.pickup,
+  ].filter((value) => value !== undefined && value !== "").length;
+  const [detailOpen, setDetailOpen] = useState(detailCount > 0);
   const invalid = invalidCustomRange(draft);
   // Unchanged conditions reuse the list's own total instead of asking again.
   const unchanged =
@@ -136,111 +142,9 @@ export function SearchPanel({
       {heading}
       {/* Only this part scrolls; the footer stays below it, never on top. */}
       <div className={styles.panelBody} data-panel-scroll>
-        {taxi && (
-          <fieldset className={styles.panelSection}>
-            {/* The inputs' own labels say it; read out, not shown. */}
-            <legend className={styles.srOnly}>경로</legend>
-            <div className={styles.route}>
-              {(["departure", "destination"] as const).map((key) => (
-                <label
-                  key={key}
-                  className={styles.routeField}
-                  data-target={target === key}
-                >
-                  <span className={styles.routeLabel}>{ROUTE_LABELS[key]}</span>
-                  <input
-                    className={styles.searchInput}
-                    value={draft[key] ?? ""}
-                    maxLength={100}
-                    autoComplete="off"
-                    placeholder={key === "departure" ? "어디서" : "어디로"}
-                    onFocus={() => setPicked(key)}
-                    onChange={(event) => set({ [key]: event.target.value })}
-                  />
-                </label>
-              ))}
-              <button
-                type="button"
-                className={styles.swap}
-                aria-label="출발지·도착지 바꾸기"
-                title="출발지·도착지 바꾸기"
-                onClick={() =>
-                  set({
-                    departure: draft.destination,
-                    destination: draft.departure,
-                  })
-                }
-              >
-                <span aria-hidden="true">⇅</span>
-              </button>
-            </div>
-            {/* Route direction: one exclusive choice, drawn as a segmented
-                switch so it never reads as another place chip. */}
-            <div
-              className={styles.direction}
-              role="radiogroup"
-              aria-labelledby={`${id}-direction`}
-            >
-              <span id={`${id}-direction`} className={styles.directionLabel}>
-                학교
-              </span>
-              <span className={styles.segmented}>
-                {DIRECTIONS.map(([value, label]) => (
-                  <label key={label} className={styles.segment}>
-                    <input
-                      type="radio"
-                      name={`${id}-direction`}
-                      className={styles.segmentInput}
-                      checked={draft.direction === value}
-                      onChange={() => set({ direction: value })}
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </span>
-            </div>
-            <Suggestions
-              places={TAXI_SEARCH_PLACES}
-              target={ROUTE_LABELS[target]}
-              value={draft[target] ?? ""}
-              onPick={suggest}
-            />
-          </fieldset>
-        )}
-
-        {delivery && (
-          <fieldset className={styles.panelSection}>
-            <legend className={styles.srOnly}>음식점·수령 장소</legend>
-            {/* Same label-beside-input rows as the taxi route. */}
-            <div className={styles.route}>
-              <PlaceField
-                label="음식점"
-                placeholder="어느 가게"
-                value={draft.restaurant ?? ""}
-                onChange={(restaurant) => set({ restaurant })}
-              />
-              <PlaceField
-                label="수령 장소"
-                placeholder="어디서 받을지"
-                target
-                value={draft.pickup ?? ""}
-                onChange={(pickup) => set({ pickup })}
-              />
-            </div>
-            <Suggestions
-              places={PICKUP_PLACES}
-              target="수령 장소"
-              value={draft.pickup ?? ""}
-              onPick={(place) =>
-                set({ pickup: draft.pickup === place ? "" : place })
-              }
-            />
-          </fieldset>
-        )}
-
         <div className={styles.panelSection}>
           <label className={styles.panelLegend} htmlFor={`${id}-q`}>
-            모집글 제목·장소 검색
+            검색어
           </label>
           <input
             id={`${id}-q`}
@@ -254,11 +158,147 @@ export function SearchPanel({
           />
           {draft.type === "ALL" && (
             <p className={styles.panelHint}>
-              택시나 배달을 고르면 출발지·도착지, 음식점·수령 장소로 좁혀 찾을
-              수 있어요.
+              택시·배달 탭에서 장소별로 더 좁힐 수 있어요.
             </p>
           )}
         </div>
+        {(taxi || delivery) && (
+          <div className={styles.moreConditions}>
+            <button
+              type="button"
+              className={styles.moreToggle}
+              aria-expanded={detailOpen}
+              aria-controls={`${id}-detail`}
+              onClick={() => setDetailOpen((open) => !open)}
+            >
+              <span>
+                상세 조건
+                <span className={styles.moreHint}>
+                  {taxi ? " · 출발지·도착지·학교 방향" : " · 음식점·수령 장소"}
+                </span>
+              </span>
+              {detailCount > 0 && (
+                <span className={styles.moreCount}>
+                  {detailCount}
+                  <span className={styles.srOnly}>개 입력됨</span>
+                </span>
+              )}
+              <span className={styles.moreChevron} aria-hidden="true" />
+            </button>
+            <div id={`${id}-detail`} hidden={!detailOpen}>
+              {taxi && (
+                <fieldset className={styles.panelSection}>
+                  {/* The inputs' own labels say it; read out, not shown. */}
+                  <legend className={styles.srOnly}>경로</legend>
+                  <div className={styles.route}>
+                    {(["departure", "destination"] as const).map((key) => (
+                      <label
+                        key={key}
+                        className={styles.routeField}
+                        data-target={target === key}
+                      >
+                        <span className={styles.routeLabel}>
+                          {ROUTE_LABELS[key]}
+                        </span>
+                        <input
+                          className={styles.searchInput}
+                          value={draft[key] ?? ""}
+                          maxLength={100}
+                          autoComplete="off"
+                          placeholder={
+                            key === "departure" ? "어디서" : "어디로"
+                          }
+                          onFocus={() => setPicked(key)}
+                          onChange={(event) =>
+                            set({ [key]: event.target.value })
+                          }
+                        />
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      className={styles.swap}
+                      aria-label="출발지·도착지 바꾸기"
+                      title="출발지·도착지 바꾸기"
+                      onClick={() =>
+                        set({
+                          departure: draft.destination,
+                          destination: draft.departure,
+                        })
+                      }
+                    >
+                      <span aria-hidden="true">⇅</span>
+                    </button>
+                  </div>
+                  {/* Route direction: one exclusive choice, drawn as a segmented
+                    switch so it never reads as another place chip. */}
+                  <div
+                    className={styles.direction}
+                    role="radiogroup"
+                    aria-labelledby={`${id}-direction`}
+                  >
+                    <span
+                      id={`${id}-direction`}
+                      className={styles.directionLabel}
+                    >
+                      학교
+                    </span>
+                    <span className={styles.segmented}>
+                      {DIRECTIONS.map(([value, label]) => (
+                        <label key={label} className={styles.segment}>
+                          <input
+                            type="radio"
+                            name={`${id}-direction`}
+                            className={styles.segmentInput}
+                            checked={draft.direction === value}
+                            onChange={() => set({ direction: value })}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </span>
+                  </div>
+                  <Suggestions
+                    places={TAXI_SEARCH_PLACES}
+                    target={ROUTE_LABELS[target]}
+                    value={draft[target] ?? ""}
+                    onPick={suggest}
+                  />
+                </fieldset>
+              )}
+
+              {delivery && (
+                <fieldset className={styles.panelSection}>
+                  <legend className={styles.srOnly}>음식점·수령 장소</legend>
+                  {/* Same label-beside-input rows as the taxi route. */}
+                  <div className={styles.route}>
+                    <PlaceField
+                      label="음식점"
+                      placeholder="어느 가게"
+                      value={draft.restaurant ?? ""}
+                      onChange={(restaurant) => set({ restaurant })}
+                    />
+                    <PlaceField
+                      label="수령 장소"
+                      placeholder="어디서 받을지"
+                      target
+                      value={draft.pickup ?? ""}
+                      onChange={(pickup) => set({ pickup })}
+                    />
+                  </div>
+                  <Suggestions
+                    places={PICKUP_PLACES}
+                    target="수령 장소"
+                    value={draft.pickup ?? ""}
+                    onPick={(place) =>
+                      set({ pickup: draft.pickup === place ? "" : place })
+                    }
+                  />
+                </fieldset>
+              )}
+            </div>
+          </div>
+        )}
 
         <fieldset className={styles.panelSection}>
           <legend className={styles.panelLegend}>
@@ -324,23 +364,6 @@ export function SearchPanel({
               )}
             </div>
           )}
-        </fieldset>
-
-        <fieldset className={`${styles.panelSection} ${styles.sortOptions}`}>
-          <legend className={styles.panelLegend}>정렬</legend>
-          {SORTS.map((value) => (
-            <label key={value} className={styles.checkRow}>
-              <input
-                type="radio"
-                name={`${id}-sort`}
-                checked={(draft.sort ?? "TIME") === value}
-                onChange={() =>
-                  set({ sort: value === "RECENT" ? "RECENT" : undefined })
-                }
-              />
-              <span>{SORT_LABELS[value]}</span>
-            </label>
-          ))}
         </fieldset>
       </div>
 

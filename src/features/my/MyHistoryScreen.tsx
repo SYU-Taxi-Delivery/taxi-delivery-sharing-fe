@@ -240,6 +240,9 @@ function History({
   );
 }
 
+/** 지난 이력 shows this many rows until the viewer opens the rest. */
+const PAST_PREVIEW = 5;
+
 function Groups({
   tab,
   history,
@@ -257,6 +260,9 @@ function Groups({
   const upcomingId = useId();
   const pastId = useId();
   const { upcoming, past } = splitMyHistory(history.content, nowMs);
+  const [showAllPast, setShowAllPast] = useState(false);
+  const pastListId = useId();
+  const shownPast = showAllPast ? past : past.slice(0, PAST_PREVIEW);
   return (
     <>
       <section className={styles.group} aria-labelledby={upcomingId}>
@@ -302,8 +308,8 @@ function Groups({
               <span className={styles.srOnly}>건</span>
             </span>
           </h2>
-          <ul className={styles.rows}>
-            {past.map((item) => (
+          <ul id={pastListId} className={styles.rows}>
+            {shownPast.map((item) => (
               <li key={item.id} tabIndex={-1} data-history-id={item.id}>
                 <MyHistoryRow
                   item={item}
@@ -312,6 +318,19 @@ function Groups({
               </li>
             ))}
           </ul>
+          {past.length > PAST_PREVIEW && (
+            <button
+              type="button"
+              className={styles.moreButton}
+              aria-expanded={showAllPast}
+              aria-controls={pastListId}
+              onClick={() => setShowAllPast((open) => !open)}
+            >
+              {showAllPast
+                ? "지난 이력 접기"
+                : `지난 이력 ${past.length - PAST_PREVIEW}개 더 보기`}
+            </button>
+          )}
         </section>
       )}
     </>

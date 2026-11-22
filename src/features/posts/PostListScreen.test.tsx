@@ -100,7 +100,7 @@ describe("8주차 목록 상태 갱신", () => {
     ["TAXI", undefined],
     ["DELIVERY", undefined],
   ])(
-    "%s / %s 신청 마감 정각과 일정 종료에 서버 시계로 갱신한다",
+    "%s / %s 참여 마감 정각과 일정 종료에 서버 시계로 갱신한다",
     async (type, recruitmentStatus) => {
       vi.useFakeTimers();
       const referenceTime = "2026-11-16T00:05:00+09:00";
@@ -131,7 +131,7 @@ describe("8주차 목록 상태 갱신", () => {
     },
   );
 
-  it("조회 후 기기 시계를 바꿔도 신청 마감이 앞당겨지거나 되돌아가지 않는다", async () => {
+  it("조회 후 기기 시계를 바꿔도 참여 마감이 앞당겨지거나 되돌아가지 않는다", async () => {
     vi.useFakeTimers();
     const deadline = Date.parse("2026-11-15T23:50:00+09:00");
     vi.setSystemTime(new Date(deadline - 60_000));
@@ -297,13 +297,18 @@ describe("PostListScreen", () => {
     const card = cards()[0];
     expect(within(card).getByText("택시")).toBeVisible();
     expect(within(card).getByText("모집 중")).toBeVisible();
-    expect(card).toHaveTextContent("석계역에서 → 삼육대학교까지");
-    expect(card).toHaveAccessibleName(/석계역에서\s*삼육대학교까지/);
+    // The route reads on two lines, 출발 over 도착.
+    expect(card).toHaveTextContent("출발 석계역에서도착 삼육대학교까지");
+    expect(card).toHaveAccessibleName(/석계역에서.*삼육대학교까지/);
     expect(within(card).getByText("1자리 남음")).toHaveAttribute(
       "data-last",
       "true",
     );
-    expect(card).toHaveTextContent("택시·모집 중·박지민");
+    expect(card).toHaveTextContent("택시·모집 중, 작성자 박지민");
+    // ① time, ② route, ④ type · status · author, in that order.
+    const text = card.textContent ?? "";
+    expect(text.indexOf("출발")).toBeLessThan(text.indexOf("석계역"));
+    expect(text.indexOf("삼육대학교")).toBeLessThan(text.indexOf("모집 중"));
     expect(card).not.toHaveTextContent("3 / 4명");
   });
 
@@ -344,7 +349,7 @@ describe("PostListScreen", () => {
     expect(within(card).getByText("모집 중")).toBeVisible();
   });
 
-  it("서버 시각으로 신청 마감이 지났으면 기기 시계가 늦어도 상세와 같이 마감으로 보인다", async () => {
+  it("서버 시각으로 참여 마감이 지났으면 기기 시계가 늦어도 상세와 같이 마감으로 보인다", async () => {
     // Server: 5 minutes before T (past the 10-minute cutoff). Device: 30 minutes slow.
     const evaluatedAt = Date.parse(taxi.referenceTime) - 5 * 60_000;
     vi.spyOn(Date, "now").mockReturnValue(evaluatedAt - 30 * 60_000);
@@ -533,8 +538,14 @@ describe("PostListScreen", () => {
     expect(
       within(sheet).queryByRole("checkbox", { name: /참여 가능/ }),
     ).not.toBeInTheDocument();
+    // The sort sits over the list where the current order shows.
     expect(
-      within(sheet).getByRole("radio", { name: "최근 등록 순" }),
+      within(sheet).queryByRole("radio", { name: "최근 등록 순" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: "정렬" })).getByRole("link", {
+        name: "최근 등록 순",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -575,9 +586,10 @@ describe("PostListScreen", () => {
       "오늘 · 11/13 (금)",
       "내일 · 11/14 (토)",
     ]);
+    // The heading carries the day, so each card shows the time only.
     const [a, b] = cards();
-    expect(a).toHaveTextContent("오늘 23:40 출발");
-    expect(b).toHaveTextContent("내일 00:10 출발");
+    expect(a).toHaveTextContent(/^23:40 출발/);
+    expect(b).toHaveTextContent(/^00:10 출발/);
   });
 
   it("하루치 목록에는 날짜 제목을 넣지 않는다", async () => {
@@ -594,17 +606,20 @@ describe("PostListScreen", () => {
         { ...taxi, id: "b", referenceTime: "2026-11-15T09:00:00+09:00" },
       ]),
     );
-    expect(cards()[0]).toHaveTextContent("내일 09:00 출발");
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["내일 · 11/14 (토)", "모레 · 11/15 (일)"]);
 
     await act(async () => vi.advanceTimersByTime(1_000));
-    expect(cards()[0]).toHaveTextContent("오늘 09:00 출발");
-    expect(cards()[1]).toHaveTextContent("내일 09:00 출발");
+    expect(cards()[0]).toHaveTextContent(/^09:00 출발/);
     expect(
       screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
     ).toEqual(["오늘 · 11/14 (토)", "내일 · 11/15 (일)"]);
 
     await act(async () => vi.advanceTimersByTime(86_400_000));
-    expect(cards()[1]).toHaveTextContent("오늘 09:00 출발");
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["11/14 (토)", "오늘 · 11/15 (일)"]);
     view.unmount();
     expect(vi.getTimerCount()).toBe(0);
   });

@@ -151,7 +151,7 @@ describe("participation panel", () => {
       fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
     });
 
-    const reason = "출발 10분 전부터 참여 신청과 취소가 마감됩니다.";
+    const reason = "출발 10분 전부터 참여와 취소가 마감돼요.";
     expect(
       screen.getAllByText(reason).filter((text) => !text.closest("dialog")),
     ).toHaveLength(1);
@@ -253,7 +253,7 @@ describe("participation panel", () => {
       viewerRelation: "NONE",
       serverTime: "2026-10-13T17:50:00+09:00",
     });
-    expect(screen.getByRole("heading", { name: "신청 마감" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "참여 마감" })).toBeVisible();
     expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
   });
 
@@ -331,14 +331,18 @@ describe("participation panel", () => {
     expect(
       screen.getByRole("heading", { name: "2자리 남았어요" }),
     ).toBeVisible();
-    expect(screen.getByText(/현재 2 \/ 4명 · 작성자 포함/)).toBeVisible();
+    expect(screen.getByText("현재 2 / 4명")).toBeVisible();
+    expect(screen.getByText(/작성자 포함 인원이에요/)).toBeVisible();
     expect(screen.queryByText(/18:00 출발/)).toBeNull();
     expect(screen.queryByText(/이전까지/)).toBeNull();
     // The phone bar: seats left and the sign-up cutoff with its day word.
     expect(screen.getByText("2자리 남음")).toBeInTheDocument();
     // The same cutoff sits right above the button on wide screens (CSS
     // shows one of the two).
-    expect(screen.getAllByText("오늘 17:50까지 신청")).toHaveLength(2);
+    const barHint = document.querySelector('[data-bottom-hint="true"]');
+    expect(barHint).toHaveTextContent(/오늘 17:50까지 참여|참여 마감까지/);
+    // Wide screens: the time left, right above the button.
+    expect(screen.getAllByText(/^참여 마감까지 /).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
   });
 

@@ -93,11 +93,13 @@
   /* Type scale (oh-my-design /hangul: body tracking 0, headings ≥ -0.03em) */
   --type-display: 1.75rem; /* 28 */
   --type-title: 1.5rem; /* 24 */
+  /* Page titles (목록, 내 참여, 글쓰기): 22 on phones up to 24 on wide screens */
+  --type-page: clamp(1.375rem, 1.25rem + 0.5vw, 1.5rem);
   --type-heading: 1.25rem; /* 20 */
   --type-subhead: 1.0625rem; /* 17 */
   --type-body: 0.9375rem; /* 15 */
-  --type-label: 0.8125rem; /* 13 */
-  --type-micro: 0.75rem; /* 12 */
+  --type-label: 0.875rem; /* 14: notes, labels, card meta */
+  --type-micro: 0.8125rem; /* 13: the smallest text anywhere */
   --tracking-heading: -0.02em;
 
   /* 4px spacing scale */

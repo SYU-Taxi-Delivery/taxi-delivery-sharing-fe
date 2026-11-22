@@ -110,6 +110,8 @@
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--posts-border);
   background: var(--canvas);
+  /* A soft edge says the list above scrolls on under the buttons. */
+  box-shadow: 0 -10px 14px -12px rgb(0 0 0 / 0.22);
 }
 
 @media (max-width: 47.99rem) {
@@ -219,7 +221,7 @@
 }
 
 .title {
-  font-size: 1.375rem;
+  font-size: var(--type-page);
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: var(--tracking-heading);
@@ -258,7 +260,7 @@
   flex: 1;
   min-width: 0;
   max-width: none;
-  font-size: var(--type-heading);
+  font-size: var(--type-page);
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: var(--tracking-heading);
@@ -455,9 +457,114 @@
   font-weight: 600;
 }
 
-.sort {
+/* Sort, where the current order shows: two small text links, the current
+   one inked and underlined. */
+.sortSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sortOption {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--round-pill);
+  color: var(--posts-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sortOption::after {
+  position: absolute;
+  inset: -0.375rem 0;
+  content: "";
+}
+
+.sortOption:hover {
+  color: var(--posts-text);
+}
+
+.sortOption[aria-current="true"] {
+  background: var(--primary-soft);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.sortOption:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+/* 상세 조건: the type's own place fields, folded under one row so the
+   search box and the time choices come first. */
+.moreConditions {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--posts-border);
+  border-bottom: 1px solid var(--posts-border);
+}
+
+.moreConditions > div:not([hidden]) {
+  display: grid;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.moreToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--posts-text);
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moreToggle:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+  border-radius: var(--round-chip);
+}
+
+.moreHint {
   color: var(--posts-muted);
   font-weight: 500;
+}
+
+.moreCount {
+  display: inline-grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  place-items: center;
+  border-radius: var(--round-pill);
+  background: var(--posts-primary-text);
+  color: var(--canvas);
+  font-size: var(--type-micro);
+}
+
+.moreChevron {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--motion-fast) var(--curve-standard);
+}
+
+.moreToggle[aria-expanded="true"] .moreChevron {
+  transform: translateY(2px) rotate(-135deg);
 }
 
 @media (min-width: 40rem) {
@@ -571,6 +678,12 @@
   transform: scale(0.985);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .card:active {
+    transform: none;
+  }
+}
+
 /* Small type icon tile; the drawing keeps its own outline. */
 .sticker {
   display: grid;
@@ -620,14 +733,71 @@
   color: var(--posts-muted);
 }
 
+/* Four rows; the type · status · author row sits on the card's bottom edge
+   so cards side by side share one baseline whatever their titles. */
 .cardBody {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100%;
   min-width: 0;
 }
 
-/* Line 1, the biggest: route or restaurant · pickup. Long names wrap at
-   word boundaries (keep-all) and stop at two lines. */
+/* ① when on the left, seats left on the right: the two things people
+   compare across cards line up in two columns. */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  min-height: 2.5rem;
+  align-content: center;
+  font-size: var(--type-subhead);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.when {
+  color: var(--posts-text);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.whenVerb {
+  font-size: var(--type-body);
+  font-weight: 700;
+}
+
+.seats {
+  margin-left: auto;
+  color: var(--posts-primary-text);
+  font-size: var(--type-body);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Last seat: warm brown-orange (--warn, 5.5:1 on white) */
+.seats[data-last="true"] {
+  color: var(--posts-warn);
+}
+
+.reason {
+  margin-left: auto;
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+}
+
+/* ② the place, the biggest words after the time. Names break between
+   words (keep-all) and each stop keeps to two lines. */
+.cardHead {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
 .cardTitle {
   display: -webkit-box;
   overflow: hidden;
@@ -642,20 +812,60 @@
   overflow-wrap: break-word;
 }
 
-/* Row 1 of the card: the title, plus the delivery pickup line under it. */
-.cardHead {
+/* Taxi route: 출발 over 도착, a hollow and a filled dot joined by a short
+   dotted line, so a long route never runs together on one line. */
+.cardTitle[data-route="true"] {
   display: grid;
-  align-content: start;
-  min-width: 0;
+  gap: 0.125rem;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
 }
 
-/* Delivery: where to pick the food up, its own small line under the
+.stop {
+  position: relative;
+  display: -webkit-box;
+  overflow: hidden;
+  padding-left: 1.125rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.stop::before {
+  position: absolute;
+  top: 0.5em;
+  left: 0.125rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 2px solid var(--posts-primary-text);
+  border-radius: 50%;
+  background: var(--canvas);
+  content: "";
+}
+
+.stop[data-end="true"]::before {
+  background: var(--posts-primary-text);
+}
+
+/* The dotted joint from the 출발 dot down to the 도착 dot */
+.stop:not([data-end])::after {
+  position: absolute;
+  top: calc(0.5em + 0.6rem);
+  bottom: -0.45em;
+  left: calc(0.375rem - 1px);
+  border-left: 2px dotted
+    color-mix(in srgb, var(--posts-primary-text) 55%, transparent);
+  content: "";
+}
+
+/* ③ Delivery: where to pick the food up, its own small line under the
    restaurant so the two places never read as one name. */
 .pickup {
   color: var(--posts-muted);
   font-size: var(--type-label);
   font-weight: 600;
-  overflow-wrap: anywhere;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .arrow {
@@ -663,57 +873,31 @@
   font-weight: 600;
 }
 
-/* Line 2: when + seats left, side by side, close under the title */
-.facts {
-  margin-top: var(--space-1);
+/* ④ type · status on the left, author on the right, small and grey, on the
+   card's bottom edge. */
+.cardMeta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--space-3);
-  font-size: var(--type-body);
-  font-variant-numeric: tabular-nums;
-}
-
-.when {
-  color: var(--posts-text);
-  font-weight: 700;
-}
-
-.seats {
-  color: var(--posts-primary-text);
-  font-weight: 700;
-}
-
-/* Last seat: warm brown-orange (--warn, 5.5:1 on white) */
-.seats[data-last="true"] {
-  color: var(--posts-warn);
-}
-
-.reason {
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-1);
   color: var(--posts-muted);
   font-size: var(--type-label);
   font-weight: 600;
 }
 
-/* Line 3: type · status · author, small and grey */
-.cardMeta {
-  margin-top: var(--space-1);
+.metaMain {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0 0.375rem;
-  color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
+  min-width: 0;
 }
 
 .chip {
-  color: var(--posts-primary-text);
+  color: var(--posts-text);
   font-weight: 700;
-}
-
-.card[data-type="delivery"] .chip {
-  color: var(--posts-warn);
 }
 
 .status {
@@ -726,7 +910,11 @@
 }
 
 .author {
-  min-width: 0;
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The viewer's relation, next to the post status: its own small pill. */
@@ -738,6 +926,7 @@
   border-radius: var(--round-pill);
   background: var(--primary-soft);
   color: var(--posts-primary-text);
+  font-size: var(--type-micro);
   font-weight: 700;
   line-height: 1.5;
 }
@@ -885,8 +1074,9 @@
   }
 }
 
+/* 초기화 is the quiet one: a plain text button beside the green 적용. */
 .secondary {
-  composes: base secondary from "../ui/button.module.css";
+  composes: base ghost from "../ui/button.module.css";
 }
 
 /* ───────── Pagination ───────── */
@@ -1070,42 +1260,6 @@
   .list .card,
   .list .skeleton {
     padding: var(--space-4) var(--space-5);
-  }
-
-  /* A day with one pod: the card takes the full row and lays out across it,
-     place (and the type · status line) on the left, when + seats on the
-     right; its height follows its content. */
-  .list[data-single="true"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .list[data-single="true"] .card {
-    align-items: center;
-  }
-
-  .list[data-single="true"] .cardBody {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "head facts"
-      "meta facts";
-    align-items: center;
-    column-gap: var(--space-6);
-  }
-
-  .list[data-single="true"] .cardHead {
-    grid-area: head;
-  }
-
-  .list[data-single="true"] .cardMeta {
-    grid-area: meta;
-  }
-
-  .list[data-single="true"] .facts {
-    grid-area: facts;
-    flex-direction: column;
-    align-items: flex-end;
-    margin-top: 0;
-    text-align: right;
   }
 }
 

@@ -16,11 +16,11 @@
 .publicTag {
   display: inline-flex;
   align-items: center;
-  min-height: 1.375rem;
+  min-height: 1.5rem;
   padding: 0 var(--space-2);
   border: 1px solid var(--input-border);
-  border-radius: 0.5rem;
-  color: var(--posts-muted);
+  border-radius: var(--round-pill);
+  color: var(--posts-text);
   font-size: var(--type-micro);
   font-weight: 700;
 }
@@ -174,21 +174,21 @@
   border-radius: 1.125rem;
 }
 
+/* Time (and my more button) on one line at the bubble's bottom edge */
 .side {
   display: flex;
   flex: none;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.125rem;
 }
 
 .row[data-mine="true"] .side {
-  align-items: flex-end;
+  flex-direction: row-reverse;
 }
 
 .time {
   color: var(--posts-muted);
-  font-size: 0.6875rem;
+  font-size: var(--type-micro);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   white-space: nowrap;
@@ -361,7 +361,8 @@
   background: color-mix(in srgb, var(--primary) 84%, black);
 }
 
-.send:disabled {
+.send:disabled,
+.send[aria-disabled="true"] {
   background: var(--closed);
   color: var(--posts-muted);
 }
@@ -373,6 +374,7 @@
 
 .composerMeta {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);

@@ -8,6 +8,7 @@ import { ParticipationMotion } from "./ParticipationMotion";
 import styles from "./participation.module.css";
 import { ClockIcon, SeatSlots } from "@/features/ui/art";
 import { dayTime, formatDate } from "@/lib/dateFormat";
+import { remainingLabel } from "@/features/posts/detail/postDetail";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -69,7 +70,7 @@ export function ParticipationPanel({
   const status = timeFinished
     ? "일정 종료"
     : {
-        OPEN: timeClosed ? "신청 마감" : "모집 중",
+        OPEN: timeClosed ? "참여 마감" : "모집 중",
         FULL: "정원 마감",
         CLOSED: "작성자 마감",
         CANCELLED: "모집 취소",
@@ -85,6 +86,23 @@ export function ParticipationPanel({
     !author &&
     snapshot.viewerRelation !== "GUEST" &&
     (joined || snapshot.status !== "CLOSED");
+  // The real cutoff next to the button, read before the general notes, as
+  // time left: "참여 마감까지 25분" / while joined "취소 마감까지 25분". The
+  // clock time itself sits in the summary's 참여·취소 마감 box.
+  const deadlineOpen =
+    Number.isFinite(availability.deadline) && nowMs < availability.deadline;
+  const left = deadlineOpen
+    ? remainingLabel(availability.deadline, nowMs)?.replace(/ 남음$/, "")
+    : null;
+  const urgent = deadlineOpen && availability.deadline - nowMs < 3_600_000;
+  const deadlineText = left
+    ? joined
+      ? `취소 마감까지 ${left}`
+      : snapshot.status === "OPEN"
+        ? `참여 마감까지 ${left}`
+        : null
+    : null;
+
   const scheduleTerm = snapshot.type === "TAXI" ? "출발" : "주문 마감";
   const hint =
     Number.isFinite(availability.deadline) && hasTime
@@ -94,21 +112,13 @@ export function ParticipationPanel({
             snapshot.status === "OPEN" && !timeClosed
               ? `${remaining}자리 남음`
               : status,
-            `${dayTime(availability.deadline, nowMs)}까지 신청`,
+            // Under an hour the phone bar counts down, like the box above
+            // the button on wide screens; before that it names the time.
+            urgent && left
+              ? `참여 마감까지 ${left}`
+              : `${dayTime(availability.deadline, nowMs)}까지 참여`,
           ]
       : null;
-
-  // The real cutoff next to the button, read before the general notes:
-  // "오늘 23:53까지 신청" / while joined "오늘 23:53까지 취소 가능".
-  const deadlineOpen =
-    Number.isFinite(availability.deadline) && nowMs < availability.deadline;
-  const deadlineText = deadlineOpen
-    ? joined
-      ? `${dayTime(availability.deadline, nowMs)}까지 취소 가능`
-      : snapshot.status === "OPEN"
-        ? `${dayTime(availability.deadline, nowMs)}까지 신청`
-        : null
-    : null;
 
   if (snapshot.status === "REMOVED") {
     return <p role="status">관리자에 의해 삭제된 모집이에요.</p>;
@@ -137,16 +147,21 @@ export function ParticipationPanel({
                 ? `${remaining}자리 남았어요`
                 : status}
         </h2>
-        <SeatSlots
-          key={motion?.id ?? "seats"}
-          className={styles.seats}
-          total={snapshot.capacity}
-          filled={snapshot.currentMemberCount}
-          pop={popSeat}
-        />
+        {/* The beans and the count side by side; the words carry it. */}
+        <div className={styles.seatRow}>
+          <SeatSlots
+            key={motion?.id ?? "seats"}
+            className={styles.seats}
+            total={snapshot.capacity}
+            filled={snapshot.currentMemberCount}
+            pop={popSeat}
+          />
+          <span className={styles.seatCount}>
+            현재 {snapshot.currentMemberCount} / {snapshot.capacity}명
+          </span>
+        </div>
         <p className={styles.muted}>
-          현재 {snapshot.currentMemberCount} / {snapshot.capacity}명 · 작성자
-          포함
+          작성자 포함 인원이에요.
           {rosterNote && (
             <>
               <br />
@@ -172,9 +187,10 @@ export function ParticipationPanel({
           {deadlineText && (
             /* Wide screens: the cutoff right above the button. Phones show
                it in the bar's two-line hint instead. */
-            <p className={styles.deadline}>
+            <p className={styles.deadline} data-urgent={urgent}>
               <ClockIcon className={styles.deadlineIcon} />
-              {deadlineText}
+              <strong>{deadlineText}</strong>
+              {urgent && <span className={styles.soonTag}>곧 마감</span>}
             </p>
           )}
           {hint && (
@@ -213,7 +229,7 @@ export function ParticipationPanel({
         !timeFinished &&
         Number.isFinite(availability.deadline) && (
           <p className={styles.help}>
-            참여 신청·취소는 {dayTime(availability.deadline, nowMs)} 이전까지
+            참여·취소는 {dayTime(availability.deadline, nowMs)} 이전까지
             가능해요.
             <br />
             {snapshot.type === "TAXI" ? "출발" : "주문 마감"}{" "}

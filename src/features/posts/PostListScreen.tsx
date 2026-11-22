@@ -306,8 +306,28 @@ function PostList({
                   ? `${query.type === "ALL" ? "" : `${active.label} `}참여 가능 ${page.totalElements}개`
                   : `${active.label} ${page.totalElements}개`}
               </span>
-              <span className={styles.sort}>
-                {SORT_LABELS[query.sort ?? "TIME"]}
+              {/* The sort is changed where it shows: two links, the current
+                  one marked, each opening the first page in that order. */}
+              <span
+                className={styles.sortSwitch}
+                role="group"
+                aria-label="정렬"
+              >
+                {(["TIME", "RECENT"] as const).map((value) => (
+                  <Link
+                    key={value}
+                    href={href({
+                      sort: value === "RECENT" ? "RECENT" : undefined,
+                    })}
+                    className={styles.sortOption}
+                    aria-current={
+                      (query.sort ?? "TIME") === value ? "true" : undefined
+                    }
+                    scroll={false}
+                  >
+                    {SORT_LABELS[value]}
+                  </Link>
+                ))}
               </span>
             </p>
           )}
@@ -382,17 +402,15 @@ function PostList({
                           {day === date ? date : `${day} · ${date}`}
                         </h3>
                       )}
-                      {/* A day with one pod: one full-width card, no empty column. */}
-                      <ul
-                        className={styles.list}
-                        data-single={group.posts.length === 1 || undefined}
-                      >
+                      <ul className={styles.list}>
                         {group.posts.map((post) => (
                           <li key={post.id}>
                             <PostCard
                               post={post}
                               now={now}
                               statusNow={statusNow}
+                              hideType={query.type !== "ALL"}
+                              showDay={groups.length <= 1}
                             />
                           </li>
                         ))}

@@ -216,14 +216,14 @@ describe("상세 조회", () => {
     );
     expect(
       screen.getByRole("region", { name: "1자리 남았어요" }),
-    ).toHaveTextContent("현재 3 / 4명 · 작성자 포함");
+    ).toHaveTextContent(/현재 3 \/ 4명.*작성자 포함/);
     // The summary names both times: the schedule and the join/cancel cutoff.
     const facts = screen
       .getByRole("article")
       .querySelector("header dl")! as HTMLElement;
     expect(within(facts).getByText("출발")).toBeVisible();
-    expect(within(facts).getByText("신청·취소 마감")).toBeVisible();
-    expect(within(facts).getByText("1시간 50분 남음")).toBeVisible();
+    expect(within(facts).getByText("참여·취소 마감")).toBeVisible();
+    expect(within(facts).getByText(/마감까지 1시간 50분/)).toBeVisible();
     expect(screen.getByText(/정문 앞에서 만나요/)).toBeVisible();
     expect(screen.getByText("모집 중")).toBeVisible();
     // No roster section for a non-member: who can see it is said under the
@@ -300,7 +300,7 @@ describe("상세 조회", () => {
 
       await act(async () => vi.advanceTimersByTime(1));
       expect(article).toHaveAttribute("data-closed", "true");
-      expect(status).toHaveTextContent("신청 마감");
+      expect(status).toHaveTextContent("참여 마감");
       expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
       expect(operations.load).toHaveBeenCalledTimes(1);
     },
@@ -1185,7 +1185,7 @@ describe("상세 하단 고정 바·참여자 안내", () => {
   const bar = () =>
     document.querySelector<HTMLElement>('[data-bottom-action="true"]');
 
-  it("자정 무렵에는 출발·마감 모두 내일로 표시하고, 참여 전 바는 남은 자리와 신청 마감을 안내한다", async () => {
+  it("자정 무렵에는 출발·마감 모두 내일로 표시하고, 참여 전 바는 남은 자리와 참여 마감을 안내한다", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-13T23:30:00+09:00"));
     await setup(
@@ -1197,13 +1197,13 @@ describe("상세 하단 고정 바·참여자 안내", () => {
     );
     const header = screen.getByRole("article").querySelector("header")!;
     expect(header).toHaveTextContent("출발내일 01:18");
-    expect(header).toHaveTextContent("신청·취소 마감내일 01:08");
+    expect(header).toHaveTextContent("참여·취소 마감내일 01:08");
     const action = bar()!;
     expect(
       within(action).getByRole("button", { name: "참여하기" }),
     ).toBeEnabled();
     expect(action).toHaveTextContent("1자리 남음");
-    expect(action).toHaveTextContent("내일 01:08까지 신청");
+    expect(action).toHaveTextContent("내일 01:08까지 참여");
   });
 
   it("배달은 참여·취소 마감과 주문 마감에 오늘·내일을 붙인다", async () => {
@@ -1330,11 +1330,11 @@ describe("상세 하단 고정 바·참여자 안내", () => {
       await setup(operations);
       const action = bar()!;
       expect(action).toHaveTextContent(
-        relation === "JOINED" ? "내일 08:00 출발" : "내일 07:50까지 신청",
+        relation === "JOINED" ? "내일 08:00 출발" : "내일 07:50까지 참여",
       );
       act(() => vi.advanceTimersByTime(1));
       expect(action).toHaveTextContent(
-        relation === "JOINED" ? "오늘 08:00 출발" : "오늘 07:50까지 신청",
+        relation === "JOINED" ? "오늘 08:00 출발" : "오늘 07:50까지 참여",
       );
       if (relation === "JOINED") {
         expect(
