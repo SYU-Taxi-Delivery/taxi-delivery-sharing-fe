@@ -26,6 +26,7 @@ import {
   type PostListOperations,
   type PostPage,
   type PostQuery,
+  type PostSort,
 } from "./posts";
 import { SearchPanel, SearchSheet } from "./SearchPanel";
 import { newPostHref, noResultsText, searchChips, SORT_LABELS } from "./search";
@@ -45,6 +46,7 @@ const tabs: { type: PostFilter; label: string }[] = [
 ];
 
 const NEW_POST_PATH = "/posts/new";
+const SORTS: PostSort[] = ["TIME", "RECENT"];
 const DESKTOP = "(min-width: 64rem)";
 
 /** True on a desktop-wide window; false on the server and where unknown. */
@@ -300,36 +302,19 @@ function PostList({
             </div>
           )}
           {page && (
-            <p className={styles.summary}>
+            <div className={styles.summary}>
               <span className={styles.count}>
                 {query.joinableOnly
                   ? `${query.type === "ALL" ? "" : `${active.label} `}참여 가능 ${page.totalElements}개`
                   : `${active.label} ${page.totalElements}개`}
               </span>
-              {/* The sort is changed where it shows: two links, the current
-                  one marked, each opening the first page in that order. */}
-              <span
-                className={styles.sortSwitch}
-                role="group"
-                aria-label="정렬"
-              >
-                {(["TIME", "RECENT"] as const).map((value) => (
-                  <Link
-                    key={value}
-                    href={href({
-                      sort: value === "RECENT" ? "RECENT" : undefined,
-                    })}
-                    className={styles.sortOption}
-                    aria-current={
-                      (query.sort ?? "TIME") === value ? "true" : undefined
-                    }
-                    scroll={false}
-                  >
-                    {SORT_LABELS[value]}
-                  </Link>
-                ))}
-              </span>
-            </p>
+              <SortMenu
+                current={query.sort ?? "TIME"}
+                hrefFor={(value) =>
+                  href({ sort: value === "RECENT" ? "RECENT" : undefined })
+                }
+              />
+            </div>
           )}
 
           {loading ? (
@@ -648,4 +633,84 @@ function useServerTick(
     : tick?.page === page
       ? tick.now
       : Date.parse(page.serverTime!);
+}
+
+/*
+ * The sort, where the current order shows: a button with the current order,
+ * opening a small menu under it (정렬 heading, then each order; the current
+ * one in green). Escape, a tap outside or picking an order closes it, and
+ * focus goes back to the button.
+ */
+function SortMenu({
+  current,
+  hrefFor,
+}: {
+  current: PostSort;
+  hrefFor: (value: PostSort) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    wrap.current?.querySelector<HTMLElement>('[aria-current="true"]')?.focus();
+    const away = (event: PointerEvent) => {
+      if (!wrap.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open]);
+
+  return (
+    <div
+      ref={wrap}
+      className={styles.sortMenu}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          setOpen(false);
+          button.current?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        if (!wrap.current?.contains(event.relatedTarget as Node | null))
+          setOpen(false);
+      }}
+    >
+      <button
+        ref={button}
+        type="button"
+        className={styles.sortButton}
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className={styles.srOnly}>정렬: </span>
+        {SORT_LABELS[current]}
+        <span className={styles.sortCaret} aria-hidden="true" />
+      </button>
+      <div id={menuId} className={styles.sortPopup} hidden={!open}>
+        <p className={styles.sortHeading} id={`${menuId}-title`}>
+          정렬
+        </p>
+        <ul role="group" aria-labelledby={`${menuId}-title`}>
+          {SORTS.map((value) => (
+            <li key={value}>
+              <Link
+                href={hrefFor(value)}
+                className={styles.sortOption}
+                aria-current={current === value ? "true" : undefined}
+                scroll={false}
+                onClick={() => setOpen(false)}
+              >
+                {SORT_LABELS[value]}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }
