@@ -117,6 +117,44 @@ describe("GET /api/posts 연동", () => {
     expect(postStatusLabel(delivery).label).toBe("정원 마감");
   });
 
+  it("목록 항목의 viewer.myParticipationStatus가 JOINED인 글만 참여 중으로 표시한다", async () => {
+    fakeBackend({
+      "GET /api/posts?page=0&size=20": () =>
+        page([
+          {
+            ...taxiItem,
+            postId: "1",
+            viewer: { isAuthor: false, myParticipationStatus: "JOINED" },
+          },
+          {
+            ...taxiItem,
+            postId: "2",
+            viewer: { isAuthor: false, myParticipationStatus: "CANCELLED" },
+          },
+          {
+            ...deliveryItem,
+            postId: "3",
+            viewer: { isAuthor: true, myParticipationStatus: "NONE" },
+          },
+          { ...deliveryItem, postId: "4" }, // older server: no viewer
+        ]),
+    });
+    const content = toPostPage(
+      await postListOperations.list({
+        type: "ALL",
+        joinableOnly: false,
+        page: 0,
+      }),
+    ).content;
+    expect(content.map((post) => post.viewerJoined === true)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(content[0]).not.toHaveProperty("viewer");
+  });
+
   it("검색 조건을 서버 이름(q·장소·direction·from/to·sort)으로 보낸다", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-13T22:47:30+09:00"));
