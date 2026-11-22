@@ -193,36 +193,36 @@ export function getParticipationAvailability(
   ) {
     return {
       ...unavailable,
-      reason: "모집 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+      reason: "모집 정보를 확인할 수 없어요. 다시 조회해 주세요.",
     };
   }
 
   if (snapshot.viewerRelation === "GUEST") {
-    return { ...unavailable, reason: "로그인 후 참여할 수 있습니다." };
+    return { ...unavailable, reason: "로그인 후 참여할 수 있어요." };
   }
   if (snapshot.viewerRelation === "AUTHOR") {
     return {
       ...unavailable,
-      reason: "작성자는 본인 모집에 참여할 수 없습니다.",
+      reason: "작성자는 본인 모집에 참여할 수 없어요.",
     };
   }
   if (snapshot.status === "REMOVED") {
-    return { ...unavailable, reason: "삭제된 모집입니다." };
+    return { ...unavailable, reason: "삭제된 모집이에요." };
   }
   if (snapshot.status === "CANCELLED") {
-    return { ...unavailable, reason: "취소된 모집입니다." };
+    return { ...unavailable, reason: "취소된 모집이에요." };
   }
   if (snapshot.status === "FINISHED") {
-    return { ...unavailable, reason: "완료된 모집입니다." };
+    return { ...unavailable, reason: "완료된 모집이에요." };
   }
   if (!(["OPEN", "FULL", "CLOSED"] as const).includes(snapshot.status)) {
     return {
       ...unavailable,
-      reason: "모집 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+      reason: "모집 정보를 확인할 수 없어요. 다시 조회해 주세요.",
     };
   }
   if (nowMs >= Date.parse(snapshot.referenceTime)) {
-    return { ...unavailable, reason: "완료된 모집입니다." };
+    return { ...unavailable, reason: "완료된 모집이에요." };
   }
   if (nowMs >= deadline) {
     return {
@@ -234,18 +234,18 @@ export function getParticipationAvailability(
     return { action: "cancel", reason: null, deadline };
   }
   if (snapshot.status === "CLOSED") {
-    return { ...unavailable, reason: "작성자가 모집을 마감했습니다." };
+    return { ...unavailable, reason: "작성자가 모집을 마감했어요." };
   }
   if (
     snapshot.status === "FULL" ||
     snapshot.currentMemberCount === snapshot.capacity
   ) {
-    return { ...unavailable, reason: "모집 정원이 마감되었습니다." };
+    return { ...unavailable, reason: "모집 정원이 다 찼어요." };
   }
   if (!snapshot.joinable) {
     return {
       ...unavailable,
-      reason: "현재 참여할 수 없습니다. 최신 모집 정보를 확인해 주세요.",
+      reason: "지금은 참여할 수 없어요. 최신 모집 정보를 확인해 주세요.",
     };
   }
   if (
@@ -260,7 +260,7 @@ export function getParticipationAvailability(
   }
   return {
     ...unavailable,
-    reason: "참여 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+    reason: "참여 정보를 확인할 수 없어요. 다시 조회해 주세요.",
   };
 }
 

@@ -186,6 +186,8 @@
 .error {
   background: var(--danger-soft);
   color: var(--danger);
+  /* Clear of the app bar above and the phone action bar + tab bar below */
+  scroll-margin: 5rem 0 10rem;
 }
 
 .success {

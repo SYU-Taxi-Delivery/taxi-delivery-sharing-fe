@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cutoffMinutes } from "./participation";
 import type { ParticipationController } from "./useParticipation";
 import { ParticipationMotion } from "./ParticipationMotion";
@@ -46,6 +46,23 @@ export function ParticipationPanel({
   const labelId = useId();
   const reasonId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
+  const feedbackRef = useRef<HTMLParagraphElement>(null);
+  // A refusal ("방금 정원이 찼어요" …) lands in the panel, which on phones
+  // sits under the fixed bar the user just tapped. Bring it into view above
+  // the bar, and hand it focus when the pressed button lost it (disabled).
+  useEffect(() => {
+    const message = feedbackRef.current;
+    if (feedback?.tone !== "error" || !message) return;
+    const active = document.activeElement;
+    if (
+      !active ||
+      active === document.body ||
+      (active instanceof HTMLButtonElement && active.disabled)
+    ) {
+      message.focus({ preventScroll: true });
+    }
+    message.scrollIntoView?.({ block: "nearest" });
+  }, [feedback]);
   const timeClosed = nowMs >= availability.deadline;
   const active = ["OPEN", "FULL", "CLOSED"].includes(snapshot.status);
   const joined = snapshot.viewerRelation === "JOINED";
@@ -239,6 +256,8 @@ export function ParticipationPanel({
       {busy && <p role="status">참여 상태를 확인하고 있어요.</p>}
       {feedback && (
         <p
+          ref={feedbackRef}
+          tabIndex={-1}
           role={feedback.tone === "error" ? "alert" : "status"}
           className={feedback.tone === "error" ? styles.error : styles.success}
         >

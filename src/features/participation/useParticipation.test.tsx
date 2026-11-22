@@ -502,7 +502,7 @@ describe("409 refusals with the latest public state", () => {
     expect(result.current.feedback).toMatchObject({
       tone: "error",
       message: "방금 정원이 찼어요. 참여 신청이 처리되지 않았어요.",
-      reason: "모집 정원이 마감되었습니다.",
+      reason: "모집 정원이 다 찼어요.",
     });
     expect(result.current.busy).toBe(false);
     expect(result.current.availability.action).toBeNull();
