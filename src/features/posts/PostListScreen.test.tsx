@@ -297,18 +297,17 @@ describe("PostListScreen", () => {
     const card = cards()[0];
     expect(within(card).getByText("택시")).toBeVisible();
     expect(within(card).getByText("모집 중")).toBeVisible();
-    // The route reads on two lines, 출발 over 도착.
-    expect(card).toHaveTextContent("출발 석계역에서도착 삼육대학교까지");
-    expect(card).toHaveAccessibleName(/석계역에서.*삼육대학교까지/);
+    expect(card).toHaveTextContent("석계역에서 → 삼육대학교까지");
+    expect(card).toHaveAccessibleName(/석계역에서\s*삼육대학교까지/);
     expect(within(card).getByText("1자리 남음")).toHaveAttribute(
       "data-last",
       "true",
     );
-    expect(card).toHaveTextContent("택시·모집 중, 작성자 박지민");
-    // ① time, ② route, ④ type · status · author, in that order.
+    expect(card).toHaveTextContent("택시·모집 중·작성자 박지민");
+    // Place, then the time band, then type · status · author.
     const text = card.textContent ?? "";
-    expect(text.indexOf("출발")).toBeLessThan(text.indexOf("석계역"));
-    expect(text.indexOf("삼육대학교")).toBeLessThan(text.indexOf("모집 중"));
+    expect(text.indexOf("삼육대학교")).toBeLessThan(text.indexOf("출발"));
+    expect(text.indexOf("1자리 남음")).toBeLessThan(text.indexOf("모집 중"));
     expect(card).not.toHaveTextContent("3 / 4명");
   });
 
@@ -586,10 +585,9 @@ describe("PostListScreen", () => {
       "오늘 · 11/13 (금)",
       "내일 · 11/14 (토)",
     ]);
-    // The heading carries the day, so each card shows the time only.
     const [a, b] = cards();
-    expect(a).toHaveTextContent(/^23:40 출발/);
-    expect(b).toHaveTextContent(/^00:10 출발/);
+    expect(a).toHaveTextContent("오늘 23:40 출발");
+    expect(b).toHaveTextContent("내일 00:10 출발");
   });
 
   it("하루치 목록에는 날짜 제목을 넣지 않는다", async () => {
@@ -606,20 +604,17 @@ describe("PostListScreen", () => {
         { ...taxi, id: "b", referenceTime: "2026-11-15T09:00:00+09:00" },
       ]),
     );
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
-    ).toEqual(["내일 · 11/14 (토)", "모레 · 11/15 (일)"]);
+    expect(cards()[0]).toHaveTextContent("내일 09:00 출발");
 
     await act(async () => vi.advanceTimersByTime(1_000));
-    expect(cards()[0]).toHaveTextContent(/^09:00 출발/);
+    expect(cards()[0]).toHaveTextContent("오늘 09:00 출발");
+    expect(cards()[1]).toHaveTextContent("내일 09:00 출발");
     expect(
       screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
     ).toEqual(["오늘 · 11/14 (토)", "내일 · 11/15 (일)"]);
 
     await act(async () => vi.advanceTimersByTime(86_400_000));
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
-    ).toEqual(["11/14 (토)", "오늘 · 11/15 (일)"]);
+    expect(cards()[1]).toHaveTextContent("오늘 09:00 출발");
     view.unmount();
     expect(vi.getTimerCount()).toBe(0);
   });

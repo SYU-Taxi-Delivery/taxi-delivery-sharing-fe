@@ -409,8 +409,6 @@ function PostList({
                               post={post}
                               now={now}
                               statusNow={statusNow}
-                              hideType={query.type !== "ALL"}
-                              showDay={groups.length <= 1}
                             />
                           </li>
                         ))}
