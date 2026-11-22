@@ -588,6 +588,13 @@
   width: 1.75rem;
 }
 
+/* Both type icons are drawn on a 48×40 grid: a little narrower than the
+   tile, so it keeps the same air around them. */
+.sticker svg[data-art="taxi"],
+.sticker svg[data-art="scooter"] {
+  width: 1.8rem;
+}
+
 .card[data-available="false"] .sticker {
   background: var(--soft);
 }

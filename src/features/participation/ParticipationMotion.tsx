@@ -24,7 +24,7 @@ import styles from "./motion.module.css";
  * - rest: always shown, and 두유콩 is always in it.
  *   - taxi: the parked taxi with its driver and a 두유콩 waving beside it,
  *     or, once you have joined, that 두유콩 in the back window.
- *   - delivery: a big lunch bag (the list card's icon) with a 두유콩 waving
+ *   - delivery: a big delivery box (the one on the scooter icon) with a 두유콩 waving
  *     beside it, and your small bag on its lid once you have joined.
  * - enter: once, the first time the scene is on screen after the detail page
  *   opens — the taxi pulls in and stops / the bag lands, and 두유콩 hops.
@@ -289,7 +289,7 @@ function TaxiScene({ rider, joined }: { rider: boolean; joined: boolean }) {
 }
 
 /**
- * The shared order: one big lunch bag (the same bag as the list card), with
+ * The shared order: one big delivery box (the same box as on the scooter icon), with
  * your small bag on its lid once you have joined (`mine`), or the bag that
  * flies on/off during a result (`moving`).
  */

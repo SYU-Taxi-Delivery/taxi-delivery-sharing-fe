@@ -24,7 +24,7 @@ describe("아이콘 세트 미리보기 경로", () => {
     expect(
       screen.getByRole("heading", { name: "두유팟 아이콘 세트" }),
     ).toBeVisible();
-    for (const kind of ["taxi", "bag", "bean"])
+    for (const kind of ["taxi", "scooter", "bag", "bean"])
       expect(document.querySelector(`svg[data-art="${kind}"]`)).not.toBeNull();
   });
 });

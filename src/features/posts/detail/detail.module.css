@@ -262,6 +262,11 @@
   width: 4rem;
 }
 
+.sticker svg[data-art="taxi"],
+.sticker svg[data-art="scooter"] {
+  width: 3.25rem;
+}
+
 .sticker[data-muted="true"] svg {
   filter: grayscale(1);
   opacity: 0.75;

@@ -39,7 +39,7 @@ import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { useListHref } from "../listOrigin";
-import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
@@ -463,7 +463,7 @@ function DetailView({
             data-type={taxi ? "taxi" : "delivery"}
             data-muted={closed}
           >
-            {taxi ? <TaxiArt size="lg" /> : <BagArt size="lg" />}
+            {taxi ? <TaxiArt size="lg" /> : <DeliveryArt size="lg" />}
           </span>
           <p className={styles.chips}>
             <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
