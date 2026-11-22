@@ -537,15 +537,35 @@ describe("PostListScreen", () => {
     expect(
       within(sheet).queryByRole("checkbox", { name: /참여 가능/ }),
     ).not.toBeInTheDocument();
-    // The sort sits over the list where the current order shows.
+    // The sort sits over the list where the current order shows: a button
+    // opening a menu of orders.
     expect(
       within(sheet).queryByRole("radio", { name: "최근 등록 순" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("정렬 버튼은 현재 정렬을 보여 주고, 누르면 정렬 목록을 펼친다", async () => {
+    await setup(async () => pageOf([taxi]));
+    const button = screen.getByRole("button", {
+      name: /^정렬:\s*출발·마감 빠른 순$/,
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "최근 등록 순" })).toBeNull();
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const menu = within(screen.getByRole("group", { name: "정렬" }));
     expect(
-      within(screen.getByRole("group", { name: "정렬" })).getByRole("link", {
-        name: "최근 등록 순",
-      }),
-    ).toBeInTheDocument();
+      menu.getByRole("link", { name: "출발·마감 빠른 순" }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(menu.getByRole("link", { name: "최근 등록 순" })).toHaveAttribute(
+      "href",
+      "/posts?sort=RECENT",
+    );
+    fireEvent.keyDown(menu.getByRole("link", { name: "최근 등록 순" }), {
+      key: "Escape",
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveFocus();
   });
 
   it("참여 중인 모집은 상태 옆에 참여 중을 함께 보여 준다", async () => {
@@ -695,7 +715,9 @@ describe("PostListScreen", () => {
 
   it("AC-UI-FILTER-08, AC-UI-FILTER-09: 기본은 기준시각 빠른 순이고 정렬·검색은 목록에 펼치지 않는다", async () => {
     await setup(async () => pageOf([taxi]));
-    expect(screen.getByText("출발·마감 빠른 순")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /출발·마감 빠른 순/ }),
+    ).toBeVisible();
     expect(screen.queryByText("최신순")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();

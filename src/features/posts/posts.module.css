@@ -457,45 +457,104 @@
   font-weight: 600;
 }
 
-/* Sort, where the current order shows: two small text links, the current
-   one inked and underlined. */
-.sortSwitch {
+/* Sort, where the current order shows: a small outlined button with the
+   current order and a caret, opening a menu right under it. */
+.sortMenu {
+  position: relative;
+}
+
+.sortButton {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  background: var(--primary-tint);
+}
+
+.sortButton:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+/* ▾ while closed, ▴ while open */
+.sortCaret {
+  width: 0;
+  height: 0;
+  border-top: 5px solid currentColor;
+  border-right: 4.5px solid transparent;
+  border-left: 4.5px solid transparent;
+}
+
+.sortButton[aria-expanded="true"] .sortCaret {
+  transform: rotate(180deg);
+}
+
+.sortPopup {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown, 100);
+  min-width: 11rem;
+  padding: var(--space-2) 0;
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.sortPopup[hidden] {
+  display: none;
+}
+
+.sortPopup ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sortHeading {
+  padding: var(--space-2) var(--space-4);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 700;
 }
 
 .sortOption {
-  position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  min-height: 2rem;
-  padding: 0 var(--space-2);
-  border-radius: var(--round-pill);
-  color: var(--posts-muted);
-  font-weight: 600;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  color: var(--posts-text);
+  font-size: var(--type-body);
+  font-weight: 500;
   text-decoration: none;
 }
 
-.sortOption::after {
-  position: absolute;
-  inset: -0.375rem 0;
-  content: "";
-}
-
 .sortOption:hover {
-  color: var(--posts-text);
+  background: var(--soft);
 }
 
 .sortOption[aria-current="true"] {
-  background: var(--primary-soft);
+  background: var(--soft);
   color: var(--posts-primary-text);
   font-weight: 700;
 }
 
 .sortOption:focus-visible {
   outline: 3px solid var(--posts-focus);
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 
 /* 상세 조건: the type's own place fields, folded under one row so the
