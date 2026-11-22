@@ -44,7 +44,7 @@ import {
 } from "./postDraft";
 import styles from "./form.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import {
   deadlinePreview,
   quickTime,
@@ -540,7 +540,7 @@ export function PostForm({
           data-type={taxi ? "taxi" : "delivery"}
           aria-hidden="true"
         >
-          {taxi ? <TaxiArt /> : <BagArt />}
+          {taxi ? <TaxiArt /> : <DeliveryArt />}
         </span>
         <div>
           <h1 className={styles.headingTitle}>
@@ -614,7 +614,7 @@ export function PostForm({
                         onChange={() => edit((d) => ({ ...d, type }), [])}
                       />
                       <span className={styles.categoryArt} data-type={type}>
-                        {type === "TAXI" ? <TaxiArt /> : <BagArt />}
+                        {type === "TAXI" ? <TaxiArt /> : <DeliveryArt />}
                       </span>
                       {typeLabels[type]}
                     </label>

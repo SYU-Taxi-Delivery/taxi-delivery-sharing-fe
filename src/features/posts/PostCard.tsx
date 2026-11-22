@@ -5,7 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { postStatusLabel, type PostSummary } from "./posts";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, TaxiArt } from "@/features/ui/art";
 import { dayLabel, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
@@ -101,7 +101,9 @@ export function PostCard({
 
   const body = (
     <>
-      <span className={styles.sticker}>{taxi ? <TaxiArt /> : <BagArt />}</span>
+      <span className={styles.sticker}>
+        {taxi ? <TaxiArt /> : <DeliveryArt />}
+      </span>
       <span className={styles.cardBody}>
         <span className={styles.cardHead}>
           <span className={styles.cardTitle}>

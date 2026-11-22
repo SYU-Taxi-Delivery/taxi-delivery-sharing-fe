@@ -13,7 +13,7 @@ import {
 import styles from "./my.module.css";
 import { GUIDE_ID } from "@/features/posts/detail/postDetail";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, ClockIcon, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, ClockIcon, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const time = new Intl.DateTimeFormat("ko-KR", {
@@ -78,7 +78,7 @@ export function MyHistoryCard({
     <article className={styles.card} aria-labelledby={titleId}>
       <div className={styles.badges}>
         <span className={styles.type}>
-          {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
+          {item.type === "TAXI" ? <TaxiArt /> : <DeliveryArt />}
           {item.type === "TAXI" ? "택시" : "배달"}
         </span>
         {/* Joined: one compact tag, two states that can hold together, mine

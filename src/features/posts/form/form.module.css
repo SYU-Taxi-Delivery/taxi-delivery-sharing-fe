@@ -40,6 +40,11 @@
   width: 2.5rem;
 }
 
+.headingArt svg[data-art="taxi"],
+.headingArt svg[data-art="scooter"] {
+  width: 2.6rem;
+}
+
 @keyframes art-swap {
   from {
     opacity: 0;
