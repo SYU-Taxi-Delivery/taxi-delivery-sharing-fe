@@ -558,11 +558,21 @@ describe("participation scene", () => {
     expect(screen.getByRole("alert")).toBeVisible();
   });
 
-  it("shows the order's bags at rest, with yours only while you have joined", async () => {
+  it("always has 두유콩 in the rest picture; the delivery shows your bag only while you have joined", async () => {
     setup({ ...initial, type: "DELIVERY" });
     await settle();
     await wait(1100);
-    expect(scene()?.querySelectorAll('[class*="restBag"]')).toHaveLength(3);
+    expect(scene()?.querySelectorAll('[class*="waiter"]')).toHaveLength(1);
+    expect(scene()?.querySelectorAll('[class*="restBag"]')).toHaveLength(1);
+  });
+
+  it("the taxi shows 두유콩 waiting beside it, or in the back window once joined", async () => {
+    setup(guest);
+    await settle();
+    await wait(1100);
+    expect(scene()?.querySelectorAll('[class*="waiter"]')).toHaveLength(1);
+    // Driver only: one window bean.
+    expect(scene()?.querySelectorAll('[class*="driver"]')).toHaveLength(1);
   });
 
   it("wiggles now and then after a quiet pause, never while a request is pending", async () => {

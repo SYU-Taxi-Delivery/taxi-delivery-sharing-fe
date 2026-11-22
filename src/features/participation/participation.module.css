@@ -18,7 +18,7 @@
   /* Buttons in this box share its rounded-rectangle shape */
   --button-round: var(--round-control);
   /* A small corner scene: the type icon at the top of the page is the big one. */
-  --participation-scene-width: 5.5rem;
+  --participation-scene-width: 7rem;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -85,7 +85,7 @@
 
 @media (max-width: 25rem) {
   .panel {
-    --participation-scene-width: 4.5rem;
+    --participation-scene-width: 5.5rem;
   }
 
   .summary > .seats {
