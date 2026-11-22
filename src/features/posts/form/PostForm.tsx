@@ -137,9 +137,11 @@ export function PostForm({
   const locked = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const pendingLeave = useRef<{ trigger: HTMLElement; href: string } | null>(
-    null,
-  );
+  const pendingLeave = useRef<{
+    trigger: HTMLElement;
+    href: string;
+    onLeave?: () => void;
+  } | null>(null);
   const setLeaveGuard = useContext(AppShellLeaveGuard);
   const phaseHeading = useRef<HTMLHeadingElement>(null);
   const baseId = useId();
@@ -166,10 +168,10 @@ export function PostForm({
   const unresolvedCreate =
     mode === "create" && phase.kind === "error" && !!phase.link;
   const blockLeave = useCallback(
-    (trigger: HTMLElement, href: string) => {
+    (trigger: HTMLElement, href: string, onLeave?: () => void) => {
       if (busy) return true;
       if (!dirty) return false;
-      pendingLeave.current = { trigger, href };
+      pendingLeave.current = { trigger, href, onLeave };
       dialog.current?.showModal();
       dialog.current
         ?.querySelector<HTMLButtonElement>("[data-autofocus]")
@@ -1198,10 +1200,13 @@ export function PostForm({
             type="button"
             className={styles.primary}
             onClick={() => {
-              const href = pendingLeave.current?.href;
+              const leave = pendingLeave.current;
               pendingLeave.current = null;
               dialog.current?.close();
-              if (href) router.push(path(href));
+              if (!leave) return;
+              // e.g. the logo forgets the list's saved scroll: start at the top
+              leave.onLeave?.();
+              router.push(path(leave.href));
             }}
           >
             입력 폐기

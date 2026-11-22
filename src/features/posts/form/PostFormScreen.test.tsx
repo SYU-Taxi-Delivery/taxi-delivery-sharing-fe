@@ -875,6 +875,26 @@ describe("수정 폼", () => {
     window.sessionStorage.clear();
   });
 
+  it("수정 중 로고를 눌러 입력을 폐기하고 나가도 목록 맨 위에서 시작한다", async () => {
+    window.sessionStorage.setItem("posts:scroll:/posts", "640");
+    await edit(ops({ load: vi.fn(async () => post()) }));
+    type("제목", "수정 중");
+    const logo = screen.getByRole("link", { name: "두유팟" });
+    fireEvent.click(logo);
+    const dialog = screen.getByRole("dialog", {
+      name: "수정한 내용을 버릴까요?",
+    });
+    // Staying keeps the list's saved place.
+    fireEvent.click(within(dialog).getByRole("button", { name: "돌아가기" }));
+    expect(window.sessionStorage.getItem("posts:scroll:/posts")).toBe("640");
+
+    fireEvent.click(logo);
+    fireEvent.click(within(dialog).getByRole("button", { name: "입력 폐기" }));
+    expect(window.sessionStorage.getItem("posts:scroll:/posts")).toBeNull();
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/posts");
+    window.sessionStorage.clear();
+  });
+
   it("다른 모집 수정으로 이동하면 이전 초안을 지우고 새 모집의 값으로만 저장한다", async () => {
     let resolveNext!: (value: EditablePost) => void;
     const next = post({ id: "p2" });

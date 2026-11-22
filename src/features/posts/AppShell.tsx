@@ -16,7 +16,15 @@ import { BoardIcon, PersonIcon } from "@/features/ui/art";
 import { clearListScroll } from "./listScroll";
 import { useTypingFlag } from "./useTypingFlag";
 
-type LeaveGuard = (trigger: HTMLElement, href: string) => boolean;
+/**
+ * A page's leave check. Returns true to hold the navigation (it then asks
+ * and, when the user leaves anyway, calls `onLeave` before going to `href`).
+ */
+type LeaveGuard = (
+  trigger: HTMLElement,
+  href: string,
+  onLeave?: () => void,
+) => boolean;
 export const AppShellLeaveGuard = createContext<
   ((guard: LeaveGuard | null) => void) | null
 >(null);
@@ -52,14 +60,21 @@ export function AppShell({
   const setLeaveGuard = useCallback((guard: LeaveGuard | null) => {
     leaveGuard.current = guard;
   }, []);
-  function guardNavigation(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  /** Runs `onLeave` when the link goes now, or after the page's leave check. */
+  function guardNavigation(
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+    onLeave?: () => void,
+  ) {
     const sameTab =
       event.button === 0 &&
       !event.defaultPrevented &&
       !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey);
-    if (sameTab && leaveGuard.current?.(event.currentTarget, href)) {
+    if (sameTab && leaveGuard.current?.(event.currentTarget, href, onLeave)) {
       event.preventDefault();
+      return;
     }
+    onLeave?.();
   }
   return (
     <div className={styles.screen} data-typing={typing || undefined}>
@@ -68,10 +83,7 @@ export function AppShell({
           <Link
             href={path(home)}
             className={styles.brand}
-            onClick={(event) => {
-              guardNavigation(event, home);
-              if (!event.defaultPrevented) clearListScroll();
-            }}
+            onClick={(event) => guardNavigation(event, home, clearListScroll)}
           >
             <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟
