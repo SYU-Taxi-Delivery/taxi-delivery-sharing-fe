@@ -38,6 +38,7 @@ describe("모집글 작성·수정 연동", () => {
   it("#34: 응답이 끊긴 작성은 내 작성 글 첫 페이지에서 같은 글을 찾는다", async () => {
     const mine = {
       postId: "9",
+      postStatus: "OPEN",
       type: "TAXI",
       title: " 통합 테스트 택시 ",
       referenceTime: "2026-10-27T05:30:00Z", // same instant, other offset
@@ -51,6 +52,7 @@ describe("모집글 작성·수정 연동", () => {
             items: [
               { ...mine, postId: "8", title: "다른 글" },
               { ...mine, postId: "7", destination: "석계역" },
+              { ...mine, postId: "6", postStatus: "CANCELLED" },
               mine,
             ],
           }),
@@ -67,6 +69,25 @@ describe("모집글 작성·수정 연동", () => {
     await expect(
       postFormOperations.findCreated!(taxiRequest),
     ).resolves.toBeNull();
+  });
+
+  it("배달 작성 결과를 확인할 때 같은 내용의 취소된 일정만 있으면 성공으로 처리하지 않는다", async () => {
+    const request: PostRequest = {
+      ...taxiRequest,
+      type: "DELIVERY",
+      restaurantName: "분식집",
+      pickupLocation: "정문",
+      orderGuide: null,
+    };
+    fakeBackend({
+      "GET /api/users/me/posts?page=0&size=50": () =>
+        Response.json(
+          envelope({
+            items: [{ ...request, postId: "5", postStatus: "CANCELLED" }],
+          }),
+        ),
+    });
+    await expect(postFormOperations.findCreated!(request)).resolves.toBeNull();
   });
 
   it("AC-POST-004: PATCH는 바꿀 수 없는 type을 빼고 보낸다", async () => {

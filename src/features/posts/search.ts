@@ -4,6 +4,7 @@
  */
 import {
   cleanSearch,
+  isLocalMinute,
   type PostQuery,
   type PostSort,
   type TimeWindow,
@@ -183,8 +184,6 @@ export function presetRangeText(
   return `${range} (${sameDay ? date(start) : `${date(start)} ~ ${date(end)}`})`;
 }
 
-const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-
 /**
  * A custom window in day words, as read at `nowMs`: "오늘 21:00 ~ 내일
  * 02:00", "내일 09:00부터", "오늘 23:00까지". Null until one end is set.
@@ -195,7 +194,7 @@ export function customRangeText(
   nowMs: number,
 ): string | null {
   const at = (local?: string) =>
-    local && localMinute.test(local)
+    isLocalMinute(local)
       ? dayTime(Date.parse(`${local}:00+09:00`), nowMs)
       : null;
   const start = at(from);
