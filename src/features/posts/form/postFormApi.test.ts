@@ -71,24 +71,51 @@ describe("모집글 작성·수정 연동", () => {
     ).resolves.toBeNull();
   });
 
-  it("배달 작성 결과를 확인할 때 같은 내용의 취소된 일정만 있으면 성공으로 처리하지 않는다", async () => {
-    const request: PostRequest = {
-      ...taxiRequest,
-      type: "DELIVERY",
-      restaurantName: "분식집",
-      pickupLocation: "정문",
-      orderGuide: null,
-    };
-    fakeBackend({
-      "GET /api/users/me/posts?page=0&size=50": () =>
-        Response.json(
-          envelope({
-            items: [{ ...request, postId: "5", postStatus: "CANCELLED" }],
-          }),
-        ),
-    });
-    await expect(postFormOperations.findCreated!(request)).resolves.toBeNull();
-  });
+  it.each([
+    ["CANCELLED", "분식집", "정문", null],
+    ["FULL", "분식집", "정문", "8"],
+    ["CLOSED", "분식집", "정문", "8"],
+    ["OPEN", "다른 분식집", "정문", null],
+    ["OPEN", "분식집", "후문", null],
+  ] as const)(
+    "배달 작성 복구: %s · %s · %s",
+    async (postStatus, restaurantName, pickupLocation, expectedId) => {
+      const delivery = {
+        type: "DELIVERY",
+        title: "정문 분식 배달",
+        restaurantName: "분식집",
+        pickupLocation: "정문",
+        referenceTime: "2026-10-27T14:30:00+09:00",
+      } as const;
+      const request: PostRequest = {
+        ...delivery,
+        description: "정문에서 받아요.",
+        communicationUrl: null,
+        orderGuide: null,
+        capacity: 4,
+      };
+      fakeBackend({
+        "GET /api/users/me/posts?page=0&size=50": () =>
+          Response.json(
+            envelope({
+              items: [
+                { ...delivery, postId: "5", postStatus: "CANCELLED" },
+                {
+                  ...delivery,
+                  postId: "8",
+                  postStatus,
+                  restaurantName,
+                  pickupLocation,
+                },
+              ],
+            }),
+          ),
+      });
+      await expect(postFormOperations.findCreated!(request)).resolves.toBe(
+        expectedId,
+      );
+    },
+  );
 
   it("AC-POST-004: PATCH는 바꿀 수 없는 type을 빼고 보낸다", async () => {
     const { calls } = fakeBackend({
