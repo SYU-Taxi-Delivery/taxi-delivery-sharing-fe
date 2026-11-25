@@ -503,7 +503,7 @@ describe("작성 폼", () => {
     expect(screen.getByLabelText("제목")).toHaveValue("정문에서 석계역까지");
   });
 
-  it.each(["found", "missing", "lookup failed"] as const)(
+  it.each(["found", "cancelled", "missing", "lookup failed"] as const)(
     "#34: 작성 응답 유실 후 POST 한 번과 내 글 조회 한 번으로 확인한다 (%s)",
     async (outcome) => {
       const lookup = "/api/users/me/posts?page=0&size=50";
@@ -514,10 +514,11 @@ describe("작성 폼", () => {
         [`GET ${lookup}`]: () => {
           if (outcome === "lookup failed") throw new TypeError("offline");
           const items =
-            outcome === "found"
+            outcome === "found" || outcome === "cancelled"
               ? [
                   {
                     postId: "found-7",
+                    postStatus: outcome === "found" ? "OPEN" : "CANCELLED",
                     type: "TAXI",
                     title: "정문에서 석계역까지",
                     referenceTime: "2026-10-05T18:00:00+09:00",

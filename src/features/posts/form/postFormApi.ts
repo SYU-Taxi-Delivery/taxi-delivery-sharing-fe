@@ -105,6 +105,13 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 export function matchesRequest(item: unknown, request: PostRequest): boolean {
   if (typeof item !== "object" || item === null) return false;
   const post = item as Record<string, unknown>;
+  // A cancelled schedule can be recreated with the same fields and time.
+  if (
+    post.postStatus !== "OPEN" &&
+    post.postStatus !== "FULL" &&
+    post.postStatus !== "CLOSED"
+  )
+    return false;
   const same = (a: unknown, b: string) => text(a).trim() === b.trim();
   if (post.type !== request.type || !same(post.title, request.title))
     return false;

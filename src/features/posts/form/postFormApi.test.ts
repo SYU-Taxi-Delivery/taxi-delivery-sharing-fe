@@ -38,6 +38,7 @@ describe("모집글 작성·수정 연동", () => {
   it("#34: 응답이 끊긴 작성은 내 작성 글 첫 페이지에서 같은 글을 찾는다", async () => {
     const mine = {
       postId: "9",
+      postStatus: "OPEN",
       type: "TAXI",
       title: " 통합 테스트 택시 ",
       referenceTime: "2026-10-27T05:30:00Z", // same instant, other offset
@@ -51,6 +52,7 @@ describe("모집글 작성·수정 연동", () => {
             items: [
               { ...mine, postId: "8", title: "다른 글" },
               { ...mine, postId: "7", destination: "석계역" },
+              { ...mine, postId: "6", postStatus: "CANCELLED" },
               mine,
             ],
           }),
@@ -68,6 +70,52 @@ describe("모집글 작성·수정 연동", () => {
       postFormOperations.findCreated!(taxiRequest),
     ).resolves.toBeNull();
   });
+
+  it.each([
+    ["CANCELLED", "분식집", "정문", null],
+    ["FULL", "분식집", "정문", "8"],
+    ["CLOSED", "분식집", "정문", "8"],
+    ["OPEN", "다른 분식집", "정문", null],
+    ["OPEN", "분식집", "후문", null],
+  ] as const)(
+    "배달 작성 복구: %s · %s · %s",
+    async (postStatus, restaurantName, pickupLocation, expectedId) => {
+      const delivery = {
+        type: "DELIVERY",
+        title: "정문 분식 배달",
+        restaurantName: "분식집",
+        pickupLocation: "정문",
+        referenceTime: "2026-10-27T14:30:00+09:00",
+      } as const;
+      const request: PostRequest = {
+        ...delivery,
+        description: "정문에서 받아요.",
+        communicationUrl: null,
+        orderGuide: null,
+        capacity: 4,
+      };
+      fakeBackend({
+        "GET /api/users/me/posts?page=0&size=50": () =>
+          Response.json(
+            envelope({
+              items: [
+                { ...delivery, postId: "5", postStatus: "CANCELLED" },
+                {
+                  ...delivery,
+                  postId: "8",
+                  postStatus,
+                  restaurantName,
+                  pickupLocation,
+                },
+              ],
+            }),
+          ),
+      });
+      await expect(postFormOperations.findCreated!(request)).resolves.toBe(
+        expectedId,
+      );
+    },
+  );
 
   it("AC-POST-004: PATCH는 바꿀 수 없는 type을 빼고 보낸다", async () => {
     const { calls } = fakeBackend({
