@@ -1,7 +1,6 @@
-import { ApiError } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import {
   InvalidBackendResponse,
-  backendGet,
   backendSend,
   resetCsrfToken,
 } from "@/lib/backend";
@@ -15,75 +14,57 @@ export class AuthNotConnectedError extends Error {
   }
 }
 
-const notConnected = async (): Promise<never> => {
-  throw new AuthNotConnectedError();
-};
+export const SESSION_CHANGE_KEY = "syu-session-change";
+export const SESSION_SIGNED_OUT = "signed-out";
+const LOGOUT_PENDING = "logout-pending";
 
-/**
- * The backend has no current-user endpoint yet, so the login response is kept
- * in this browser and every me() confirms the session with an authenticated
- * read. Only id, display name and role are stored, never credentials.
- */
-export const USER_KEY = "syu-session-user";
-let fallbackUser: unknown;
-let fallbackStored: string | null | undefined;
-
-function rememberedUser(): unknown {
+function signalSessionChange(signal?: string) {
   try {
-    const stored = window.localStorage.getItem(USER_KEY);
-    if (fallbackUser !== undefined && fallbackStored === undefined) {
-      // Recovery cannot establish whether storage changed while reads failed.
-      fallbackUser = null;
-      fallbackStored = stored;
-    }
-    if (fallbackUser !== undefined && stored === fallbackStored) {
-      return fallbackUser;
-    }
-    // A later storage change or clear takes precedence over the page fallback.
-    fallbackUser = undefined;
-    return JSON.parse(stored ?? "null");
+    window.localStorage.setItem(
+      SESSION_CHANGE_KEY,
+      signal ?? crypto.randomUUID(),
+    );
   } catch {
-    return fallbackUser ?? null;
+    // With storage disabled, other tabs still recheck on focus.
   }
 }
 
-function remember(user: unknown) {
-  let stored: string | null | undefined;
-  try {
-    stored = window.localStorage.getItem(USER_KEY);
-    if (user === null) window.localStorage.removeItem(USER_KEY);
-    else window.localStorage.setItem(USER_KEY, JSON.stringify(user));
-    fallbackUser = undefined;
-  } catch {
-    // Keep the latest identity (or sign-out) over an unchanged stale value.
-    fallbackUser = user;
-    fallbackStored = stored;
-  }
-}
-
-/** POST /api/auth/local/login answers `{ userId, name, role }` without an envelope. */
+/** Login and GET /api/users/me return the same unwrapped user DTO. */
 function toSessionUser(value: unknown) {
   const { userId, name, role } = (value ?? {}) as Record<string, unknown>;
-  if (typeof userId !== "string" || typeof name !== "string") {
+  if (
+    typeof userId !== "string" ||
+    !userId.trim() ||
+    typeof name !== "string" ||
+    !name.trim() ||
+    (role !== "ADMIN" && role !== "STUDENT")
+  ) {
     throw new InvalidBackendResponse();
   }
   return { id: userId, displayName: name, role };
 }
 
 export const authOperations: AuthOperations = {
-  me: async () => {
-    const user = rememberedUser();
-    if (!user) return null;
+  isLogoutPending: () => {
     try {
-      await backendGet("/api/users/me/participations?page=0&size=1");
+      return window.localStorage.getItem(SESSION_CHANGE_KEY) === LOGOUT_PENDING;
+    } catch {
+      return false;
+    }
+  },
+  me: async () => {
+    try {
+      // Remove identity cached by older clients. The session cookie is authoritative.
+      window.localStorage.removeItem("syu-session-user");
+    } catch {
+      // Reading the session works without local storage.
+    }
+    try {
+      return toSessionUser(await apiFetch("/api/users/me"));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        remember(null);
-        return null;
-      }
+      if (error instanceof ApiError && error.status === 401) return null;
       throw error;
     }
-    return user;
   },
   login: async ({ email, password }) => {
     // The backend accepts a student number or school email as the identifier.
@@ -93,27 +74,81 @@ export const authOperations: AuthOperations = {
     });
     // Login rotates the session and its CSRF token.
     resetCsrfToken();
-    remember(toSessionUser(response));
+    toSessionUser(response);
+    signalSessionChange();
   },
   logout: async () => {
     try {
       // Spring Security answers 302; the redirect itself is not followed.
       await backendSend("POST", "/logout", undefined, { redirect: "manual" });
     } catch (error) {
-      if (!(error instanceof ApiError && error.status === 0)) throw error;
+      if (!(error instanceof ApiError && [0, 401].includes(error.status))) {
+        signalSessionChange(LOGOUT_PENDING);
+        throw error;
+      }
     } finally {
-      remember(null);
       resetCsrfToken();
     }
+    signalSessionChange(SESSION_SIGNED_OUT);
   },
 };
 
-/**
- * Fields match the backend, but signup remains disconnected until text success
- * responses and verification/password policies are adapted. See docs/backend-integration.md.
- */
+/** Verification issues a single-use token; registration returns a numeric ID. */
 export const signupOperations: SignupOperations = {
-  requestCode: notConnected,
-  verifyCode: notConnected,
-  register: notConnected,
+  requestCode: async (email) => {
+    await backendSend(
+      "POST",
+      "/api/auth/school-email/send-code",
+      {
+        schoolEmail: email.trim().toLowerCase(),
+      },
+      { responseType: "text" },
+    );
+  },
+  verifyCode: async (email, code) => {
+    const response = await backendSend(
+      "POST",
+      "/api/auth/school-email/verify-code",
+      {
+        schoolEmail: email.trim().toLowerCase(),
+        code,
+      },
+    );
+    if (
+      typeof response !== "object" ||
+      response === null ||
+      !("verificationToken" in response) ||
+      typeof response.verificationToken !== "string" ||
+      !response.verificationToken.trim()
+    ) {
+      throw new InvalidBackendResponse();
+    }
+    return response.verificationToken;
+  },
+  register: async ({
+    studentNo,
+    name,
+    schoolEmail,
+    password,
+    verificationToken,
+  }) => {
+    const userId = await backendSend(
+      "POST",
+      "/api/auth/school-email/register",
+      {
+        studentNo: studentNo.trim(),
+        name: name.trim(),
+        schoolEmail: schoolEmail.trim().toLowerCase(),
+        password,
+        verificationToken,
+      },
+    );
+    if (
+      typeof userId !== "number" ||
+      !Number.isSafeInteger(userId) ||
+      userId <= 0
+    ) {
+      throw new InvalidBackendResponse();
+    }
+  },
 };

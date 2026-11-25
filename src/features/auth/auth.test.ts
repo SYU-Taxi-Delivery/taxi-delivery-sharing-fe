@@ -5,6 +5,7 @@ import {
   loginErrorMessage,
   loginHref,
   safeNextPath,
+  schoolEmailError,
   toCurrentUser,
   validateLogin,
 } from "./auth";
@@ -51,6 +52,7 @@ describe("safeNextPath", () => {
   it.each([
     ["/posts/1?tab=comments#c2", "/posts/1?tab=comments#c2"],
     ["/admin", "/admin"],
+    ["/posts/../my", "/my"],
   ])("같은 출처의 경로 %s를 유지한다", (value, expected) => {
     expect(safeNextPath(value)).toBe(expected);
   });
@@ -61,6 +63,8 @@ describe("safeNextPath", () => {
     "posts",
     "https://evil.example/",
     "//evil.example/",
+    "/posts/..//my",
+    "/%2e%2e//my",
     "/\\evil.example",
     "/a\nb",
     "/login",
@@ -92,7 +96,6 @@ describe("validateLogin", () => {
       "a@example.com",
       "a@syuin.ac.kr.evil.com",
       "a@mail.syuin.ac.kr",
-      "a@syu.ac.kr",
       "@syuin.ac.kr",
       "a b@syuin.ac.kr",
       "syuin.ac.kr",
@@ -123,6 +126,25 @@ describe("validateLogin", () => {
     expect(
       validateLogin({ email: "a@syuin.ac.kr", password: "   " }).password,
     ).toBeUndefined();
+  });
+});
+
+describe("schoolEmailError", () => {
+  it.each([
+    " Student+1@SYUIN.AC.KR ",
+    "student@syu.ac.kr",
+    `${"a".repeat(64)}@syuin.ac.kr`,
+  ])("학교 이메일 %s를 허용한다", (email) => {
+    expect(schoolEmailError(email)).toBeNull();
+  });
+
+  it.each([
+    ".student@syuin.ac.kr",
+    "학생@syuin.ac.kr",
+    `${"a".repeat(65)}@syuin.ac.kr`,
+    `${"a".repeat(100)}@syu.ac.kr`,
+  ])("서버의 이메일 형식에 맞지 않는 %s를 거절한다", (email) => {
+    expect(schoolEmailError(email)).not.toBeNull();
   });
 });
 

@@ -1,54 +1,48 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { envelope, failure, fakeBackend } from "@/test/fakeBackend";
-import { toCurrentUser } from "./auth";
-import { authOperations } from "./authApi";
+import {
+  authOperations,
+  SESSION_CHANGE_KEY,
+  SESSION_SIGNED_OUT,
+} from "./authApi";
 
-const sessionProbe = "GET /api/users/me/participations?page=0&size=1";
-const login = { email: " student1@syuin.ac.kr ", password: "demo-pass" };
+const me = "GET /api/users/me";
+const credentials = { email: " student1@syuin.ac.kr ", password: "demo-pass" };
+const student = { userId: "2", name: "student1", role: "STUDENT" };
+const currentUser = { id: "2", displayName: "student1", role: "STUDENT" };
 
 beforeEach(() => window.localStorage.clear());
-afterEach(async () => {
+afterEach(() => {
   vi.restoreAllMocks();
-  fakeBackend({ "POST /logout": () => new Response(null, { status: 204 }) });
-  await authOperations.logout();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
 describe("로그인 세션 연동", () => {
-  it("AC-AUTH-001: 학교 이메일을 identifier로 보내고 응답 사용자를 me()로 확인한다", async () => {
+  it("AC-AUTH-001: 학교 이메일을 identifier로 보내고 다른 탭에 세션 변경만 알린다", async () => {
     const { calls } = fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () =>
-        Response.json(
-          envelope({ items: [], page: 0, size: 1, totalElements: 0 }),
-        ),
+      "POST /api/auth/local/login": () => Response.json(student),
     });
-    await authOperations.login(login);
+    await authOperations.login(credentials);
     const request = calls.find((call) => call.path === "/api/auth/local/login");
     expect(request?.body).toEqual({
       identifier: "student1@syuin.ac.kr",
       password: "demo-pass",
     });
     expect(request?.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
-    // The password is never kept in storage.
-    expect(JSON.stringify(window.localStorage)).not.toContain("demo-pass");
-    expect(toCurrentUser(await authOperations.me())).toEqual({
-      id: "2",
-      displayName: "student1",
-      role: "STUDENT",
-    });
+    expect(window.localStorage.getItem(SESSION_CHANGE_KEY)).toBeTruthy();
+    expect(JSON.stringify(window.localStorage)).not.toMatch(
+      /demo-pass|student1/,
+    );
   });
 
   it("로그인 후 CSRF 토큰을 새로 받는다(세션 교체)", async () => {
     const { calls } = fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
+      "POST /api/auth/local/login": () => Response.json(student),
       "POST /api/posts/1/participants": () =>
         Response.json(envelope({}), { status: 201 }),
     });
-    await authOperations.login(login);
+    await authOperations.login(credentials);
     const { postDetailOperations } =
       await import("@/features/posts/detail/postDetailApi");
     await postDetailOperations.join("1");
@@ -60,202 +54,103 @@ describe("로그인 세션 연동", () => {
       "POST /api/auth/local/login": () =>
         failure(401, "AUTHENTICATION_REQUIRED"),
     });
-    await expect(authOperations.login(login)).rejects.toMatchObject({
+    await expect(authOperations.login(credentials)).rejects.toMatchObject({
       status: 401,
     });
     expect(window.localStorage.length).toBe(0);
   });
 
-  it("기억한 사용자가 없으면 요청 없이 비로그인이다", async () => {
-    const { fetchMock } = fakeBackend({});
-    await expect(authOperations.me()).resolves.toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+  it("로컬 정보가 없어도 쿠키로 현재 사용자를 조회하고 CSRF를 요청하지 않는다", async () => {
+    const { calls, fetchMock } = fakeBackend({
+      [me]: () => Response.json(student),
+    });
+    await expect(authOperations.me()).resolves.toEqual(currentUser);
+    expect(calls.map(({ path }) => path)).toEqual(["/api/users/me"]);
+    expect(calls[0].headers.has("X-XSRF-TOKEN")).toBe(false);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      credentials: "include",
+      cache: "no-store",
+    });
   });
 
-  it("AC-AUTH-002: 세션이 만료되면(401) 기억한 사용자를 지우고 null이다", async () => {
+  it("이전 버전의 사용자 캐시 대신 서버가 확인한 사용자를 복원한다", async () => {
     window.localStorage.setItem(
       "syu-session-user",
-      JSON.stringify({ id: "2", displayName: "student1", role: "STUDENT" }),
+      JSON.stringify({ id: "1", role: "ADMIN" }),
     );
+    fakeBackend({ [me]: () => Response.json(student) });
+    await expect(authOperations.me()).resolves.toEqual(currentUser);
+    expect(window.localStorage.getItem("syu-session-user")).toBeNull();
+  });
+
+  it("저장소를 사용할 수 없어도 서버의 사용자 정보를 확인한다", async () => {
+    for (const method of ["getItem", "removeItem", "setItem"] as const) {
+      vi.spyOn(Storage.prototype, method).mockImplementation(() => {
+        throw new DOMException("Storage blocked", "SecurityError");
+      });
+    }
     fakeBackend({
-      [sessionProbe]: () => failure(401, "AUTHENTICATION_REQUIRED"),
+      "POST /api/auth/local/login": () => Response.json(student),
+      [me]: () => Response.json(student),
     });
+    await authOperations.login(credentials);
+    await expect(authOperations.me()).resolves.toEqual(currentUser);
+  });
+
+  it("AC-AUTH-002: 세션 만료·정지·탈퇴에 대한 401은 이전 캐시와 관계없이 null이다", async () => {
+    window.localStorage.setItem(
+      "syu-session-user",
+      JSON.stringify(currentUser),
+    );
+    fakeBackend({ [me]: () => failure(401, "AUTHENTICATION_REQUIRED") });
     await expect(authOperations.me()).resolves.toBeNull();
     expect(window.localStorage.getItem("syu-session-user")).toBeNull();
   });
 
-  it("세션 확인이 네트워크로 실패하면 로그인 상태를 단정하지 않고 오류를 전달한다", async () => {
-    window.localStorage.setItem(
-      "syu-session-user",
-      JSON.stringify({ id: "2", displayName: "student1", role: "STUDENT" }),
-    );
-    fakeBackend({ [sessionProbe]: () => failure(503, "UNAVAILABLE") });
-    await expect(authOperations.me()).rejects.toMatchObject({ status: 503 });
+  it.each([403, 404, 503])(
+    "세션 조회 %i를 비로그인으로 간주하지 않는다",
+    async (status) => {
+      fakeBackend({ [me]: () => failure(status, "UNAVAILABLE") });
+      await expect(authOperations.me()).rejects.toMatchObject({ status });
+    },
+  );
+
+  it.each([
+    null,
+    { ...student, userId: 2 },
+    { ...student, name: " " },
+    { ...student, role: "ROOT" },
+    envelope(student),
+  ])("잘못된 사용자 응답을 거부한다", async (body) => {
+    fakeBackend({ [me]: () => Response.json(body) });
+    await expect(authOperations.me()).rejects.toMatchObject({
+      name: "InvalidBackendResponse",
+    });
   });
 
-  it("AC-AUTH-002-01: 로그아웃은 CSRF와 함께 POST /logout, 302는 따라가지 않고 성공이다", async () => {
-    window.localStorage.setItem("syu-session-user", "{}");
-    const { calls } = fakeBackend({
-      // fetch(redirect: "manual") exposes a 302 as an opaque, status-0 response.
+  it("AC-AUTH-002-01: 로그아웃은 CSRF와 함께 POST /logout으로 보내며 리다이렉트를 따라가지 않는다", async () => {
+    const { calls, fetchMock } = fakeBackend({
       "POST /logout": () => Response.error(),
     });
     await expect(authOperations.logout()).resolves.toBeUndefined();
     expect(calls.at(-1)?.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
-    expect(window.localStorage.getItem("syu-session-user")).toBeNull();
-  });
-
-  it("저장소가 가득 차도 새 로그인 응답을 이전 사용자 대신 사용한다", async () => {
-    window.localStorage.setItem(
-      "syu-session-user",
-      JSON.stringify({ id: "1", displayName: "previous", role: "ADMIN" }),
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.redirect).toBe("manual");
+    expect(window.localStorage.getItem(SESSION_CHANGE_KEY)).toBe(
+      SESSION_SIGNED_OUT,
     );
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("Storage is full", "QuotaExceededError");
-    });
-    fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () => Response.json(envelope({ items: [] })),
-    });
-    await authOperations.login(login);
-    await expect(authOperations.me()).resolves.toEqual({
-      id: "2",
-      displayName: "student1",
-      role: "STUDENT",
-    });
+    expect(authOperations.isLogoutPending?.()).toBe(false);
   });
 
-  it("저장소 읽기와 쓰기가 차단되어도 현재 페이지에서 로그인할 수 있다", async () => {
-    for (const method of ["getItem", "setItem"] as const) {
-      vi.spyOn(Storage.prototype, method).mockImplementation(() => {
-        throw new DOMException("Storage is blocked", "SecurityError");
-      });
-    }
-    fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () => Response.json(envelope({ items: [] })),
-    });
-    await authOperations.login(login);
-    await expect(authOperations.me()).resolves.toEqual({
-      id: "2",
-      displayName: "student1",
-      role: "STUDENT",
-    });
-  });
-
-  it.each(["clear", "change"] as const)(
-    "저장소 읽기 차단 해제 후 %s 상태는 재로그인 전까지 비로그인이다",
-    async (action) => {
-      window.localStorage.setItem(
-        "syu-session-user",
-        JSON.stringify({ id: "1", displayName: "previous", role: "ADMIN" }),
-      );
-      const blockedRead = vi
-        .spyOn(Storage.prototype, "getItem")
-        .mockImplementation(() => {
-          throw new DOMException("Storage is blocked", "SecurityError");
-        });
-      fakeBackend({
-        "POST /api/auth/local/login": () =>
-          Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-        [sessionProbe]: () => Response.json(envelope({ items: [] })),
-      });
-      await authOperations.login(login);
-      await expect(authOperations.me()).resolves.toMatchObject({ id: "2" });
-      blockedRead.mockRestore();
-      if (action === "clear") window.localStorage.clear();
-      else {
-        window.localStorage.setItem(
-          "syu-session-user",
-          JSON.stringify({ id: "3", displayName: "other", role: "STUDENT" }),
-        );
-      }
-      await expect(authOperations.me()).resolves.toBeNull();
-      await expect(authOperations.me()).resolves.toBeNull();
-      await authOperations.login(login);
-      await expect(authOperations.me()).resolves.toEqual({
-        id: "2",
-        displayName: "student1",
-        role: "STUDENT",
-      });
-    },
-  );
-
-  it("정상 저장 후 저장소를 비우면 메모리에서 사용자를 되살리지 않는다", async () => {
-    fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () => Response.json(envelope({ items: [] })),
-    });
-    await authOperations.login(login);
-    window.localStorage.clear();
-    await expect(authOperations.me()).resolves.toBeNull();
-  });
-
-  it("저장 실패 뒤 남은 이전 사용자 정보도 명시적으로 비우면 로그아웃 상태다", async () => {
-    window.localStorage.setItem(
-      "syu-session-user",
-      JSON.stringify({ id: "1" }),
-    );
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("Storage is full", "QuotaExceededError");
-    });
-    fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () => Response.json(envelope({ items: [] })),
-    });
-    await authOperations.login(login);
-    window.localStorage.clear();
-    await expect(authOperations.me()).resolves.toBeNull();
-  });
-
-  it("서버 로그아웃과 저장소 삭제가 실패해도 메모리의 로그인은 지운다", async () => {
-    window.localStorage.setItem(
-      "syu-session-user",
-      JSON.stringify({ id: "1" }),
-    );
-    for (const method of ["setItem", "removeItem"] as const) {
-      vi.spyOn(Storage.prototype, method).mockImplementation(() => {
-        throw new DOMException("Storage is blocked", "SecurityError");
-      });
-    }
-    fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      "POST /logout": () => failure(503, "UNAVAILABLE"),
-      [sessionProbe]: () => Response.json(envelope({ items: [] })),
-    });
-    await authOperations.login(login);
+  it("실패한 로그아웃은 재시도 대상이며 서버에서 종료를 확인하면 해제한다", async () => {
+    fakeBackend({ "POST /logout": () => failure(503, "UNAVAILABLE") });
     await expect(authOperations.logout()).rejects.toMatchObject({
       status: 503,
     });
-    await expect(authOperations.me()).resolves.toBeNull();
-  });
-
-  it("401로 메모리 사용자를 지운 뒤에는 삭제하지 못한 이전 계정을 복원하지 않는다", async () => {
-    window.localStorage.setItem(
-      "syu-session-user",
-      JSON.stringify({ id: "1" }),
-    );
-    for (const method of ["setItem", "removeItem"] as const) {
-      vi.spyOn(Storage.prototype, method).mockImplementation(() => {
-        throw new DOMException("Storage is blocked", "SecurityError");
-      });
-    }
-    let expired = true;
+    expect(authOperations.isLogoutPending?.()).toBe(true);
     fakeBackend({
-      "POST /api/auth/local/login": () =>
-        Response.json({ userId: "2", name: "student1", role: "STUDENT" }),
-      [sessionProbe]: () =>
-        expired
-          ? failure(401, "AUTHENTICATION_REQUIRED")
-          : Response.json(envelope({ items: [] })),
+      "POST /logout": () => failure(401, "AUTHENTICATION_REQUIRED"),
     });
-    await authOperations.login(login);
-    await expect(authOperations.me()).resolves.toBeNull();
-    expired = false;
-    await expect(authOperations.me()).resolves.toBeNull();
+    await authOperations.logout();
+    expect(authOperations.isLogoutPending?.()).toBe(false);
   });
 });

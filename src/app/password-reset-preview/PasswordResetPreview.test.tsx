@@ -37,7 +37,6 @@ const requestProps = () =>
   renderRequest.mock.lastCall?.[0] as { operations: PasswordResetOperations };
 const resetProps = () =>
   renderReset.mock.lastCall?.[0] as {
-    token?: string;
     operations: PasswordResetOperations;
   };
 const choose = (value: string) =>
@@ -50,45 +49,41 @@ async function finish(promise: Promise<void>) {
 }
 
 describe("PasswordResetPreview", () => {
-  it("실제 메일 발송 없이 요청 성공·제한·네트워크 실패를 재현한다", async () => {
+  it("실제 메일 발송 없이 요청 성공·메일 실패·네트워크 실패를 재현한다", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     render(<PasswordResetPreview mode="request" />);
     expect(screen.getByText(/비밀번호 복구 데모/)).toBeVisible();
     await expect(
-      finish(requestProps().operations.requestLink("a@syuin.ac.kr")),
+      finish(requestProps().operations.requestCode("a@syuin.ac.kr")),
     ).resolves.toBeUndefined();
-    choose("rateLimited");
+    choose("mailFailed");
     await expect(
-      finish(requestProps().operations.requestLink("a@syuin.ac.kr")),
-    ).rejects.toMatchObject({ kind: "rateLimited" });
+      finish(requestProps().operations.requestCode("a@syuin.ac.kr")),
+    ).rejects.toMatchObject({ status: 503 });
     choose("error");
     await expect(
-      finish(requestProps().operations.requestLink("a@syuin.ac.kr")),
+      finish(requestProps().operations.requestCode("a@syuin.ac.kr")),
     ).rejects.toThrow("preview network failure");
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("모의 토큰으로 변경 성공·만료 링크·비밀번호 거절을 재현한다", async () => {
+  it("모의 인증번호로 변경 성공·만료 코드·비밀번호 거절을 재현한다", async () => {
     render(<PasswordResetPreview mode="reset" />);
-    expect(resetProps().token).toBe("preview-only-token");
     const request = {
-      token: resetProps().token!,
-      password: "new password 123",
+      schoolEmail: "demo@syu.ac.kr",
+      code: "123456",
+      newPassword: "new password 123",
     };
     await expect(
       finish(resetProps().operations.resetPassword(request)),
     ).resolves.toBeUndefined();
-    for (const kind of ["invalidLink", "passwordRejected"] as const) {
+    for (const kind of ["expired", "passwordRejected"] as const) {
       choose(kind);
       await expect(
         finish(resetProps().operations.resetPassword(request)),
-      ).rejects.toMatchObject({ kind });
+      ).rejects.toMatchObject({ status: 400 });
     }
-    choose("missing");
-    expect(resetProps().token).toBeUndefined();
-    choose("success");
-    expect(resetProps().token).toBe("preview-only-token");
   });
 
   it.each([
@@ -99,7 +94,7 @@ describe("PasswordResetPreview", () => {
     fireEvent.change(screen.getByLabelText(label), {
       target: { value: "previous draft" },
     });
-    choose("rateLimited");
+    choose("mailFailed");
     expect(screen.getByLabelText(label)).toHaveValue("");
     fireEvent.change(screen.getByLabelText(label), {
       target: { value: "failed draft" },

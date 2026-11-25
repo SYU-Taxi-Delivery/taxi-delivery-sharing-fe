@@ -7,6 +7,7 @@ import {
   loginErrorMessage,
   safeNextPath,
   SCHOOL_EMAIL_DOMAIN,
+  SCHOOL_EMAIL_LABEL,
   validateLogin,
   type LoginFieldErrors,
 } from "./auth";
@@ -128,6 +129,7 @@ export function LoginScreen({
             )}
           </div>
           <form
+            method="post"
             className={styles.form}
             noValidate
             aria-busy={busy}
@@ -164,7 +166,7 @@ export function LoginScreen({
                 </p>
               )}
               <p id={ids.emailHelp} className={styles.help}>
-                삼육대학교 이메일(@{SCHOOL_EMAIL_DOMAIN}) 입력
+                삼육대학교 이메일({SCHOOL_EMAIL_LABEL}) 입력
               </p>
             </div>
             <div className={styles.field}>

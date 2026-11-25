@@ -2,8 +2,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthOperations, CurrentUser } from "./auth";
+import { SESSION_CHANGE_KEY, SESSION_SIGNED_OUT } from "./authApi";
 import { AccountMenu } from "./AccountMenu";
 import { AuthProvider, useAuth } from "./AuthProvider";
+import { AppProviders } from "@/features/demo/AppProviders";
 import { RequireAuth } from "./RequireAuth";
 
 const router = { replace: vi.fn() };
@@ -38,6 +40,19 @@ function renderWith(me: AuthOperations["me"], ui: ReactNode) {
 }
 
 describe("RequireAuth", () => {
+  it("비로그인 데모는 로그인 링크를 제공하고 데모 상황을 벗어나지 않는다", async () => {
+    location.pathname = "/my-preview";
+    render(
+      <AppProviders>
+        <RequireAuth>보호 내용</RequireAuth>
+      </AppProviders>,
+    );
+    await act(async () => {});
+    expect(
+      screen.getByRole("link", { name: "로그인하러 가기" }),
+    ).toHaveAttribute("href", "/auth-preview?next=%2Fmy-preview");
+    expect(router.replace).not.toHaveBeenCalled();
+  });
   it("다른 탭에서 로그아웃하면 만료가 아니라 로그아웃했다고 안내한다", async () => {
     const me = vi.fn<AuthOperations["me"]>(async () => student);
     renderWith(
@@ -52,8 +67,8 @@ describe("RequireAuth", () => {
     await act(async () => {
       window.dispatchEvent(
         new StorageEvent("storage", {
-          key: "syu-session-user",
-          newValue: null,
+          key: SESSION_CHANGE_KEY,
+          newValue: SESSION_SIGNED_OUT,
         }),
       );
     });
@@ -91,6 +106,7 @@ describe("RequireAuth", () => {
       screen.getByRole("link", { name: "로그인하러 가기" }),
     ).toHaveAttribute("href", "/login?next=%2Fposts%2F1");
     expect(screen.queryByText("보호 내용")).not.toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith("/login?next=%2Fposts%2F1");
   });
 
   it.each([
@@ -106,6 +122,9 @@ describe("RequireAuth", () => {
       screen.getByRole("link", { name: "로그인하러 가기" }),
     ).toHaveAttribute(
       "href",
+      `/login?next=${encodeURIComponent(`${pathname}?${search}`)}`,
+    );
+    expect(router.replace).toHaveBeenCalledWith(
       `/login?next=${encodeURIComponent(`${pathname}?${search}`)}`,
     );
   });
@@ -129,6 +148,7 @@ describe("RequireAuth", () => {
     expect(screen.getByText("참가자 명단")).toBeVisible();
     act(() => expire());
     expect(screen.queryByText("참가자 명단")).not.toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith("/login?next=%2Fposts%2F1");
     expect(screen.getByRole("alert")).toHaveTextContent("로그인이 만료됐어요");
     // The heading says it once; the text tells what happens next.
     expect(screen.getAllByText(/로그인이 만료됐어요/)).toHaveLength(1);
@@ -153,6 +173,7 @@ describe("RequireAuth", () => {
     );
     await act(async () => {});
     expect(screen.getByRole("alert")).toHaveTextContent("네트워크");
+    expect(router.replace).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "다시 확인" }));
     });

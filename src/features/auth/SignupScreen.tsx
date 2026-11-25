@@ -10,7 +10,11 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { schoolEmailError, SCHOOL_EMAIL_DOMAIN } from "./auth";
+import {
+  schoolEmailError,
+  SCHOOL_EMAIL_DOMAIN,
+  SCHOOL_EMAIL_LABEL,
+} from "./auth";
 import { signupOperations as defaultOperations } from "./authApi";
 import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "./AuthProvider";
@@ -22,6 +26,7 @@ import {
   normalizeName,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  PASSWORD_UTF8_MAX,
   passwordConfirmError,
   passwordError,
   registerErrorMessage,
@@ -33,9 +38,15 @@ import {
   type SignupOperations,
 } from "./signup";
 import styles from "./auth.module.css";
+import { errorCode } from "@/lib/backend";
 import { useAppPath } from "@/features/demo/AppProviders";
 
-type EmailStep = "idle" | "sending" | "sent" | "verifying" | "verified";
+type EmailStep =
+  | "idle"
+  | "sending"
+  | "sent"
+  | "verifying"
+  | { schoolEmail: string; verificationToken: string };
 type Page = 1 | 2 | 3;
 type Field = "email" | "code" | "name" | "studentNo" | "password" | "confirm";
 type FocusTarget = Field | "verified" | "terms";
@@ -118,7 +129,7 @@ export function SignupScreen({
       ? 0
       : Math.max(0, Math.ceil((RESEND_INTERVAL_MS - (now - sentAt)) / 1000));
 
-  const verified = step === "verified";
+  const verified = typeof step === "object";
   const codeStage = step === "sent" || step === "verifying";
   const allAgreed = consents.every(({ key }) => agreed[key]);
   const someAgreed = consents.some(({ key }) => agreed[key]);
@@ -192,7 +203,7 @@ export function SignupScreen({
       setStep("sent");
       setCode("");
       setErrors({});
-      // Same notice for new and already registered addresses (AC-AUTH-001-09).
+      // Start the countdown only after a successful send-code response.
       setEmailMessage({
         tone: "info",
         text: `입력한 학교 이메일로 인증번호를 보냈어요. 인증번호는 발급 후 ${CODE_TTL_MS / 60_000}분 동안 유효해요.`,
@@ -217,9 +228,9 @@ export function SignupScreen({
     setStep("verifying");
     setEmailMessage(null);
     try {
-      await operations.verifyCode(sentTo, code);
+      const verificationToken = await operations.verifyCode(sentTo, code);
       focusLater("name");
-      setStep("verified");
+      setStep({ schoolEmail: sentTo, verificationToken });
       setCode("");
       setPage(2);
       setEmailMessage({ tone: "info", text: "학교 이메일 인증이 완료됐어요." });
@@ -276,9 +287,10 @@ export function SignupScreen({
       await operations.register({
         studentNo: studentNo.trim(),
         name: normalizedName,
-        schoolEmail: email.trim(),
         password,
+        ...step,
       });
+      setStep("idle");
       setPassword("");
       setConfirm("");
       setDone(normalizedName);
@@ -288,13 +300,8 @@ export function SignupScreen({
           ? failure.status
           : undefined;
       setSubmitError(registerErrorMessage(failure));
-      if (status === 401 || status === 403) {
-        // Verification expired: back to step 1, address kept.
-        setStep("idle");
-        setSentAt(null);
-        setSentTo(null);
-        setEmailMessage(null);
-        focusLater("email");
+      if (status === 403 && errorCode(failure) === "EMAIL_NOT_VERIFIED") {
+        resetVerification();
         setPage(1);
       } else if (status === 400) {
         // Rejected input (usually the password): back to the account step.
@@ -411,14 +418,14 @@ export function SignupScreen({
         </ol>
         {operations === defaultOperations && (
           <p className={styles.terms}>
-            현재 이메일 인증과 가입 요청을 연결하고 있어요. 데모에서는 가입
-            과정을 체험할 수 있어요.{" "}
+            계정을 만들기 전에 가입 절차를 확인할 수 있어요.{" "}
             <Link href="/signup-preview" className={styles.textLink}>
               가입 데모 보기
             </Link>
           </p>
         )}
         <form
+          method="post"
           className={styles.form}
           noValidate
           aria-busy={submitting}
@@ -556,7 +563,7 @@ export function SignupScreen({
                     />
                     {fieldError("email")}
                     <p id={id("email-help")} className={styles.help}>
-                      삼육대학교 이메일(@{SCHOOL_EMAIL_DOMAIN})로 학교 계정 인증
+                      삼육대학교 이메일({SCHOOL_EMAIL_LABEL})로 학교 계정 인증
                     </p>
                     <button
                       type="submit"
@@ -573,6 +580,7 @@ export function SignupScreen({
                       <button
                         type="button"
                         className={styles.secondary}
+                        disabled={step === "sending"}
                         onClick={resumeCode}
                       >
                         받은 인증번호 입력하기
@@ -692,8 +700,8 @@ export function SignupScreen({
                 />
                 {fieldError("password")}
                 <p id={id("password-help")} className={styles.help}>
-                  {PASSWORD_MIN}~{PASSWORD_MAX}자 · 다른 사이트와 같은
-                  비밀번호는 피해 주세요.
+                  {PASSWORD_MIN}~{PASSWORD_MAX}자 · UTF-8 {PASSWORD_UTF8_MAX}
+                  바이트 이하 (한글·이모지는 여러 바이트)
                 </p>
               </div>
 

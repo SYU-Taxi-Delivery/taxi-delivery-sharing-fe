@@ -19,7 +19,11 @@ import {
   type CurrentUser,
   type LoginCredentials,
 } from "./auth";
-import { authOperations, USER_KEY } from "./authApi";
+import {
+  authOperations,
+  SESSION_CHANGE_KEY,
+  SESSION_SIGNED_OUT,
+} from "./authApi";
 
 type Notice = {
   tone: "info" | "error";
@@ -58,6 +62,12 @@ const elsewhereNotice: Notice = {
   kind: "signedOutElsewhere",
 };
 
+const logoutPendingNotice: Notice = {
+  tone: "error",
+  message:
+    "이 기기의 로그인 정보는 지웠지만 서버 로그아웃을 확인하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.",
+};
+
 export function AuthProvider({
   operations = authOperations,
   children,
@@ -77,6 +87,7 @@ export function AuthProvider({
   const locked = useRef(false);
   const mounted = useRef(true);
   const sequence = useRef(0);
+  const sessionRevision = useRef(0);
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -102,9 +113,15 @@ export function AuthProvider({
   );
 
   const check = useCallback(
-    async (signedOutElsewhere = false) => {
+    async (previousSessionEnd?: "signedOutElsewhere" | "expired") => {
       // After an unconfirmed logout a successful me() must not sign the user back in.
       if (checking.current || locked.current || pendingRef.current) return;
+      if (operationsRef.current.isLogoutPending?.()) {
+        pendingRef.current = true;
+        setServerLogoutPending(true);
+        signOutLocally("anonymous", logoutPendingNotice);
+        return;
+      }
       checking.current = true;
       const requestId = ++sequence.current;
       const current = () => mounted.current && sequence.current === requestId;
@@ -127,19 +144,20 @@ export function AuthProvider({
       checking.current = false;
       if (result) {
         update("authenticated", result);
-      } else if (statusRef.current === "authenticated") {
-        if (signedOutElsewhere) {
-          update("anonymous", null);
-          setNotice(elsewhereNotice);
-        } else {
-          update("expired", null);
-          setNotice(expiredNotice);
-        }
+      } else if (previousSessionEnd === "signedOutElsewhere") {
+        update("anonymous", null);
+        setNotice(elsewhereNotice);
+      } else if (
+        statusRef.current === "authenticated" ||
+        previousSessionEnd === "expired"
+      ) {
+        update("expired", null);
+        setNotice(expiredNotice);
       } else if (statusRef.current !== "expired") {
         update("anonymous", null);
       }
     },
-    [update],
+    [signOutLocally, update],
   );
 
   useEffect(() => {
@@ -160,12 +178,27 @@ export function AuthProvider({
     const restored = (event: PageTransitionEvent) => {
       if (event.persisted) void check();
     };
-    // Signing in or out in another tab changes the stored user there; this
-    // tab rechecks at once instead of on its next focus.
     const otherTab = (event: StorageEvent) => {
-      // The stored user removed (or storage cleared) means a sign-out there.
-      if (event.key === null || event.key === USER_KEY)
-        void check(event.newValue === null);
+      if (event.key !== null && event.key !== SESSION_CHANGE_KEY) return;
+      sessionRevision.current += 1;
+      if (locked.current) return;
+      // The cookie may now represent someone else. Discard the old view and any
+      // response that was already in flight, even if the new check fails.
+      checking.current = false;
+      pendingRef.current = false;
+      setServerLogoutPending(false);
+      setNotice(null);
+      const wasAuthenticated = statusRef.current === "authenticated";
+      const signedOut =
+        event.newValue === null || event.newValue === SESSION_SIGNED_OUT;
+      update("checking", null);
+      void check(
+        wasAuthenticated
+          ? signedOut
+            ? "signedOutElsewhere"
+            : "expired"
+          : undefined,
+      );
     };
     window.addEventListener("focus", recheck);
     document.addEventListener("visibilitychange", recheck);
@@ -177,7 +210,7 @@ export function AuthProvider({
       window.removeEventListener("pageshow", restored);
       window.removeEventListener("storage", otherTab);
     };
-  }, [check]);
+  }, [check, update]);
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
@@ -189,9 +222,14 @@ export function AuthProvider({
       try {
         await operationsRef.current.login(credentials);
         // The issued session is trusted only after me() confirms who it is.
-        const confirmed = toCurrentUser(await operationsRef.current.me());
+        let revision: number;
+        let confirmed: CurrentUser | null;
+        do {
+          revision = sessionRevision.current;
+          confirmed = toCurrentUser(await operationsRef.current.me());
+          if (!mounted.current || sequence.current !== requestId) return;
+        } while (sessionRevision.current !== revision);
         if (!confirmed) throw new Error("로그인 세션을 확인하지 못했습니다.");
-        if (!mounted.current || sequence.current !== requestId) return;
         pendingRef.current = false;
         setServerLogoutPending(false);
         update("authenticated", confirmed);
@@ -226,11 +264,7 @@ export function AuthProvider({
       "anonymous",
       confirmed
         ? { tone: "info", message: "로그아웃했어요." }
-        : {
-            tone: "error",
-            message:
-              "이 기기의 로그인 정보는 지웠지만 서버 로그아웃을 확인하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.",
-          },
+        : logoutPendingNotice,
     );
     return confirmed;
   }, [signOutLocally]);
@@ -251,8 +285,7 @@ export function AuthProvider({
       notice,
       loggingOut,
       serverLogoutPending,
-      // Public check never means "signed out elsewhere" (e.g. onClick={check}).
-      check: () => check(),
+      check,
       login,
       logout,
       handleUnauthorized,

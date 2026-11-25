@@ -92,7 +92,7 @@ describe("apiFetch", () => {
     expect(new ApiError(500, "")).toBeInstanceOf(Error);
   });
 
-  it("브라우저 밖에서 주소가 미정이면 네트워크 요청 전에 실패한다", async () => {
+  it("주소가 미정이면 네트워크 요청 전에 실패한다", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
 
     await expect(apiFetch("/rooms")).rejects.toThrow(
@@ -114,6 +114,17 @@ describe("apiFetch", () => {
       "https://preview.example.test/api/csrf",
       expect.objectContaining({ credentials: "include" }),
     );
+  });
+
+  it("인증 요청에서만 문자열 응답을 허용하고 HTML 성공 응답을 거절한다", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("완료"));
+    await expect(apiFetch("/auth", {}, "text")).resolves.toBe("완료");
+    fetchMock.mockResolvedValueOnce(
+      new Response("<html>로그인</html>", {
+        headers: { "Content-Type": "text/html" },
+      }),
+    );
+    await expect(apiFetch("/auth", {}, "text")).rejects.toThrow("응답 형식");
   });
 
   it.each([

@@ -14,6 +14,8 @@ export type LoginCredentials = { email: string; password: string };
 
 // UI callbacks; the URI, DTO and session transport belong to the API adapter (#18).
 export type AuthOperations = {
+  /** An earlier logout on this browser still needs server confirmation. */
+  isLogoutPending?: () => boolean;
   /** Current user, or null when the server reports no valid session (401). */
   me: () => Promise<unknown>;
   /** School email login. Resolve only when the server issued a session. */
@@ -23,20 +25,25 @@ export type AuthOperations = {
 };
 
 export const SCHOOL_EMAIL_DOMAIN = "syuin.ac.kr";
+export const SCHOOL_EMAIL_DOMAINS = [SCHOOL_EMAIL_DOMAIN, "syu.ac.kr"];
+export const SCHOOL_EMAIL_LABEL = SCHOOL_EMAIL_DOMAINS.map(
+  (domain) => `@${domain}`,
+).join(" · ");
 
 export type LoginFieldErrors = { email?: string; password?: string };
 
 export function schoolEmailError(email: string): string | null {
-  const address = email.trim();
+  const address = email.trim().toLowerCase();
   const at = address.lastIndexOf("@");
   if (address === "") return "학교 이메일을 입력해 주세요.";
   if (
     at < 1 ||
+    address.length > 100 ||
     address.indexOf("@") !== at ||
-    /\s/.test(address) ||
-    address.slice(at + 1).toLowerCase() !== SCHOOL_EMAIL_DOMAIN
+    !/^[a-z0-9][a-z0-9._%+-]{0,63}$/.test(address.slice(0, at)) ||
+    !SCHOOL_EMAIL_DOMAINS.includes(address.slice(at + 1))
   ) {
-    return `삼육대학교 이메일(@${SCHOOL_EMAIL_DOMAIN})을 입력해 주세요.`;
+    return `삼육대학교 이메일(${SCHOOL_EMAIL_LABEL})을 입력해 주세요.`;
   }
   return null;
 }
@@ -114,7 +121,12 @@ export function safeNextPath(value: unknown): string {
     return "/";
   }
   const url = new URL(value, "https://same-origin.invalid");
-  if (url.origin !== "https://same-origin.invalid") return "/";
+  if (
+    url.origin !== "https://same-origin.invalid" ||
+    url.pathname.startsWith("//")
+  ) {
+    return "/";
+  }
   if (url.pathname === "/login" || url.pathname.startsWith("/login/")) {
     return "/";
   }

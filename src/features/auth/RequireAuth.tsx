@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useId, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useId, type ReactNode } from "react";
 import { loginHref, type UserRole } from "./auth";
 import { useAuth } from "./AuthProvider";
 import styles from "./auth.module.css";
@@ -113,11 +113,13 @@ export function RequireAuth({
 function LoginLink({ pathname, label }: { pathname: string; label: string }) {
   const path = useAppPath();
   const search = useSearchParams().toString();
+  const href = path(loginHref(`${pathname}${search ? `?${search}` : ""}`));
+  const router = useRouter();
+  useEffect(() => {
+    if (path("/login") === "/login") router.replace(href);
+  }, [href, path, router]);
   return (
-    <Link
-      href={path(loginHref(`${pathname}${search ? `?${search}` : ""}`))}
-      className={styles.primary}
-    >
+    <Link href={href} className={styles.primary}>
       {label}
     </Link>
   );
