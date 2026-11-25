@@ -10,6 +10,7 @@ import {
 } from "./posts";
 import {
   customRangeLabel,
+  customRangeText,
   invalidCustomRange,
   matchesSearch,
   newPostHref,
@@ -82,6 +83,22 @@ describe("검색 조건 주소", () => {
     expect(hasSearch({ ...base, q: "  " })).toBe(false);
     expect(hasSearch({ ...base, time: "hour" })).toBe(true);
     expect(isFilteredQuery({ ...base, sort: "RECENT" })).toBe(true);
+  });
+
+  it.each(["2026-02-29T09:00", "2026-13-01T10:00", "2026-11-23T24:00"])(
+    "공유 URL의 잘못된 시작 시각 %s는 제외하고 유효한 끝 시각은 유지한다",
+    (from) => {
+      const to = "2028-02-29T12:00";
+      expect(parsePostQuery({ time: "custom", from, to })).toEqual({
+        ...base,
+        time: "custom",
+        to,
+      });
+    },
+  );
+
+  it("잘못된 시간 범위로 필터를 열어도 날짜 표시가 실패하지 않는다", () => {
+    expect(customRangeText("2026-13-01T09:00", undefined, NOW)).toBeNull();
   });
 });
 

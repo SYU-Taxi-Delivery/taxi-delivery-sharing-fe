@@ -42,19 +42,112 @@
    placement transforms (attributes) stay in the scene's coordinates. */
 .rider,
 .rider [data-leg],
-.door,
 .hop,
 .basket,
 .restBag,
 .driver,
+.waiter,
+.steam,
 .hello {
   transform-box: fill-box;
+}
+
+/* ───────── 두유콩 beside the taxi / the bag ───────── */
+
+.waiter {
+  transform-origin: 50% 100%;
+}
+
+/* Arrival: hops up once next to the taxi pulling in / the bag landing. */
+[data-scene$="-enter"] .waiter {
+  animation: waiter-hop 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) 0.45s both;
+}
+
+@keyframes waiter-hop {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(1px) scale(1.06, 0.9);
+  }
+  60% {
+    transform: translateY(-6px) scale(0.96, 1.05);
+  }
+  85% {
+    transform: translateY(0.5px) scale(1.04, 0.95);
+  }
+}
+
+/* Idle: a happy sway with a little bounce. */
+[data-scene$="-idle"] .waiter {
+  animation: waiter-sway 0.9s ease-in-out both;
+}
+
+@keyframes waiter-sway {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: rotate(-7deg) translateY(-1.5px);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+  75% {
+    transform: rotate(6deg) translateY(-1.5px);
+  }
+}
+
+/* Tossing your bag onto the lid / catching it back. */
+[data-scene="delivery-join"] .waiter,
+[data-scene="delivery-leave"] .waiter {
+  animation: waiter-toss 0.6s ease-out both;
+}
+
+@keyframes waiter-toss {
+  0%,
+  100% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(1px) scale(1.06, 0.92);
+  }
+  65% {
+    transform: translateY(-4px) scale(0.96, 1.05);
+  }
+}
+
+/* Steam over the warm bag drifts up now and then. */
+.steam {
+  transform-origin: 50% 100%;
+  opacity: 0.55;
+}
+
+[data-scene="delivery-enter"] .steam,
+[data-scene="delivery-idle"] .steam {
+  animation: steam-rise 0.9s ease-in-out both;
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0.55;
+    transform: none;
+  }
 }
 
 /* ───────── Taxi ───────── */
 
 /* 두유콩 keeps the same pose keyframes in both layers; only which
-   layer is visible changes, while they stand inside the door opening. */
+   layer is visible changes, at the top of the hop over the side. */
 .rider {
   transform-origin: 50% 100%;
 }
@@ -75,11 +168,11 @@
     layer-show-at-58 1s steps(1, end) both;
 }
 
-/* walk up beside the taxi → wait for the door → step onto the sill and
-   duck in through the opening */
+/* walk up behind the open taxi → crouch → hop over the side into the back
+   seat (the body hides the feet once inside) */
 @keyframes rider-join {
   0% {
-    transform: translate(14px, 62px) scale(1);
+    transform: translate(42px, 62px) scale(1);
     animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
   }
   32%,
@@ -87,11 +180,11 @@
     transform: translate(64px, 62px) scale(1);
   }
   48% {
-    transform: translate(82px, 58px) scale(0.86);
+    transform: translate(74px, 40px) scale(0.8);
   }
   58%,
   100% {
-    transform: translate(89.4px, 53.2px) scale(0.66);
+    transform: translate(81.2px, 40.2px) scale(0.65);
   }
 }
 
@@ -127,14 +220,14 @@
     layer-show-at-26 1s steps(1, end) both;
 }
 
-/* Facing left (mirrored) while getting out and walking away */
+/* Facing left (mirrored): hop out of the back seat and walk away */
 @keyframes rider-leave {
   0%,
   22% {
-    transform: translate(89.4px, 53.2px) scale(-0.66, 0.66);
+    transform: translate(81.2px, 40.2px) scale(-0.65, 0.65);
   }
   34% {
-    transform: translate(82px, 58px) scale(-0.86, 0.86);
+    transform: translate(74px, 40px) scale(-0.8, 0.8);
   }
   44% {
     transform: translate(64px, 62px) scale(-1, 1);
@@ -142,7 +235,7 @@
   }
   86%,
   100% {
-    transform: translate(20px, 62px) scale(-1, 1);
+    transform: translate(42px, 62px) scale(-1, 1);
   }
 }
 
@@ -205,48 +298,6 @@
   }
 }
 
-/* Rear door hinges on its front edge */
-.door {
-  transform-origin: 100% 50%;
-}
-
-[data-scene="taxi-join"] .door {
-  animation: door-join 1s var(--curve-standard) both;
-}
-
-[data-scene="taxi-leave"] .door {
-  animation: door-leave 1s var(--curve-standard) both;
-}
-
-@keyframes door-join {
-  0%,
-  26% {
-    transform: scaleX(1);
-  }
-  40%,
-  66% {
-    transform: scaleX(0.12);
-  }
-  82%,
-  100% {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes door-leave {
-  0% {
-    transform: scaleX(1);
-  }
-  16%,
-  50% {
-    transform: scaleX(0.12);
-  }
-  68%,
-  100% {
-    transform: scaleX(1);
-  }
-}
-
 [data-scene="taxi-join"] .hop {
   animation: taxi-hop 1s var(--curve-standard) both;
 }
@@ -275,28 +326,29 @@
   animation: bag-join-y 1s both;
 }
 
+/* From 두유콩's hands (beside the bag) up onto the big bag's lid. */
 @keyframes bag-join-x {
   0% {
-    transform: translateX(22px);
+    transform: translateX(70px);
   }
   62%,
   100% {
-    transform: translateX(103px);
+    transform: translateX(104px);
   }
 }
 
 @keyframes bag-join-y {
   0% {
-    transform: translateY(62px);
+    transform: translateY(52px);
     animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
   }
   30% {
-    transform: translateY(22px);
+    transform: translateY(14px);
     animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
   }
   62%,
   100% {
-    transform: translateY(54px);
+    transform: translateY(40px);
   }
 }
 
@@ -308,25 +360,26 @@
   animation: bag-leave-y 1s both;
 }
 
+/* Off the lid, over 두유콩's head, down onto the ground behind it. */
 @keyframes bag-leave-x {
   0%,
   8% {
-    transform: translateX(103px);
+    transform: translateX(104px);
   }
   72%,
   100% {
-    transform: translateX(36px);
+    transform: translateX(30px);
   }
 }
 
 @keyframes bag-leave-y {
   0%,
   8% {
-    transform: translateY(54px);
+    transform: translateY(40px);
     animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
   }
   38% {
-    transform: translateY(20px);
+    transform: translateY(10px);
     animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
   }
   72% {

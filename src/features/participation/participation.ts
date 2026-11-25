@@ -105,7 +105,7 @@ export function recruitmentStatusAt(
  */
 export const REJECTION_MESSAGES: Record<string, string> = {
   POST_FULL: "방금 정원이 찼어요.",
-  JOIN_TIME_CLOSED: "신청 기한이 지났어요.",
+  JOIN_TIME_CLOSED: "참여 기한이 지났어요.",
   CANCEL_TIME_CLOSED: "취소 기한이 지났어요.",
   POST_CLOSED: "작성자가 모집을 마감했어요.",
   POST_CANCELLED: "모집이 취소됐어요.",
@@ -117,7 +117,7 @@ export const REJECTION_MESSAGES: Record<string, string> = {
   AUTHOR_CANNOT_CANCEL_PARTICIPATION:
     "작성자는 참여를 취소할 수 없어요. 모집을 취소하려면 모집 관리를 이용해 주세요.",
   PARTICIPATION_TEMPORARILY_UNAVAILABLE:
-    "신청이 몰려 잠시 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    "참여 요청이 몰려 잠시 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
 };
 
 /** Statuses a REJECTION_MESSAGES code can arrive with. */
@@ -193,59 +193,59 @@ export function getParticipationAvailability(
   ) {
     return {
       ...unavailable,
-      reason: "모집 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+      reason: "모집 정보를 확인할 수 없어요. 다시 조회해 주세요.",
     };
   }
 
   if (snapshot.viewerRelation === "GUEST") {
-    return { ...unavailable, reason: "로그인 후 참여할 수 있습니다." };
+    return { ...unavailable, reason: "로그인 후 참여할 수 있어요." };
   }
   if (snapshot.viewerRelation === "AUTHOR") {
     return {
       ...unavailable,
-      reason: "작성자는 본인 모집에 참여할 수 없습니다.",
+      reason: "작성자는 본인 모집에 참여할 수 없어요.",
     };
   }
   if (snapshot.status === "REMOVED") {
-    return { ...unavailable, reason: "삭제된 모집입니다." };
+    return { ...unavailable, reason: "삭제된 모집이에요." };
   }
   if (snapshot.status === "CANCELLED") {
-    return { ...unavailable, reason: "취소된 모집입니다." };
+    return { ...unavailable, reason: "취소된 모집이에요." };
   }
   if (snapshot.status === "FINISHED") {
-    return { ...unavailable, reason: "완료된 모집입니다." };
+    return { ...unavailable, reason: "완료된 모집이에요." };
   }
   if (!(["OPEN", "FULL", "CLOSED"] as const).includes(snapshot.status)) {
     return {
       ...unavailable,
-      reason: "모집 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+      reason: "모집 정보를 확인할 수 없어요. 다시 조회해 주세요.",
     };
   }
   if (nowMs >= Date.parse(snapshot.referenceTime)) {
-    return { ...unavailable, reason: "완료된 모집입니다." };
+    return { ...unavailable, reason: "완료된 모집이에요." };
   }
   if (nowMs >= deadline) {
     return {
       ...unavailable,
-      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(snapshot)}분 전부터 참여 신청과 취소가 마감됩니다.`,
+      reason: `${snapshot.type === "TAXI" ? "출발" : "주문 마감"} ${cutoffMinutes(snapshot)}분 전부터 참여와 취소가 마감돼요.`,
     };
   }
   if (snapshot.viewerRelation === "JOINED") {
     return { action: "cancel", reason: null, deadline };
   }
   if (snapshot.status === "CLOSED") {
-    return { ...unavailable, reason: "작성자가 모집을 마감했습니다." };
+    return { ...unavailable, reason: "작성자가 모집을 마감했어요." };
   }
   if (
     snapshot.status === "FULL" ||
     snapshot.currentMemberCount === snapshot.capacity
   ) {
-    return { ...unavailable, reason: "모집 정원이 마감되었습니다." };
+    return { ...unavailable, reason: "모집 정원이 다 찼어요." };
   }
   if (!snapshot.joinable) {
     return {
       ...unavailable,
-      reason: "현재 참여할 수 없습니다. 최신 모집 정보를 확인해 주세요.",
+      reason: "지금은 참여할 수 없어요. 최신 모집 정보를 확인해 주세요.",
     };
   }
   if (
@@ -260,7 +260,7 @@ export function getParticipationAvailability(
   }
   return {
     ...unavailable,
-    reason: "참여 정보를 확인할 수 없습니다. 다시 조회해 주세요.",
+    reason: "참여 정보를 확인할 수 없어요. 다시 조회해 주세요.",
   };
 }
 

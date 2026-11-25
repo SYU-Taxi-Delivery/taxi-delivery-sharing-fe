@@ -18,6 +18,13 @@
   --posts-focus: var(--primary-text);
   --bounce: var(--ease-out); /* state changes settle, no overshoot */
   --delivery-tint: color-mix(in srgb, var(--warn) 12%, white);
+  /* Type icon tiles: yellow for the taxi, light green for delivery, each
+     with a darker edge, so the two types part by colour as well as by
+     drawing. */
+  --taxi-tile: #fdf1c9;
+  --taxi-tile-edge: #efd27c;
+  --delivery-tile: #e4f2cc;
+  --delivery-tile-edge: #a9d26b;
 
   /* Bottom area (phones): nav bar, plus an action strip when a page has one */
   --nav-h: 3.75rem;
@@ -103,6 +110,8 @@
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--posts-border);
   background: var(--canvas);
+  /* A soft edge says the list above scrolls on under the buttons. */
+  box-shadow: 0 -10px 14px -12px rgb(0 0 0 / 0.22);
 }
 
 @media (max-width: 47.99rem) {
@@ -212,7 +221,7 @@
 }
 
 .title {
-  font-size: 1.375rem;
+  font-size: var(--type-page);
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: var(--tracking-heading);
@@ -251,7 +260,7 @@
   flex: 1;
   min-width: 0;
   max-width: none;
-  font-size: var(--type-heading);
+  font-size: var(--type-page);
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: var(--tracking-heading);
@@ -448,9 +457,173 @@
   font-weight: 600;
 }
 
-.sort {
+/* Sort, where the current order shows: a small outlined button with the
+   current order and a caret, opening a menu right under it. */
+.sortMenu {
+  position: relative;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  color: var(--posts-text);
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  background: var(--primary-tint);
+}
+
+.sortButton:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
+/* ▾ while closed, ▴ while open */
+.sortCaret {
+  width: 0;
+  height: 0;
+  border-top: 5px solid currentColor;
+  border-right: 4.5px solid transparent;
+  border-left: 4.5px solid transparent;
+}
+
+.sortButton[aria-expanded="true"] .sortCaret {
+  transform: rotate(180deg);
+}
+
+.sortPopup {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown, 100);
+  min-width: 11rem;
+  padding: var(--space-2) 0;
+  border: 1px solid var(--posts-border);
+  border-radius: var(--round-control);
+  background: var(--canvas);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.sortPopup[hidden] {
+  display: none;
+}
+
+.sortPopup ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sortHeading {
+  padding: var(--space-2) var(--space-4);
+  color: var(--posts-text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+.sortOption {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  color: var(--posts-text);
+  font-size: var(--type-body);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.sortOption:hover {
+  background: var(--soft);
+}
+
+.sortOption[aria-current="true"] {
+  background: var(--soft);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.sortOption:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: -3px;
+}
+
+/* 상세 조건: the type's own place fields, folded under one row so the
+   search box and the time choices come first. */
+.moreConditions {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--posts-border);
+  border-bottom: 1px solid var(--posts-border);
+}
+
+.moreConditions > div:not([hidden]) {
+  display: grid;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.moreToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--posts-text);
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moreToggle:focus-visible {
+  outline: 3px solid var(--posts-focus);
+  outline-offset: 2px;
+  border-radius: var(--round-chip);
+}
+
+.moreHint {
   color: var(--posts-muted);
   font-weight: 500;
+}
+
+.moreCount {
+  display: inline-grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  place-items: center;
+  border-radius: var(--round-pill);
+  background: var(--posts-primary-text);
+  color: var(--canvas);
+  font-size: var(--type-micro);
+}
+
+.moreChevron {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--motion-fast) var(--curve-standard);
+}
+
+.moreToggle[aria-expanded="true"] .moreChevron {
+  transform: translateY(2px) rotate(-135deg);
 }
 
 @media (min-width: 40rem) {
@@ -537,12 +710,13 @@
   }
 }
 
-/* One pod = one white card: thin light border, the app's card corners.
+/* One pod = one white card: thin light grey edge, the app's card corners,
+   no shadow. Three bands (place, time, meta) split by space and one rule.
    The whole card is the link to the detail page. */
 .card {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr);
-  align-items: start;
+  container: card / inline-size;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
@@ -557,30 +731,44 @@
 
 .card:hover {
   border-color: color-mix(in srgb, var(--primary) 45%, var(--posts-border));
-  background: var(--primary-tint);
 }
 
 .card:active {
   transform: scale(0.985);
 }
 
-/* Small type icon tile; the drawing keeps its own outline. */
+@media (prefers-reduced-motion: reduce) {
+  .card:active {
+    transform: none;
+  }
+}
+
+/* Top: the type tile (same size and spot on every card) and the place */
+.cardTop {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+
 .sticker {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
-  border-radius: 0.75rem;
-  background: var(--primary-soft);
+  border-radius: 0.875rem;
+  background: var(--taxi-tile);
+  box-shadow: inset 0 0 0 1.5px var(--taxi-tile-edge);
 }
 
 .card[data-type="delivery"] .sticker {
-  background: var(--delivery-tint);
+  background: var(--delivery-tile);
+  box-shadow: inset 0 0 0 1.5px var(--delivery-tile-edge);
 }
 
 .sticker svg {
   flex: none;
-  width: 2.125rem;
+  width: 2rem;
   height: auto;
 }
 
@@ -590,6 +778,7 @@
 
 .card[data-available="false"] .sticker {
   background: var(--soft);
+  box-shadow: inset 0 0 0 1.5px var(--posts-border);
 }
 
 /* Closed (full, closed, past deadline, finished, cancelled): the whole card
@@ -598,19 +787,20 @@
   filter: grayscale(1);
 }
 
-.card[data-available="false"] .cardTitle,
-.card[data-available="false"] .when {
+.card[data-available="false"] .cardTitle {
   color: var(--posts-muted);
 }
 
-.cardBody {
+.cardHead {
   display: grid;
-  align-content: start;
+  align-content: center;
+  gap: 0.125rem;
   min-width: 0;
+  min-height: 2.75rem;
 }
 
-/* Line 1, the biggest: route or restaurant · pickup. Long names wrap at
-   word boundaries (keep-all) and stop at two lines. */
+/* The place, the biggest words on the card. Names break between words
+   only (keep-all); a taxi route wraps after the arrow when it is long. */
 .cardTitle {
   display: -webkit-box;
   overflow: hidden;
@@ -625,78 +815,111 @@
   overflow-wrap: break-word;
 }
 
-/* Row 1 of the card: the title, plus the delivery pickup line under it. */
-.cardHead {
-  display: grid;
-  align-content: start;
-  min-width: 0;
-}
-
-/* Delivery: where to pick the food up, its own small line under the
-   restaurant so the two places never read as one name. */
-.pickup {
-  color: var(--posts-muted);
-  font-size: var(--type-label);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
 .arrow {
   color: var(--posts-muted);
   font-weight: 600;
 }
 
-/* Line 2: when + seats left, side by side, close under the title */
-.facts {
-  margin-top: var(--space-1);
+/* Delivery: where to pick the food up, small and grey under the name */
+.pickup {
+  color: var(--posts-muted);
+  font-size: var(--type-label);
+  font-weight: 600;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Middle: a light green band, the time on the left and a pale yellow
+   seats badge on the right with a faint rule between them. Quieter type
+   than the title so the place still reads first. */
+/* Spare height in a row goes above the band, so the bands and the
+   bottom lines of side-by-side cards both line up. */
+.timeBand {
+  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--space-3);
-  font-size: var(--type-body);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--round-control);
+  background: var(--primary-tint);
   font-variant-numeric: tabular-nums;
 }
 
 .when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
   color: var(--posts-text);
-  font-weight: 700;
+  font-size: var(--type-body);
+  font-weight: 600;
+}
+
+.whenIcon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--posts-primary-text);
 }
 
 .seats {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--round-pill);
+  background: var(--taxi-tile);
   color: var(--posts-primary-text);
+  font-size: var(--type-label);
   font-weight: 700;
+  white-space: nowrap;
 }
 
-/* Last seat: warm brown-orange (--warn, 5.5:1 on white) */
+/* The faint rule between the time and the badge */
+.seats::before {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: calc(var(--space-3) * -0.5 - 0.5px);
+  border-left: 1px solid
+    color-mix(in srgb, var(--posts-primary-text) 18%, transparent);
+  content: "";
+}
+
+/* Last seat: warm brown-orange (--warn, 5.5:1 on the pale yellow) */
 .seats[data-last="true"] {
   color: var(--posts-warn);
 }
 
-.reason {
+.seats[data-closed="true"] {
+  background: var(--soft);
   color: var(--posts-muted);
-  font-size: var(--type-label);
-  font-weight: 600;
 }
 
-/* Line 3: type · status · author, small and grey */
+/* Bottom: a thin rule, then 유형 · 모집 상태 · 작성자 on one line, on the
+   card's bottom edge so cards side by side share one baseline. */
 .cardMeta {
-  margin-top: var(--space-1);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 0.375rem;
+  gap: 0 var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--posts-border);
   color: var(--posts-muted);
-  font-size: var(--type-micro);
-  font-weight: 600;
+  font-size: var(--type-label);
+  font-weight: 500;
+}
+
+.dot {
+  color: color-mix(in srgb, var(--posts-muted) 70%, transparent);
 }
 
 .chip {
-  color: var(--posts-primary-text);
-  font-weight: 700;
-}
-
-.card[data-type="delivery"] .chip {
-  color: var(--posts-warn);
+  color: var(--posts-text);
+  font-weight: 600;
 }
 
 .status {
@@ -710,6 +933,7 @@
 
 .author {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* The viewer's relation, next to the post status: its own small pill. */
@@ -721,8 +945,20 @@
   border-radius: var(--round-pill);
   background: var(--primary-soft);
   color: var(--posts-primary-text);
+  font-size: var(--type-micro);
   font-weight: 700;
   line-height: 1.5;
+}
+
+/* Narrow cards: the band stacks, the badge under the time, no rule. */
+@container card (max-width: 19rem) {
+  .seats {
+    margin-left: 0;
+  }
+
+  .seats::before {
+    display: none;
+  }
 }
 
 /* ───────── Loading, empty, error ───────── */
@@ -868,8 +1104,9 @@
   }
 }
 
+/* 초기화 is the quiet one: a plain text button beside the green 적용. */
 .secondary {
-  composes: base secondary from "../ui/button.module.css";
+  composes: base ghost from "../ui/button.module.css";
 }
 
 /* ───────── Pagination ───────── */
@@ -1053,42 +1290,6 @@
   .list .card,
   .list .skeleton {
     padding: var(--space-4) var(--space-5);
-  }
-
-  /* A day with one pod: the card takes the full row and lays out across it,
-     place (and the type · status line) on the left, when + seats on the
-     right; its height follows its content. */
-  .list[data-single="true"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .list[data-single="true"] .card {
-    align-items: center;
-  }
-
-  .list[data-single="true"] .cardBody {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "head facts"
-      "meta facts";
-    align-items: center;
-    column-gap: var(--space-6);
-  }
-
-  .list[data-single="true"] .cardHead {
-    grid-area: head;
-  }
-
-  .list[data-single="true"] .cardMeta {
-    grid-area: meta;
-  }
-
-  .list[data-single="true"] .facts {
-    grid-area: facts;
-    flex-direction: column;
-    align-items: flex-end;
-    margin-top: 0;
-    text-align: right;
   }
 }
 

@@ -19,9 +19,18 @@ import {
   type CurrentUser,
   type LoginCredentials,
 } from "./auth";
-import { authOperations, SESSION_CHANGE_KEY } from "./authApi";
+import {
+  authOperations,
+  SESSION_CHANGE_KEY,
+  SESSION_SIGNED_OUT,
+} from "./authApi";
 
-type Notice = { tone: "info" | "error"; message: string } | null;
+type Notice = {
+  tone: "info" | "error";
+  message: string;
+  /** Set when another tab signed out, so screens say so instead of "만료". */
+  kind?: "signedOutElsewhere";
+} | null;
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -45,6 +54,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const expiredNotice: Notice = {
   tone: "info",
   message: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+};
+
+const elsewhereNotice: Notice = {
+  tone: "info",
+  message: "다른 탭에서 로그아웃했어요. 계속하려면 다시 로그인해 주세요.",
+  kind: "signedOutElsewhere",
 };
 
 const logoutPendingNotice: Notice = {
@@ -97,43 +112,53 @@ export function AuthProvider({
     [update],
   );
 
-  const check = useCallback(async () => {
-    // After an unconfirmed logout a successful me() must not sign the user back in.
-    if (checking.current || locked.current || pendingRef.current) return;
-    if (operationsRef.current.isLogoutPending?.()) {
-      pendingRef.current = true;
-      setServerLogoutPending(true);
-      signOutLocally("anonymous", logoutPendingNotice);
-      return;
-    }
-    checking.current = true;
-    const requestId = ++sequence.current;
-    const current = () => mounted.current && sequence.current === requestId;
-    let result: CurrentUser | null;
-    try {
-      result = toCurrentUser(await operationsRef.current.me());
-    } catch (error) {
-      if (!current()) return;
-      checking.current = false;
-      if (error instanceof ApiError && error.status === 401) {
-        result = null;
-      } else {
-        // A failed recheck keeps a signed-in user; protected APIs still answer 401.
-        if (statusRef.current !== "authenticated") update("unavailable", null);
+  const check = useCallback(
+    async (previousSessionEnd?: "signedOutElsewhere" | "expired") => {
+      // After an unconfirmed logout a successful me() must not sign the user back in.
+      if (checking.current || locked.current || pendingRef.current) return;
+      if (operationsRef.current.isLogoutPending?.()) {
+        pendingRef.current = true;
+        setServerLogoutPending(true);
+        signOutLocally("anonymous", logoutPendingNotice);
         return;
       }
-    }
-    if (!current()) return;
-    checking.current = false;
-    if (result) {
-      update("authenticated", result);
-    } else if (statusRef.current === "authenticated") {
-      update("expired", null);
-      setNotice(expiredNotice);
-    } else if (statusRef.current !== "expired") {
-      update("anonymous", null);
-    }
-  }, [signOutLocally, update]);
+      checking.current = true;
+      const requestId = ++sequence.current;
+      const current = () => mounted.current && sequence.current === requestId;
+      let result: CurrentUser | null;
+      try {
+        result = toCurrentUser(await operationsRef.current.me());
+      } catch (error) {
+        if (!current()) return;
+        checking.current = false;
+        if (error instanceof ApiError && error.status === 401) {
+          result = null;
+        } else {
+          // A failed recheck keeps a signed-in user; protected APIs still answer 401.
+          if (statusRef.current !== "authenticated")
+            update("unavailable", null);
+          return;
+        }
+      }
+      if (!current()) return;
+      checking.current = false;
+      if (result) {
+        update("authenticated", result);
+      } else if (previousSessionEnd === "signedOutElsewhere") {
+        update("anonymous", null);
+        setNotice(elsewhereNotice);
+      } else if (
+        statusRef.current === "authenticated" ||
+        previousSessionEnd === "expired"
+      ) {
+        update("expired", null);
+        setNotice(expiredNotice);
+      } else if (statusRef.current !== "expired") {
+        update("anonymous", null);
+      }
+    },
+    [signOutLocally, update],
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -163,8 +188,17 @@ export function AuthProvider({
       pendingRef.current = false;
       setServerLogoutPending(false);
       setNotice(null);
+      const wasAuthenticated = statusRef.current === "authenticated";
+      const signedOut =
+        event.newValue === null || event.newValue === SESSION_SIGNED_OUT;
       update("checking", null);
-      void check();
+      void check(
+        wasAuthenticated
+          ? signedOut
+            ? "signedOutElsewhere"
+            : "expired"
+          : undefined,
+      );
     };
     window.addEventListener("focus", recheck);
     document.addEventListener("visibilitychange", recheck);

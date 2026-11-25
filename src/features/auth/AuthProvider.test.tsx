@@ -184,6 +184,23 @@ describe("AuthProvider 재확인", () => {
     expect(state()).toHaveTextContent("unavailable:-");
   });
 
+  it("저장된 사용자가 남아 있는데 세션이 끝났으면 만료로 안내한다", async () => {
+    const me = vi.fn<AuthOperations["me"]>(async () => student);
+    const { auth, state } = setup({ me });
+    await flush();
+    me.mockResolvedValue(null);
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: SESSION_CHANGE_KEY,
+          newValue: "new-login",
+        }),
+      );
+    });
+    expect(state()).toHaveTextContent("expired:-");
+    expect(auth.current.notice?.message).toContain("만료");
+  });
+
   it("일시적인 재확인 실패는 로그인 사용자를 유지한다", async () => {
     const me = vi.fn<AuthOperations["me"]>(async () => student);
     const { state } = setup({ me });

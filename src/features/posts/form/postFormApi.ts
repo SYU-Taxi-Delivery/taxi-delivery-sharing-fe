@@ -105,6 +105,13 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 export function matchesRequest(item: unknown, request: PostRequest): boolean {
   if (typeof item !== "object" || item === null) return false;
   const post = item as Record<string, unknown>;
+  // A cancelled schedule can be recreated with the same fields and time.
+  if (
+    post.postStatus !== "OPEN" &&
+    post.postStatus !== "FULL" &&
+    post.postStatus !== "CLOSED"
+  )
+    return false;
   const same = (a: unknown, b: string) => text(a).trim() === b.trim();
   if (post.type !== request.type || !same(post.title, request.title))
     return false;
@@ -121,15 +128,12 @@ export function matchesRequest(item: unknown, request: PostRequest): boolean {
 export const postFormOperations: PostFormOperations = {
   // No similar-post search API yet; an empty result lets writing continue.
   findSimilar: async () => [],
-  create: async (request, options) => {
+  create: async (request) => {
     try {
       const { data } = await backendSendData<{ postId?: unknown }>(
         "POST",
         "/api/posts",
         toBackendBody(request, { includeType: true }),
-        options?.idempotencyKey
-          ? { "Idempotency-Key": options.idempotencyKey }
-          : undefined,
       );
       if (typeof data?.postId !== "string") throw new InvalidBackendResponse();
       return data.postId;

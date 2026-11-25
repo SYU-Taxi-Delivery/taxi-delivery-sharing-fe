@@ -209,7 +209,7 @@ describe("참여 신청·취소 연동", () => {
 
   it.each([
     ["POST_FULL", "방금 정원이 찼어요."],
-    ["JOIN_TIME_CLOSED", "신청 기한이 지났어요."],
+    ["JOIN_TIME_CLOSED", "참여 기한이 지났어요."],
     ["POST_CLOSED", "작성자가 모집을 마감했어요."],
     ["POST_CANCELLED", "모집이 취소됐어요."],
     ["POST_FINISHED", "일정이 끝났어요."],

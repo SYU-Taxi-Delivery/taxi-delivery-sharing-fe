@@ -2,7 +2,10 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostDetailError } from "@/features/posts/detail/postDetail";
 import { ParticipationPanel } from "./ParticipationPanel";
-import type { ParticipationSnapshot } from "./participation";
+import {
+  ParticipationRejected,
+  type ParticipationSnapshot,
+} from "./participation";
 import {
   useParticipation,
   type ParticipationOperations,
@@ -151,7 +154,7 @@ describe("participation panel", () => {
       fireEvent.click(screen.getByRole("button", { name: "내 참여 취소" }));
     });
 
-    const reason = "출발 10분 전부터 참여 신청과 취소가 마감됩니다.";
+    const reason = "출발 10분 전부터 참여와 취소가 마감돼요.";
     expect(
       screen.getAllByText(reason).filter((text) => !text.closest("dialog")),
     ).toHaveLength(1);
@@ -243,7 +246,7 @@ describe("participation panel", () => {
     setup({ ...initial, viewerRelation: "AUTHOR" });
     expect(screen.queryByRole("button", { name: "참여하기" })).toBeNull();
     expect(
-      screen.getByText("작성자는 본인 모집에 참여할 수 없습니다."),
+      screen.getByText("작성자는 본인 모집에 참여할 수 없어요."),
     ).toBeVisible();
   });
 
@@ -253,7 +256,7 @@ describe("participation panel", () => {
       viewerRelation: "NONE",
       serverTime: "2026-10-13T17:50:00+09:00",
     });
-    expect(screen.getByRole("heading", { name: "신청 마감" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "참여 마감" })).toBeVisible();
     expect(screen.getByRole("button", { name: "참여하기" })).toBeDisabled();
   });
 
@@ -268,7 +271,7 @@ describe("participation panel", () => {
         currentMemberCount: status === "FULL" ? 4 : 2,
       });
       expect(screen.getByRole("heading", { name: "일정 종료" })).toBeVisible();
-      expect(screen.getAllByText("완료된 모집입니다.")[0]).toBeVisible();
+      expect(screen.getAllByText("완료된 모집이에요.")[0]).toBeVisible();
       expect(screen.queryByRole("button", { name: "참여하기" })).toBeNull();
       expect(screen.queryByText(/참여 신청·취소는/)).toBeNull();
     },
@@ -284,7 +287,7 @@ describe("participation panel", () => {
         currentMemberCount: status === "FULL" ? 4 : 2,
       });
       expect(screen.getByRole("heading", { name: "일정 종료" })).toBeVisible();
-      expect(screen.getAllByText("완료된 모집입니다.")[0]).toBeVisible();
+      expect(screen.getAllByText("완료된 모집이에요.")[0]).toBeVisible();
       expect(screen.queryByRole("button", { name: "참여 취소" })).toBeNull();
       expect(screen.queryByText(/참여 신청·취소는/)).toBeNull();
     },
@@ -331,14 +334,18 @@ describe("participation panel", () => {
     expect(
       screen.getByRole("heading", { name: "2자리 남았어요" }),
     ).toBeVisible();
-    expect(screen.getByText(/현재 2 \/ 4명 · 작성자 포함/)).toBeVisible();
+    expect(screen.getByText("현재 2 / 4명")).toBeVisible();
+    expect(screen.getByText(/작성자 포함 인원이에요/)).toBeVisible();
     expect(screen.queryByText(/18:00 출발/)).toBeNull();
     expect(screen.queryByText(/이전까지/)).toBeNull();
     // The phone bar: seats left and the sign-up cutoff with its day word.
     expect(screen.getByText("2자리 남음")).toBeInTheDocument();
     // The same cutoff sits right above the button on wide screens (CSS
     // shows one of the two).
-    expect(screen.getAllByText("오늘 17:50까지 신청")).toHaveLength(2);
+    const barHint = document.querySelector('[data-bottom-hint="true"]');
+    expect(barHint).toHaveTextContent(/오늘 17:50까지 참여|참여 마감까지/);
+    // Wide screens: the time left, right above the button.
+    expect(screen.getAllByText(/^참여 마감까지 /).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "참여하기" })).toBeEnabled();
   });
 
@@ -371,7 +378,7 @@ describe("participation panel", () => {
     });
     expect(
       screen.getByRole("button", { name: "참여하기" }),
-    ).toHaveAccessibleDescription("모집 정원이 마감되었습니다.");
+    ).toHaveAccessibleDescription("모집 정원이 다 찼어요.");
   });
 
   it("a join rejected because the last seat was taken shows the reason once", async () => {
@@ -395,10 +402,46 @@ describe("participation panel", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
     });
-    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getAllByText("모집 정원이 다 찼어요.")).toHaveLength(1);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "참여 신청이 처리되지 않았어요",
     );
+  });
+
+  it("a refusal is brought into view above the phone bar and takes the lost focus", async () => {
+    const scrolled = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrolled;
+    try {
+      const operations = setup({
+        ...initial,
+        viewerRelation: "NONE",
+        currentMemberCount: 3,
+        participantNames: undefined,
+        communicationUrl: undefined,
+      });
+      vi.mocked(operations.join).mockRejectedValueOnce(
+        new ParticipationRejected("POST_FULL", {
+          status: "FULL",
+          recruitmentStatus: "FULL",
+          currentMemberCount: 4,
+          joinable: false,
+        }),
+      );
+      const button = screen.getByRole("button", { name: "참여하기" });
+      button.focus();
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent("방금 정원이 찼어요.");
+      // The pressed button is now disabled, so the message holds focus.
+      expect(button).toBeDisabled();
+      expect(alert).toHaveFocus();
+      expect(scrolled).toHaveBeenCalledWith({ block: "nearest" });
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
   });
 
   it("a join that a focus recheck finds full is not sent and shows the reason once", async () => {
@@ -429,7 +472,7 @@ describe("participation panel", () => {
       });
     });
     expect(operations.join).not.toHaveBeenCalled();
-    expect(screen.getAllByText("모집 정원이 마감되었습니다.")).toHaveLength(1);
+    expect(screen.getAllByText("모집 정원이 다 찼어요.")).toHaveLength(1);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "모집 상태가 바뀌어 참여 신청을 보내지 않았어요",
     );
@@ -558,11 +601,21 @@ describe("participation scene", () => {
     expect(screen.getByRole("alert")).toBeVisible();
   });
 
-  it("shows the order's bags at rest, with yours only while you have joined", async () => {
+  it("always has 두유콩 in the rest picture; the delivery shows your bag only while you have joined", async () => {
     setup({ ...initial, type: "DELIVERY" });
     await settle();
     await wait(1100);
-    expect(scene()?.querySelectorAll('[class*="restBag"]')).toHaveLength(3);
+    expect(scene()?.querySelectorAll('[class*="waiter"]')).toHaveLength(1);
+    expect(scene()?.querySelectorAll('[class*="restBag"]')).toHaveLength(1);
+  });
+
+  it("the taxi shows 두유콩 waiting beside it, or in the back window once joined", async () => {
+    setup(guest);
+    await settle();
+    await wait(1100);
+    expect(scene()?.querySelectorAll('[class*="waiter"]')).toHaveLength(1);
+    // Driver only: one window bean.
+    expect(scene()?.querySelectorAll('[class*="driver"]')).toHaveLength(1);
   });
 
   it("wiggles now and then after a quiet pause, never while a request is pending", async () => {

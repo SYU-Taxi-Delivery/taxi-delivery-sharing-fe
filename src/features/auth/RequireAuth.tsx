@@ -40,7 +40,7 @@ export function RequireAuth({
   loginLabel?: string;
   children: ReactNode;
 }) {
-  const { status, user, check } = useAuth();
+  const { status, user, check, notice } = useAuth();
   const pathname = usePathname();
   const titleId = useId();
 
@@ -74,19 +74,25 @@ export function RequireAuth({
 
   if (status !== "authenticated" || !user) {
     const expired = status === "expired";
+    const elsewhere =
+      status === "anonymous" && notice?.kind === "signedOutElsewhere";
     return (
       <section
         className={styles.notice}
         aria-labelledby={titleId}
         // Announce the heading and the next step together, without repeating
         // "로그인이 만료됐어요" in the text below it.
-        role={expired ? "alert" : undefined}
+        role={expired || elsewhere ? "alert" : undefined}
       >
         <h2 id={titleId} className={styles.noticeTitle}>
-          {expired ? "로그인이 만료됐어요" : "로그인이 필요해요"}
+          {expired
+            ? "로그인이 만료됐어요"
+            : elsewhere
+              ? "다른 탭에서 로그아웃했어요"
+              : "로그인이 필요해요"}
         </h2>
         <p className={styles.muted}>
-          {expired
+          {expired || elsewhere
             ? "다시 로그인하면 보던 화면으로 돌아와요."
             : "삼육대학교 학생만 이용할 수 있어요. 학교 이메일로 로그인해 주세요."}
         </p>

@@ -241,7 +241,13 @@ export const DEFAULT_POST_QUERY: PostQuery = {
 };
 
 export const SEARCH_TEXT_MAX = 100;
-const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+/** Check wall-clock fields in UTC so the browser's time zone cannot shift them. */
+export function isLocalMinute(value?: string): value is string {
+  if (value?.length !== 16) return false;
+  const iso = `${value}:00.000Z`;
+  const date = new Date(iso);
+  return Number.isFinite(date.getTime()) && date.toISOString() === iso;
+}
 const TEXT_KEYS = [
   "q",
   "departure",
@@ -274,8 +280,8 @@ export function cleanSearch(query: PostQuery): PostQuery {
     next.direction = query.direction;
   if (query.time && query.time !== "custom") next.time = query.time;
   if (query.time === "custom") {
-    const from = query.from && localMinute.test(query.from) ? query.from : "";
-    const to = query.to && localMinute.test(query.to) ? query.to : "";
+    const from = isLocalMinute(query.from) ? query.from : undefined;
+    const to = isLocalMinute(query.to) ? query.to : undefined;
     if (from || to) {
       next.time = "custom";
       if (from) next.from = from;

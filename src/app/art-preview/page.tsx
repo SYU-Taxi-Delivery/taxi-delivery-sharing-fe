@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   BagArt,
+  DeliveryArt,
   BeanArt,
   CampusScene,
   PersonIcon,
@@ -12,7 +13,7 @@ import {
 export const metadata = { robots: { index: false, follow: false } };
 
 /*
- * Development-only sheet of the 두유팟 icon set (taxi, lunch bag, 두유콩):
+ * Development-only sheet of the 두유팟 icon set (taxi, delivery scooter and box, 두유콩):
  * the set side by side, then each drawing at the size the app really uses.
  * Not available in production builds.
  */
@@ -27,6 +28,9 @@ export default function ArtPreviewPage() {
           <TaxiArt size="lg" className="h-24 w-32" />
         </Cell>
         <Cell label="배달 lg">
+          <DeliveryArt size="lg" className="h-24 w-32" />
+        </Cell>
+        <Cell label="배달통 (장면용)">
           <BagArt size="lg" className="h-24 w-24" />
         </Cell>
         <Cell label="두유콩 full">
@@ -43,15 +47,15 @@ export default function ArtPreviewPage() {
         </Cell>
         <Cell label="카드 48px">
           <TaxiArt className="w-12" />
-          <BagArt className="w-10" />
+          <DeliveryArt className="w-12" />
         </Cell>
         <Cell label="유형 배지 40px">
           <TaxiArt className="w-10" />
-          <BagArt className="w-[1.875rem]" />
+          <DeliveryArt className="w-10" />
         </Cell>
         <Cell label="상세 68px">
           <TaxiArt size="lg" className="w-[4.25rem]" />
-          <BagArt size="lg" className="w-16" />
+          <DeliveryArt size="lg" className="w-[4.25rem]" />
         </Cell>
         <Cell label="두유콩 얼굴 32px">
           <BeanArt detail="face" className="h-8 w-[1.8rem]" />

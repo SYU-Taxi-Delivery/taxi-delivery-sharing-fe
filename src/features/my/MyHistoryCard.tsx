@@ -13,7 +13,7 @@ import {
 import styles from "./my.module.css";
 import { GUIDE_ID } from "@/features/posts/detail/postDetail";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, ClockIcon, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const time = new Intl.DateTimeFormat("ko-KR", {
@@ -74,53 +74,54 @@ export function MyHistoryCard({
       ? item.communicationUrl
       : null;
 
+  const taxi = item.type === "TAXI";
   return (
-    <article className={styles.card} aria-labelledby={titleId}>
-      <div className={styles.badges}>
-        <span className={styles.type}>
-          {item.type === "TAXI" ? <TaxiArt /> : <BagArt />}
-          {item.type === "TAXI" ? "택시" : "배달"}
+    <article
+      className={styles.card}
+      aria-labelledby={titleId}
+      data-type={taxi ? "taxi" : "delivery"}
+      data-available={available}
+    >
+      {/* My own relation sits on top with its own label; the post's state
+          stays with the type at the bottom, so the two never read as one. */}
+      <p className={styles.relationBar}>
+        <span className={styles.relationLabel}>
+          {author ? "내가 쓴 모집" : "내 참여"}
         </span>
-        {/* Joined: one compact tag, two states that can hold together, mine
-            (filled half, 참여 중) and the post's (outlined half, e.g. 정원
-            마감). In 작성한 글 every card is mine, so only the post's own
-            state shows (모집 중 · 정원 마감 · 작성자 마감). */}
-        {author ? (
-          <span className={styles.status}>
-            <span className={styles.srOnly}>모집, </span>
-            {label}
+        {!author && <span className={styles.relation}>참여 중</span>}
+      </p>
+
+      {/* ① when on the left, seats left on the right (same as the board) */}
+      <div className={styles.head}>
+        <span className={styles.sticker} aria-hidden="true">
+          {taxi ? <TaxiArt /> : <DeliveryArt />}
+        </span>
+        <p className={styles.when}>
+          <span>
+            {dayLabel(referenceMs, nowMs)} {time.format(referenceMs)}{" "}
+            <span className={styles.whenVerb}>{verb}</span>
           </span>
-        ) : (
-          <span className={styles.stateTag}>
-            <span className={styles.relation}>
-              <span className={styles.srOnly}>내 참여, </span>
-              참여 중
-            </span>
-            <span className={styles.status}>
-              <span className={styles.srOnly}>모집, </span>
-              {label}
-            </span>
+        </p>
+        {available && (
+          <span className={styles.seats} data-last={remaining === 1}>
+            {remaining}자리 남음
           </span>
         )}
       </div>
 
-      <p className={styles.when}>
-        <ClockIcon className={styles.scheduleIcon} />
-        <span>
-          {dayLabel(referenceMs, nowMs)} {time.format(referenceMs)} {verb}
-        </span>
-      </p>
-
+      {/* ② the place, ③ the pickup */}
       <div className={styles.place}>
         <h3 id={titleId} className={styles.cardTitle}>
           <Link href={detailHref} className={styles.titleLink}>
-            {item.type === "TAXI" ? (
+            {taxi ? (
               <>
                 <span className={styles.stop}>
+                  <span className={styles.srOnly}>출발 </span>
                   {item.departure}
                   <span className={styles.srOnly}>에서</span>
                 </span>
                 <span className={styles.stop} data-end="true">
+                  <span className={styles.srOnly}>도착 </span>
                   {item.destination}
                   <span className={styles.srOnly}>까지</span>
                 </span>
@@ -130,22 +131,27 @@ export function MyHistoryCard({
             )}
           </Link>
         </h3>
-        {item.type === "DELIVERY" && (
+        {!taxi && (
           <p className={styles.muted}>수령 장소 · {item.pickupLocation}</p>
         )}
       </div>
 
-      {/* Secondary: what is left and who is in, one small muted line. */}
+      {/* ④ the headcount, then type · post status (left) and author (right) */}
       <p className={styles.meta} data-testid="seat-summary">
-        {available && (
-          <span className={styles.seats} data-last={remaining === 1}>
-            {remaining}자리 남음
-          </span>
-        )}
+        현재 {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
+      </p>
+      <p className={styles.footMeta}>
         <span>
-          현재 {item.currentMemberCount} / {item.capacity}명 · 작성자 포함
+          <span className={styles.typeWord}>{taxi ? "택시" : "배달"}</span>
+          <span aria-hidden="true"> · </span>
+          <span className={styles.status}>
+            <span className={styles.srOnly}>모집 상태 </span>
+            {label}
+          </span>
         </span>
-        {item.authorName && !author && <span>작성자 {item.authorName}</span>}
+        {item.authorName && !author && (
+          <span className={styles.authorName}>작성자 {item.authorName}</span>
+        )}
       </p>
 
       {author && (
@@ -156,7 +162,8 @@ export function MyHistoryCard({
         </p>
       )}
 
-      {/* One full-width primary action, then 참여 취소 on its own row. */}
+      {/* The main action first; 참여 취소 is the quieter one, with its
+          deadline right under the button it belongs to. */}
       <div className={styles.actions}>
         {author ? (
           <Link href={detailHref} className={styles.primaryAction}>
@@ -180,7 +187,7 @@ export function MyHistoryCard({
           </Link>
         )}
         {!author && (
-          <div className={styles.cancelRow}>
+          <div className={styles.cancelGroup}>
             {availability.action === "cancel" && (
               <button
                 type="button"
@@ -195,7 +202,7 @@ export function MyHistoryCard({
             )}
             <span
               id={cutoffId}
-              className={styles.cutoff}
+              className={styles.cancelCutoff}
               data-closed={!cancellable}
             >
               {cancellable

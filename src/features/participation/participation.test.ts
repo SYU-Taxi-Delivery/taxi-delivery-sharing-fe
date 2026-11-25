@@ -182,14 +182,14 @@ describe.each(["TAXI", "DELIVERY"] as const)("%s 참여 정책", (type) => {
     expect(
       getParticipationAvailability(input, Date.parse(input.referenceTime))
         .reason,
-    ).toBe("완료된 모집입니다.");
+    ).toBe("완료된 모집이에요.");
     expect(input).toEqual(original);
     expect(hideUnavailableDetails(input).status).toBe("OPEN");
   });
 
   it.each([
-    { status: "CANCELLED", reason: "취소된 모집입니다." },
-    { status: "REMOVED", reason: "삭제된 모집입니다." },
+    { status: "CANCELLED", reason: "취소된 모집이에요." },
+    { status: "REMOVED", reason: "삭제된 모집이에요." },
   ] as const)(
     "AC-JOIN-006-06: T 이후에도 $status의 사유를 완료로 바꾸지 않는다",
     ({ status, reason }) => {

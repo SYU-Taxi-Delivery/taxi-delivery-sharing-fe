@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthOperations, CurrentUser } from "./auth";
+import { SESSION_CHANGE_KEY, SESSION_SIGNED_OUT } from "./authApi";
 import { AccountMenu } from "./AccountMenu";
 import { AuthProvider, useAuth } from "./AuthProvider";
 import { AppProviders } from "@/features/demo/AppProviders";
@@ -52,6 +53,33 @@ describe("RequireAuth", () => {
     ).toHaveAttribute("href", "/auth-preview?next=%2Fmy-preview");
     expect(router.replace).not.toHaveBeenCalled();
   });
+  it("다른 탭에서 로그아웃하면 만료가 아니라 로그아웃했다고 안내한다", async () => {
+    const me = vi.fn<AuthOperations["me"]>(async () => student);
+    renderWith(
+      me,
+      <RequireAuth>
+        <p>참가자 명단</p>
+      </RequireAuth>,
+    );
+    await act(async () => {});
+    expect(screen.getByText("참가자 명단")).toBeVisible();
+    me.mockResolvedValue(null);
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: SESSION_CHANGE_KEY,
+          newValue: SESSION_SIGNED_OUT,
+        }),
+      );
+    });
+    expect(screen.queryByText("참가자 명단")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "다른 탭에서 로그아웃했어요",
+    );
+    expect(screen.queryByText(/만료/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "로그인하러 가기" })).toBeVisible();
+  });
+
   it("확인 중에는 보호 내용을 렌더링하지 않는다", () => {
     renderWith(
       () => new Promise(() => {}),

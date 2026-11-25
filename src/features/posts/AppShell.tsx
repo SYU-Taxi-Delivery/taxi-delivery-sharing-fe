@@ -13,16 +13,26 @@ import { AccountMenu } from "@/features/auth/AccountMenu";
 import styles from "./posts.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { BoardIcon, PersonIcon } from "@/features/ui/art";
+import { clearListScroll } from "./listScroll";
 import { useTypingFlag } from "./useTypingFlag";
 
-type LeaveGuard = (trigger: HTMLElement, href: string) => boolean;
+/**
+ * A page's leave check. Returns true to hold the navigation (it then asks
+ * and, when the user leaves anyway, calls `onLeave` before going to `href`).
+ */
+type LeaveGuard = (
+  trigger: HTMLElement,
+  href: string,
+  onLeave?: () => void,
+) => boolean;
 export const AppShellLeaveGuard = createContext<
   ((guard: LeaveGuard | null) => void) | null
 >(null);
 
 /*
  * Signed-in service frame: logo, account menu, main navigation and footer.
- * The logo + name goes to the posts list, the same place as the 모집글 tab.
+ * The logo + name goes to the first screen: the posts list with no search,
+ * scrolled to the top. The 모집글 tab returns to the list as you left it.
  * The one main nav sits in the header on wide screens and becomes the phone's
  * bottom bar. A page's main action (participation button, form submit row,
  * marked data-bottom-action) stacks on top of that bar in the same bottom
@@ -43,27 +53,37 @@ export function AppShell({
 }) {
   const path = useAppPath();
   const typing = useTypingFlag();
+  // The logo is the first screen: the whole list with no search, at the top
+  // (the 모집글 tab keeps the list you were on).
+  const home = postsPath.split("?")[0] || "/posts";
   const leaveGuard = useRef<LeaveGuard>(null);
   const setLeaveGuard = useCallback((guard: LeaveGuard | null) => {
     leaveGuard.current = guard;
   }, []);
-  function guardNavigation(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  /** Runs `onLeave` when the link goes now, or after the page's leave check. */
+  function guardNavigation(
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+    onLeave?: () => void,
+  ) {
     const sameTab =
       event.button === 0 &&
       !event.defaultPrevented &&
       !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey);
-    if (sameTab && leaveGuard.current?.(event.currentTarget, href)) {
+    if (sameTab && leaveGuard.current?.(event.currentTarget, href, onLeave)) {
       event.preventDefault();
+      return;
     }
+    onLeave?.();
   }
   return (
     <div className={styles.screen} data-typing={typing || undefined}>
       <header className={styles.frameHeader}>
         <div className={styles.header}>
           <Link
-            href={path(postsPath)}
+            href={path(home)}
             className={styles.brand}
-            onClick={(event) => guardNavigation(event, postsPath)}
+            onClick={(event) => guardNavigation(event, home, clearListScroll)}
           >
             <Image src="/auth/logo.svg" width={32} height={32} alt="" />
             두유팟

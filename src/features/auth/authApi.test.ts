@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { envelope, failure, fakeBackend } from "@/test/fakeBackend";
-import { authOperations, SESSION_CHANGE_KEY } from "./authApi";
+import {
+  authOperations,
+  SESSION_CHANGE_KEY,
+  SESSION_SIGNED_OUT,
+} from "./authApi";
 
 const me = "GET /api/users/me";
 const credentials = { email: " student1@syuin.ac.kr ", password: "demo-pass" };
@@ -131,6 +135,9 @@ describe("로그인 세션 연동", () => {
     await expect(authOperations.logout()).resolves.toBeUndefined();
     expect(calls.at(-1)?.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
     expect(fetchMock.mock.calls.at(-1)?.[1]?.redirect).toBe("manual");
+    expect(window.localStorage.getItem(SESSION_CHANGE_KEY)).toBe(
+      SESSION_SIGNED_OUT,
+    );
     expect(authOperations.isLogoutPending?.()).toBe(false);
   });
 

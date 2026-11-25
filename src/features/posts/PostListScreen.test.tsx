@@ -100,7 +100,7 @@ describe("8주차 목록 상태 갱신", () => {
     ["TAXI", undefined],
     ["DELIVERY", undefined],
   ])(
-    "%s / %s 신청 마감 정각과 일정 종료에 서버 시계로 갱신한다",
+    "%s / %s 참여 마감 정각과 일정 종료에 서버 시계로 갱신한다",
     async (type, recruitmentStatus) => {
       vi.useFakeTimers();
       const referenceTime = "2026-11-16T00:05:00+09:00";
@@ -131,7 +131,7 @@ describe("8주차 목록 상태 갱신", () => {
     },
   );
 
-  it("조회 후 기기 시계를 바꿔도 신청 마감이 앞당겨지거나 되돌아가지 않는다", async () => {
+  it("조회 후 기기 시계를 바꿔도 참여 마감이 앞당겨지거나 되돌아가지 않는다", async () => {
     vi.useFakeTimers();
     const deadline = Date.parse("2026-11-15T23:50:00+09:00");
     vi.setSystemTime(new Date(deadline - 60_000));
@@ -303,7 +303,11 @@ describe("PostListScreen", () => {
       "data-last",
       "true",
     );
-    expect(card).toHaveTextContent("택시·모집 중·박지민");
+    expect(card).toHaveTextContent("택시·모집 중·작성자 박지민");
+    // Place, then the time band, then type · status · author.
+    const text = card.textContent ?? "";
+    expect(text.indexOf("삼육대학교")).toBeLessThan(text.indexOf("출발"));
+    expect(text.indexOf("1자리 남음")).toBeLessThan(text.indexOf("모집 중"));
     expect(card).not.toHaveTextContent("3 / 4명");
   });
 
@@ -344,7 +348,7 @@ describe("PostListScreen", () => {
     expect(within(card).getByText("모집 중")).toBeVisible();
   });
 
-  it("서버 시각으로 신청 마감이 지났으면 기기 시계가 늦어도 상세와 같이 마감으로 보인다", async () => {
+  it("서버 시각으로 참여 마감이 지났으면 기기 시계가 늦어도 상세와 같이 마감으로 보인다", async () => {
     // Server: 5 minutes before T (past the 10-minute cutoff). Device: 30 minutes slow.
     const evaluatedAt = Date.parse(taxi.referenceTime) - 5 * 60_000;
     vi.spyOn(Date, "now").mockReturnValue(evaluatedAt - 30 * 60_000);
@@ -533,9 +537,35 @@ describe("PostListScreen", () => {
     expect(
       within(sheet).queryByRole("checkbox", { name: /참여 가능/ }),
     ).not.toBeInTheDocument();
+    // The sort sits over the list where the current order shows: a button
+    // opening a menu of orders.
     expect(
-      within(sheet).getByRole("radio", { name: "최근 등록 순" }),
-    ).toBeInTheDocument();
+      within(sheet).queryByRole("radio", { name: "최근 등록 순" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("정렬 버튼은 현재 정렬을 보여 주고, 누르면 정렬 목록을 펼친다", async () => {
+    await setup(async () => pageOf([taxi]));
+    const button = screen.getByRole("button", {
+      name: /^정렬:\s*출발·마감 빠른 순$/,
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "최근 등록 순" })).toBeNull();
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const menu = within(screen.getByRole("group", { name: "정렬" }));
+    expect(
+      menu.getByRole("link", { name: "출발·마감 빠른 순" }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(menu.getByRole("link", { name: "최근 등록 순" })).toHaveAttribute(
+      "href",
+      "/posts?sort=RECENT",
+    );
+    fireEvent.keyDown(menu.getByRole("link", { name: "최근 등록 순" }), {
+      key: "Escape",
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveFocus();
   });
 
   it("참여 중인 모집은 상태 옆에 참여 중을 함께 보여 준다", async () => {
@@ -685,7 +715,9 @@ describe("PostListScreen", () => {
 
   it("AC-UI-FILTER-08, AC-UI-FILTER-09: 기본은 기준시각 빠른 순이고 정렬·검색은 목록에 펼치지 않는다", async () => {
     await setup(async () => pageOf([taxi]));
-    expect(screen.getByText("출발·마감 빠른 순")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /출발·마감 빠른 순/ }),
+    ).toBeVisible();
     expect(screen.queryByText("최신순")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();

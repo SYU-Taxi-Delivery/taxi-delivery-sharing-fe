@@ -80,6 +80,31 @@ describe("backend client", () => {
     expect(calls.at(-1)?.headers.get("Content-Type")).toBe("application/json");
   });
 
+  it.each(["POST", "PATCH", "DELETE"] as const)(
+    "%s 응답이 유실돼도 변경 요청을 한 번만 보낸다",
+    async (method) => {
+      const { calls } = fakeBackend({
+        [`${method} /api/posts/1`]: () => {
+          throw new TypeError("connection closed");
+        },
+      });
+      await expect(backendSend(method, "/api/posts/1")).rejects.toThrow(
+        "connection closed",
+      );
+      expect(calls.map((call) => call.method)).toEqual(["GET", method]);
+    },
+  );
+
+  it("CSRF_INVALID 코드라도 5xx이면 변경 요청을 재시도하지 않는다", async () => {
+    const { calls } = fakeBackend({
+      "POST /api/posts": () => failure(502, "CSRF_INVALID"),
+    });
+    await expect(backendSend("POST", "/api/posts")).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(calls.map((call) => call.method)).toEqual(["GET", "POST"]);
+  });
+
   it("다른 403은 재시도하지 않는다", async () => {
     let attempts = 0;
     fakeBackend({

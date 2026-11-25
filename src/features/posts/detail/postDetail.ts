@@ -293,7 +293,7 @@ export type DetailStatusLabel =
   | "모집 중"
   | "정원 마감"
   | "작성자 마감"
-  | "신청 마감"
+  | "참여 마감"
   | "모집 취소"
   | "일정 종료"
   | "삭제된 모집";
@@ -302,7 +302,7 @@ const DETAIL_LABELS: Record<RecruitmentStatus, DetailStatusLabel> = {
   RECRUITING: "모집 중",
   FULL: "정원 마감",
   CLOSED: "작성자 마감",
-  APPLICATION_CLOSED: "신청 마감",
+  APPLICATION_CLOSED: "참여 마감",
   CANCELLED: "모집 취소",
   FINISHED: "일정 종료",
   REMOVED: "삭제된 모집",
@@ -347,7 +347,7 @@ export function detailStatus(
       case "OPEN":
         if (detail.currentMemberCount >= detail.capacity) return "정원 마감";
         return nowMs >= participationDeadlineMs(detail) || !detail.joinable
-          ? "신청 마감"
+          ? "참여 마감"
           : "모집 중";
     }
   })();

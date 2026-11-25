@@ -117,8 +117,42 @@
   font-weight: 600;
 }
 
-.fact span[data-urgent="true"] {
+/* Schedule: when it happens, the tinted box. */
+.fact[data-kind="schedule"] strong {
+  font-size: var(--type-heading);
+}
+
+/* Deadline: until when one can join or leave, a white box with an outline,
+   so the two times never read as a pair of the same thing. */
+.fact[data-kind="deadline"] {
+  border: 1.5px solid var(--primary-soft);
+  background: var(--canvas);
+}
+
+.fact[data-kind="deadline"] dd > span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  color: var(--posts-primary-text);
+  font-weight: 700;
+}
+
+.fact[data-kind="deadline"][data-urgent="true"] {
+  border-color: color-mix(in srgb, var(--posts-warn) 35%, transparent);
+}
+
+.fact[data-kind="deadline"][data-urgent="true"] dd > span {
   color: var(--posts-warn);
+}
+
+.soonTag {
+  display: inline-flex;
+  padding: 0 0.4375rem;
+  border: 1px solid currentColor;
+  border-radius: var(--round-pill);
+  font-size: var(--type-micro);
+  line-height: 1.5;
 }
 
 /* ───────── More menu (⋯): copy link, report ───────── */
@@ -245,11 +279,13 @@
   height: 4.25rem;
   place-items: center;
   border-radius: 1.125rem;
-  background: var(--primary-soft);
+  background: var(--taxi-tile);
+  box-shadow: inset 0 0 0 1.5px var(--taxi-tile-edge);
 }
 
 .sticker[data-type="delivery"] {
-  background: var(--delivery-tint);
+  background: var(--delivery-tile);
+  box-shadow: inset 0 0 0 1.5px var(--delivery-tile-edge);
 }
 
 .sticker svg {
@@ -260,6 +296,11 @@
 
 .sticker svg[data-art="bag"] {
   width: 4rem;
+}
+
+.sticker svg[data-art="taxi"],
+.sticker svg[data-art="scooter"] {
+  width: 3.25rem;
 }
 
 .sticker[data-muted="true"] svg {
@@ -830,6 +871,7 @@ p.stop::before {
 .boneLine {
   display: block;
   border-radius: 0.5rem;
+  box-shadow: none;
   background: linear-gradient(
       90deg,
       transparent 0%,

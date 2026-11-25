@@ -135,10 +135,17 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(button).toHaveFocus();
   });
 
-  it("택시 조건(추천 장소, 바꾸기, 학교 도착, 시간대, 정렬)을 주소로 적용한다", async () => {
+  it("택시 조건(추천 장소, 바꾸기, 학교 도착, 시간대)을 주소로 적용한다", async () => {
     const operations = await setup(taxiQuery);
     fireEvent.click(screen.getByRole("button", { name: "필터" }));
     const sheet = within(screen.getByRole("dialog", { name: "필터" }));
+    // Place fields wait under 상세 조건; the search box comes first.
+    const more = sheet.getByRole("button", { name: /상세 조건/ });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    // The sort lives over the list now, not in the sheet.
+    expect(sheet.queryByRole("radio", { name: "최근 등록 순" })).toBeNull();
 
     // One suggestion list; it starts on the empty 출발지.
     expect(sheet.getAllByRole("group", { name: /추천 장소/ })).toHaveLength(1);
@@ -190,7 +197,6 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
       within(direction).getByRole("radio", { name: "도착" }),
     ).toBeChecked();
     fireEvent.click(sheet.getByRole("button", { name: "오늘 밤" }));
-    fireEvent.click(sheet.getByRole("radio", { name: "최근 등록 순" }));
 
     // The draft's count is asked once typing settles.
     await act(async () => {
@@ -202,14 +208,13 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
         destination: "삼육대학교 정문",
         direction: "TO_SCHOOL",
         time: "tonight",
-        sort: "RECENT",
       }),
     );
     fireEvent.click(
       sheet.getByRole("button", { name: "적용하고 결과 1개 보기" }),
     );
     expect(router.push).toHaveBeenCalledWith(
-      "/posts?type=TAXI&departure=%EC%84%9D%EA%B3%84&destination=%EC%82%BC%EC%9C%A1%EB%8C%80%ED%95%99%EA%B5%90+%EC%A0%95%EB%AC%B8&direction=TO_SCHOOL&time=tonight&sort=RECENT",
+      "/posts?type=TAXI&departure=%EC%84%9D%EA%B3%84&destination=%EC%82%BC%EC%9C%A1%EB%8C%80%ED%95%99%EA%B5%90+%EC%A0%95%EB%AC%B8&direction=TO_SCHOOL&time=tonight",
       { scroll: false },
     );
   });
@@ -277,7 +282,8 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     fireEvent.click(screen.getByRole("button", { name: "필터" }));
     const sheet = within(screen.getByRole("dialog", { name: "필터" }));
     expect(sheet.queryByLabelText("출발지")).not.toBeInTheDocument();
-    expect(sheet.getByLabelText("모집글 제목·장소 검색")).toBeVisible();
+    expect(sheet.getByLabelText("검색어")).toBeVisible();
+    fireEvent.click(sheet.getByRole("button", { name: /상세 조건/ }));
     fireEvent.change(sheet.getByLabelText("음식점"), {
       target: { value: "김밥" },
     });

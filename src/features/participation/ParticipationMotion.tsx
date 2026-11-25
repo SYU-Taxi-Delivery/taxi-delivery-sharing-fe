@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   BAG_PLACE,
   BagShape,
-  BasketBack,
-  BasketFront,
   Bean,
-  GREEN,
   INK,
   Line,
-  TAXI,
-  TaxiLights,
-  TaxiSign,
-  TaxiWheels,
+  OpenTaxiBack,
+  OpenTaxiFront,
 } from "@/features/ui/art";
 import type { ParticipationMotion as Motion } from "./useParticipation";
 import styles from "./motion.module.css";
@@ -23,12 +18,15 @@ import styles from "./motion.module.css";
  * the corner the panel always keeps free, so nothing ever moves the text,
  * the seat row or the buttons. One controller runs both kinds:
  *
- * - rest: the parked taxi with its 두유콩 driver, or the basket with the
- *   bags of the order (one more when you have joined). Always shown.
+ * - rest: always shown, and 두유콩 is always in it.
+ *   - taxi: the open taxi with its 두유콩 driver and a 두유콩 waving beside
+ *     it, or, once you have joined, that 두유콩 in the back seat.
+ *   - delivery: a big delivery box (the one on the scooter icon) with a 두유콩 waving
+ *     beside it, and your small bag on its lid once you have joined.
  * - enter: once, the first time the scene is on screen after the detail page
- *   opens — the taxi pulls in and stops / the basket lands and the bags pop
- *   in. Never shows anyone boarding, so it can't be read as a join.
- * - idle: a small wiggle (driver nod + engine bob / one bag shuffles) after a
+ *   opens — the taxi pulls in and stops / the bag lands, and 두유콩 hops.
+ *   Never shows anyone boarding, so it can't be read as a join.
+ * - idle: a small wiggle (driver nod + engine bob, 두유콩 waves) after a
  *   quiet 6.5–9.5 s, only while the scene is on screen, the tab is visible and
  *   no request is in flight. Nothing is "caught up" after coming back.
  * - join / leave: the existing result scenes, only after the request
@@ -178,9 +176,19 @@ export function ParticipationMotion({
       >
         <Line d="M4 62H132" stroke="var(--input-border)" fill="none" />
         {taxi ? (
-          <TaxiScene rider={result} />
+          <TaxiScene rider={result} joined={joined} />
         ) : (
           <DeliveryScene moving={result} mine={!result && joined} />
+        )}
+        {/* 두유콩 waits beside the car / the bag. In the taxi the join
+            scene's rider starts from the same spot, so it hides then; by the
+            bag it stays and tosses your bag onto the lid. */}
+        {!(taxi && (result || joined)) && (
+          <g transform={taxi ? "translate(42 62)" : "translate(62 62)"}>
+            <g className={styles.waiter}>
+              <Bean look="ivory" wave face="happy" />
+            </g>
+          </g>
         )}
         {result && (
           <Hello
@@ -194,38 +202,23 @@ export function ParticipationMotion({
   );
 }
 
-const CAR = "translate(62 11.2) scale(1.5)";
+/* The open taxi on the 48 × 40 icon grid, wheels on the ground line. */
+const CAR = "translate(70 13.64) scale(1.3)";
 
-/** The taxi driver: a small 두유콩 seen through the front window. */
-function Driver() {
-  const clip = useId();
-  return (
-    <>
-      <clipPath id={clip}>
-        <path d={TAXI.frontWindow} />
-      </clipPath>
-      <g clipPath={`url(#${clip})`}>
-        <g className={styles.driver}>
-          <g transform="translate(28.6 20.4) scale(0.34)">
-            <Bean look="green" detail="face" />
-          </g>
-        </g>
-      </g>
-      <Line d={TAXI.frontWindow} fill="none" />
-    </>
-  );
-}
-
-function TaxiScene({ rider }: { rider: boolean }) {
+/**
+ * The open taxi with its 두유콩 driver. Once you have joined, you sit in the
+ * back seat; while a result plays, the rider hops in or out over the side
+ * (drawn between the two layers so the body hides its feet).
+ */
+function TaxiScene({ rider, joined }: { rider: boolean; joined: boolean }) {
   return (
     <>
       <g className={styles.hop}>
-        <ellipse cx={98} cy={62.6} rx={30} ry={2} fill={INK} opacity={0.1} />
-        {/* cabin seen through the open rear door */}
+        <ellipse cx={101} cy={62.6} rx={28} ry={2} fill={INK} opacity={0.1} />
         <g transform={CAR}>
-          <path
-            d={TAXI.door}
-            fill="color-mix(in srgb, var(--primary-text) 45%, var(--text))"
+          <OpenTaxiBack
+            passenger={joined && !rider}
+            driverClassName={styles.driver}
           />
         </g>
         {rider && (
@@ -234,21 +227,7 @@ function TaxiScene({ rider }: { rider: boolean }) {
           </g>
         )}
         <g transform={CAR}>
-          <TaxiSign size="lg" />
-          <Line
-            d={`${TAXI.body} ${TAXI.door}`}
-            fillRule="evenodd"
-            fill={GREEN}
-          />
-          <Line d={TAXI.frontWindow} fill="#fff" />
-          <Driver />
-          <TaxiLights />
-          <TaxiWheels />
-          <g className={styles.door}>
-            <Line d={TAXI.door} fill={GREEN} />
-            <Line d={TAXI.doorWindow} fill="#fff" />
-            <Line d="M19.4 19.6H21.6" fill="none" />
-          </g>
+          <OpenTaxiFront size="lg" />
         </g>
       </g>
       {rider && (
@@ -263,35 +242,31 @@ function TaxiScene({ rider }: { rider: boolean }) {
 }
 
 /**
- * The shared order: two bags from the others, plus yours when you have
- * joined (`mine`), or the bag that flies in/out during a result (`moving`).
+ * The shared order: one big delivery box (the same box as on the scooter icon), with
+ * your small bag on its lid once you have joined (`mine`), or the bag that
+ * flies on/off during a result (`moving`).
  */
 function DeliveryScene({ moving, mine }: { moving: boolean; mine: boolean }) {
   return (
     <>
-      <ellipse cx={103} cy={62.6} rx={28} ry={2} fill={INK} opacity={0.1} />
+      <ellipse cx={104} cy={62.6} rx={24} ry={2} fill={INK} opacity={0.1} />
       <g className={styles.basket}>
-        <g transform="translate(76 42)">
-          <BasketBack />
-        </g>
-        <g transform="translate(88 54)">
-          <g className={styles.restBag}>
-            <g transform={BAG_PLACE(0.55)}>
-              <BagShape />
-            </g>
+        <g transform="translate(104 62)">
+          <g transform={BAG_PLACE(1.1)}>
+            <BagShape size="lg" />
           </g>
         </g>
-        <g transform="translate(119 54)">
-          <g className={styles.restBag}>
-            <g transform={BAG_PLACE(0.55)}>
-              <BagShape />
-            </g>
+        {/* steam: something warm inside (your bag sits there once joined) */}
+        {!mine && !moving && (
+          <g className={styles.steam}>
+            <Line d="M95 30Q93 27 95 24.5Q97 22 95 19" fill="none" />
+            <Line d="M113 30Q111 27 113 24.5Q115 22 113 19" fill="none" />
           </g>
-        </g>
+        )}
         {mine && (
-          <g transform="translate(103 54)">
+          <g transform="translate(104 40)">
             <g className={styles.restBag}>
-              <g transform={BAG_PLACE(0.56)}>
+              <g transform={BAG_PLACE(0.5)}>
                 <BagShape />
               </g>
             </g>
@@ -300,15 +275,12 @@ function DeliveryScene({ moving, mine }: { moving: boolean; mine: boolean }) {
         {moving && (
           <g className={styles.bagX}>
             <g className={styles.bagY}>
-              <g transform={BAG_PLACE(0.56)}>
+              <g transform={BAG_PLACE(0.5)}>
                 <BagShape />
               </g>
             </g>
           </g>
         )}
-        <g transform="translate(76 42)">
-          <BasketFront />
-        </g>
       </g>
     </>
   );

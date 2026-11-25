@@ -39,7 +39,7 @@ import { ReportDialog } from "./ReportDialog";
 import styles from "./detail.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
 import { useListHref } from "../listOrigin";
-import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import { dayLabel, dayTime, formatDate } from "@/lib/dateFormat";
 
 const timeFormat = new Intl.DateTimeFormat("ko-KR", {
@@ -463,7 +463,7 @@ function DetailView({
             data-type={taxi ? "taxi" : "delivery"}
             data-muted={closed}
           >
-            {taxi ? <TaxiArt size="lg" /> : <BagArt size="lg" />}
+            {taxi ? <TaxiArt size="lg" /> : <DeliveryArt size="lg" />}
           </span>
           <p className={styles.chips}>
             <span className={styles.chip}>{taxi ? "택시" : "배달"}</span>
@@ -527,8 +527,10 @@ function DetailView({
           )}
           {subtitle && <p className={styles.postTitle}>{subtitle}</p>}
         </div>
+        {/* The schedule (when it happens) and the action deadline (until
+            when one can join or leave) look different on purpose. */}
         <dl className={styles.facts}>
-          <div className={styles.fact}>
+          <div className={styles.fact} data-kind="schedule">
             <dt>{scheduleTerm}</dt>
             <dd>
               <strong>
@@ -540,16 +542,23 @@ function DetailView({
             </dd>
           </div>
           {status !== "CANCELLED" && Number.isFinite(deadline) && (
-            <div className={styles.fact}>
-              <dt>{taxi ? "신청·취소 마감" : "참여·취소 마감"}</dt>
+            <div
+              className={styles.fact}
+              data-kind="deadline"
+              data-urgent={left !== null && deadline - clockMs < 3_600_000}
+            >
+              <dt>참여·취소 마감</dt>
               <dd>
                 <strong>
                   {deadlineDay} {timeFormat.format(deadline)}
                 </strong>
-                <span
-                  data-urgent={left !== null && deadline - clockMs < 3_600_000}
-                >
-                  {left ?? "마감됐어요"}
+                <span>
+                  {left
+                    ? `마감까지 ${left.replace(/ 남음$/, "")}`
+                    : "마감됐어요"}
+                  {left !== null && deadline - clockMs < 3_600_000 && (
+                    <span className={styles.soonTag}>곧 마감</span>
+                  )}
                 </span>
               </dd>
             </div>
@@ -784,8 +793,8 @@ function DetailView({
           </h2>
           <ul>
             <li>
-              작성자가 마감하거나 {taxi ? "신청·취소" : "참여·취소"} 마감 시간이
-              지나면 새로 참여할 수 없어요.
+              작성자가 마감하거나 참여·취소 마감 시간이 지나면 새로 참여할 수
+              없어요.
             </li>
             <li>본인이 작성한 글에는 참여할 수 없어요.</li>
           </ul>

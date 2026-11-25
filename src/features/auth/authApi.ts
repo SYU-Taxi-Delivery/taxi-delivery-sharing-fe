@@ -15,13 +15,14 @@ export class AuthNotConnectedError extends Error {
 }
 
 export const SESSION_CHANGE_KEY = "syu-session-change";
+export const SESSION_SIGNED_OUT = "signed-out";
 const LOGOUT_PENDING = "logout-pending";
 
-function signalSessionChange(logoutPending = false) {
+function signalSessionChange(signal?: string) {
   try {
     window.localStorage.setItem(
       SESSION_CHANGE_KEY,
-      logoutPending ? LOGOUT_PENDING : crypto.randomUUID(),
+      signal ?? crypto.randomUUID(),
     );
   } catch {
     // With storage disabled, other tabs still recheck on focus.
@@ -82,13 +83,13 @@ export const authOperations: AuthOperations = {
       await backendSend("POST", "/logout", undefined, { redirect: "manual" });
     } catch (error) {
       if (!(error instanceof ApiError && [0, 401].includes(error.status))) {
-        signalSessionChange(true);
+        signalSessionChange(LOGOUT_PENDING);
         throw error;
       }
     } finally {
       resetCsrfToken();
     }
-    signalSessionChange();
+    signalSessionChange(SESSION_SIGNED_OUT);
   },
 };
 

@@ -44,7 +44,7 @@ import {
 } from "./postDraft";
 import styles from "./form.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
-import { BagArt, SeatSlots, TaxiArt } from "@/features/ui/art";
+import { DeliveryArt, SeatSlots, TaxiArt } from "@/features/ui/art";
 import {
   deadlinePreview,
   quickTime,
@@ -94,7 +94,7 @@ const STEP_ONE: readonly FieldName[] = [
   "capacity",
 ];
 // Step 1 also holds the headcount, so its name says so.
-const STEPS = ["유형·장소·일정·정원", "안내·미리보기"] as const;
+const STEPS = ["기본 정보", "안내 및 확인"] as const;
 
 export function PostForm({
   mode,
@@ -135,13 +135,13 @@ export function PostForm({
     DELIVERY: readRecentPlaces("DELIVERY"),
   }));
   const locked = useRef(false);
-  /** One Idempotency-Key per content: resending the same draft reuses it. */
-  const createKey = useRef<{ body: string; key: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const pendingLeave = useRef<{ trigger: HTMLElement; href: string } | null>(
-    null,
-  );
+  const pendingLeave = useRef<{
+    trigger: HTMLElement;
+    href: string;
+    onLeave?: () => void;
+  } | null>(null);
   const setLeaveGuard = useContext(AppShellLeaveGuard);
   const phaseHeading = useRef<HTMLHeadingElement>(null);
   const baseId = useId();
@@ -165,11 +165,13 @@ export function PostForm({
   );
   const dirty = JSON.stringify(draft) !== initial;
   const busy = phase.kind === "checking" || phase.kind === "submitting";
+  const unresolvedCreate =
+    mode === "create" && phase.kind === "error" && !!phase.link;
   const blockLeave = useCallback(
-    (trigger: HTMLElement, href: string) => {
+    (trigger: HTMLElement, href: string, onLeave?: () => void) => {
       if (busy) return true;
       if (!dirty) return false;
-      pendingLeave.current = { trigger, href };
+      pendingLeave.current = { trigger, href, onLeave };
       dialog.current?.showModal();
       dialog.current
         ?.querySelector<HTMLButtonElement>("[data-autofocus]")
@@ -266,7 +268,9 @@ export function PostForm({
     if (target === "step") {
       const heading = document.getElementById(id("step-heading"));
       heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView?.({ block: "start" });
+      // Back to the page top so the 목록 link, the title and the first field
+      // all sit below the sticky header, not half under it.
+      window.scrollTo({ top: 0, behavior: "instant" });
     } else focusField(target);
     // focusField reads the DOM of the step that just rendered.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -344,6 +348,17 @@ export function PostForm({
       if (first) goTo(STEP_ONE.includes(first) ? 1 : 2, first);
       return;
     }
+    if (
+      error instanceof ApiError &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
+      setPhase({
+        kind: "error",
+        message: "요청이 거절됐어요. 입력 내용과 권한을 확인해 주세요.",
+      });
+      return;
+    }
     // A lost or broken response does not prove the write failed (AC-POST-002-11).
     setPhase(
       mode === "create"
@@ -372,20 +387,7 @@ export function PostForm({
     setPhase({ kind: "submitting" });
     try {
       if (mode === "create") {
-        const request = toPostRequest(draft);
-        const body = JSON.stringify(request);
-        if (createKey.current?.body !== body)
-          createKey.current = { body, key: newIdempotencyKey() };
-        const created = await createOrFind(
-          operations,
-          request,
-          createKey.current.key,
-          () => {
-            // The server answered "no": nothing was made, so a resend is new.
-            createKey.current = null;
-          },
-        );
-        createKey.current = null;
+        const created = await createOrFind(operations, toPostRequest(draft));
         rememberPlaces(draft.type, usedPlaces(draft));
         router.push(path(`/posts/${encodeURIComponent(created)}`));
         return; // stay locked while leaving the page
@@ -434,6 +436,7 @@ export function PostForm({
       next();
       return;
     }
+    if (unresolvedCreate) return;
     const now = Date.now();
     setNowMs(now);
     setSubmitted(true);
@@ -541,7 +544,7 @@ export function PostForm({
           data-type={taxi ? "taxi" : "delivery"}
           aria-hidden="true"
         >
-          {taxi ? <TaxiArt /> : <BagArt />}
+          {taxi ? <TaxiArt /> : <DeliveryArt />}
         </span>
         <div>
           <h1 className={styles.headingTitle}>
@@ -557,28 +560,40 @@ export function PostForm({
         </div>
       </div>
 
-      {/* One compact indicator: where you are, what comes next, and a
-          two-part bar. Focus lands on the heading on a step change. */}
+      {/* Two named steps: the current one marked (aria-current), the
+          finished one ticked. Focus lands on the heading on a step change. */}
       <div className={styles.progress}>
         <h2
           id={id("step-heading")}
           tabIndex={-1}
           className={styles.progressNow}
         >
-          <span className={styles.progressCount}>
-            {step}/{STEPS.length}
-            <span className="sr-only">단계</span>
-          </span>{" "}
-          {STEPS[step - 1]}
+          <span className="sr-only">
+            {STEPS.length}단계 중 {step}단계,{" "}
+          </span>
+          {step}. {STEPS[step - 1]}
         </h2>
-        <p className={styles.progressNext}>
-          {step === 1 ? `다음: ${STEPS[1]}` : "마지막 단계"}
-        </p>
-        <span className={styles.progressBar} aria-hidden="true">
-          {STEPS.map((label, index) => (
-            <span key={label} data-filled={index < step} />
-          ))}
-        </span>
+        <ol className={styles.steps} aria-label="작성 단계">
+          {STEPS.map((label, index) => {
+            const state =
+              index + 1 < step ? "done" : index + 1 === step ? "now" : "next";
+            return (
+              <li
+                key={label}
+                data-state={state}
+                aria-current={state === "now" ? "step" : undefined}
+              >
+                <span className={styles.stepDot} aria-hidden="true">
+                  {state === "done" ? "✓" : index + 1}
+                </span>
+                <span>
+                  {label}
+                  {state === "done" && <span className="sr-only"> (완료)</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
       <form
@@ -615,7 +630,7 @@ export function PostForm({
                         onChange={() => edit((d) => ({ ...d, type }), [])}
                       />
                       <span className={styles.categoryArt} data-type={type}>
-                        {type === "TAXI" ? <TaxiArt /> : <BagArt />}
+                        {type === "TAXI" ? <TaxiArt /> : <DeliveryArt />}
                       </span>
                       {typeLabels[type]}
                     </label>
@@ -949,7 +964,7 @@ export function PostForm({
                 placeholder="장소를 고르면 자동으로 채워져요"
                 help={
                   titleIsSuggested
-                    ? "장소를 보고 채웠어요. 원하는 대로 고쳐 써도 돼요."
+                    ? "장소를 보고 자동으로 채웠어요. 바로 고쳐 써도 돼요."
                     : undefined
                 }
                 error={shown("title")}
@@ -964,7 +979,9 @@ export function PostForm({
                   label="주문 안내"
                   value={draft.delivery.orderGuide}
                   max={LIMITS.orderGuide}
-                  placeholder="메뉴 고르는 방법, 정산 방식 등"
+                  placeholder={
+                    "예: 메뉴는 오픈채팅에서 각자 골라요.\n배달비는 인원수대로 나눠서 정산해요."
+                  }
                   multiline
                   error={shown("orderGuide")}
                   onChange={(value) => setDelivery("orderGuide", value)}
@@ -981,8 +998,8 @@ export function PostForm({
                 max={LIMITS.description}
                 placeholder={
                   taxi
-                    ? "만날 장소, 요청사항 등을 적어 주세요"
-                    : "수령 방법, 요청사항 등을 적어 주세요"
+                    ? "예: 출발 5분 전 정문 앞 편의점에서 만나요.\n짐이 크면 미리 알려 주세요."
+                    : "예: 후문 경비실 앞에서 같이 받아요.\n도착하면 오픈채팅으로 알려 드릴게요."
                 }
                 multiline
                 error={shown("description")}
@@ -1117,10 +1134,12 @@ export function PostForm({
           </p>
         )}
 
-        <p className={styles.help}>
-          {mode === "edit"
-            ? "저장하면 모집글 목록과 상세에 바로 반영돼요."
-            : "등록하면 모집글 목록에 바로 공개돼요."}
+        <p className={styles.help} data-note="next">
+          {step === 1
+            ? "다음 단계에서 제목과 안내를 적고, 목록에 보일 모습을 확인해요."
+            : mode === "edit"
+              ? "저장하면 모집글 목록과 상세에 바로 반영돼요."
+              : "등록하면 모집글 목록에 바로 공개돼요."}
         </p>
         <div className={styles.actions} data-bottom-action="true">
           {step === 1 ? (
@@ -1147,7 +1166,11 @@ export function PostForm({
               다음
             </button>
           ) : (
-            <button type="submit" className={styles.primary} disabled={busy}>
+            <button
+              type="submit"
+              className={styles.primary}
+              disabled={busy || unresolvedCreate}
+            >
               {phase.kind === "checking"
                 ? "확인 중…"
                 : phase.kind === "submitting"
@@ -1195,10 +1218,13 @@ export function PostForm({
             type="button"
             className={styles.primary}
             onClick={() => {
-              const href = pendingLeave.current?.href;
+              const leave = pendingLeave.current;
               pendingLeave.current = null;
               dialog.current?.close();
-              if (href) router.push(path(href));
+              if (!leave) return;
+              // e.g. the logo forgets the list's saved scroll: start at the top
+              leave.onLeave?.();
+              router.push(path(leave.href));
             }}
           >
             입력 폐기
@@ -1429,10 +1455,13 @@ function TextField({
           </label>
           <Tag kind={required ? "required" : "optional"} />
         </span>
+        {/* Short fields show the count only near the limit; long text
+            always does. Screen readers always get it. */}
         <span
           id={`${id}-count`}
           className={styles.counter}
           data-over={used > max}
+          data-shown={multiline || used >= max * 0.8}
         >
           {used}/{max}자
         </span>
@@ -1440,6 +1469,7 @@ function TextField({
       {multiline ? (
         <textarea
           {...common}
+          rows={4}
           className={styles.textarea}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -1468,12 +1498,6 @@ function TextField({
   );
 }
 
-function newIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
-    return crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
 /**
  * Whether the server's answer proves nothing was saved: a 4xx (including
  * mapped form errors) or the not-connected adapter. A lost response, a 5xx or
@@ -1481,7 +1505,8 @@ function newIdempotencyKey(): string {
  */
 function rejected(error: unknown): boolean {
   if (error instanceof PostFormError) return true;
-  if (error instanceof ApiError) return error.status < 500;
+  if (error instanceof ApiError)
+    return error.status >= 400 && error.status < 500;
   return error instanceof Error && error.name === "PostFormNotConnectedError";
 }
 
@@ -1493,17 +1518,11 @@ function rejected(error: unknown): boolean {
 async function createOrFind(
   operations: PostFormOperations,
   request: PostRequest,
-  idempotencyKey: string,
-  onRejected: () => void,
 ): Promise<string> {
   try {
-    return await operations.create(request, { idempotencyKey });
+    return await operations.create(request);
   } catch (error) {
-    if (rejected(error)) {
-      onRejected();
-      throw error;
-    }
-    if (!operations.findCreated) throw error;
+    if (rejected(error) || !operations.findCreated) throw error;
     let found: string | null = null;
     try {
       found = await operations.findCreated(request);

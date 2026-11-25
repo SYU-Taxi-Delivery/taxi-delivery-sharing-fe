@@ -101,15 +101,18 @@ describe("apiFetch", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("브라우저에서는 환경변수가 비어 있어도 같은 출처의 프록시를 호출한다", async () => {
+  it("브라우저에서 기본 주소가 비어 있으면 현재 출처로 세션 쿠키를 보낸다", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
     vi.stubGlobal("window", {
       location: { origin: "https://preview.example.test" },
     });
     fetchMock.mockResolvedValue(Response.json({ ok: true }));
-    await apiFetch("/api/posts");
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      "https://preview.example.test/api/posts",
+
+    await apiFetch("/api/csrf");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://preview.example.test/api/csrf",
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
