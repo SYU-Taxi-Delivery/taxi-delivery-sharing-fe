@@ -7,7 +7,7 @@ describe("demoPath", () => {
     ["/login", "/auth-preview"],
     ["/signup", "/signup-preview"],
     ["/forgot-password?next=%2Fmy", "/password-reset-preview?next=%2Fmy"],
-    ["/reset-password", "/password-reset-preview?mode=reset"],
+    ["/reset-password", "/password-reset-preview"],
     ["/posts?type=DELIVERY&page=3", "/posts-preview?type=DELIVERY&page=3"],
     ["/posts/new?type=DELIVERY", "/post-form-preview?type=DELIVERY"],
     ["/posts/preview-1", "/post-detail-preview?postId=preview-1"],

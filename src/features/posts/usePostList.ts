@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/lib/api";
+import { ApiError, retryHint } from "@/lib/api";
 import { serverTimeNow } from "@/lib/backend";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
@@ -34,7 +34,7 @@ function errorMessage(error: unknown) {
   if (error instanceof Error && error.name === "InvalidPostData") {
     return "모집글 정보를 확인할 수 없어요. 다시 불러와 주세요.";
   }
-  return "모집글을 불러오지 못했어요. 네트워크를 확인한 후 다시 시도해 주세요.";
+  return `모집글을 불러오지 못했어요. ${retryHint(error)}`;
 }
 
 /** Loads one page; a newer query or retry always wins over an older response. */

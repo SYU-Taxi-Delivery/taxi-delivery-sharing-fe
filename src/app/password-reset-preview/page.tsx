@@ -8,13 +8,6 @@ export default async function PasswordResetPreviewPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { mode, next } = await searchParams;
-  const previewMode = mode === "reset" ? "reset" : "request";
-  return (
-    <PasswordResetPreview
-      key={previewMode}
-      mode={previewMode}
-      next={safeNextPath(next)}
-    />
-  );
+  const { next } = await searchParams;
+  return <PasswordResetPreview next={safeNextPath(next)} />;
 }

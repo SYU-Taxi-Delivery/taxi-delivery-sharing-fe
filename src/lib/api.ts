@@ -8,6 +8,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * What to try after a failed load: a server error (5xx) is not the user's
+ * connection, so it asks for a moment instead of a network check.
+ */
+export function retryHint(error: unknown): string {
+  return error instanceof ApiError && error.status >= 500
+    ? "서버에 잠시 문제가 있어요. 잠시 후 다시 시도해 주세요."
+    : "네트워크를 확인한 후 다시 시도해 주세요.";
+}
+
 /** JSON REST request. Empty responses return undefined; cookies are sent by default. */
 export async function apiFetch<T = unknown>(
   path: string,

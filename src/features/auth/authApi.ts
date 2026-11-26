@@ -15,10 +15,6 @@ export class AuthNotConnectedError extends Error {
   }
 }
 
-const notConnected = async (): Promise<never> => {
-  throw new AuthNotConnectedError();
-};
-
 /**
  * The backend has no current-user endpoint yet, so the login response is kept
  * in this browser and every me() confirms the session with an authenticated
@@ -109,11 +105,39 @@ export const authOperations: AuthOperations = {
 };
 
 /**
- * Fields match the backend, but signup remains disconnected until text success
- * responses and verification/password policies are adapted. See docs/backend-integration.md.
+ * School email and password reset endpoints answer success with a plain
+ * sentence (or a bare id), not a data envelope. Only the 2xx status counts;
+ * a failure still arrives as ApiError with the usual `{ error: { code } }`.
  */
+export async function sendAuthRequest(
+  path: string,
+  body: Record<string, string>,
+): Promise<void> {
+  try {
+    await backendSend("POST", path, body);
+  } catch (error) {
+    // apiFetch reads every 2xx body as JSON; a sentence body fails that parse
+    // only after the status was already ok.
+    if (error instanceof SyntaxError) return;
+    throw error;
+  }
+}
+
+/** POST /api/auth/school-email/{send-code, verify-code, register}. */
 export const signupOperations: SignupOperations = {
-  requestCode: notConnected,
-  verifyCode: notConnected,
-  register: notConnected,
+  requestCode: (schoolEmail) =>
+    sendAuthRequest("/api/auth/school-email/send-code", { schoolEmail }),
+  verifyCode: (schoolEmail, code) =>
+    sendAuthRequest("/api/auth/school-email/verify-code", {
+      schoolEmail,
+      code,
+    }),
+  // No automatic login after signup: the screen sends the user to /login.
+  register: ({ studentNo, name, schoolEmail, password }) =>
+    sendAuthRequest("/api/auth/school-email/register", {
+      studentNo,
+      name,
+      schoolEmail,
+      password,
+    }),
 };

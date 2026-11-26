@@ -15,23 +15,25 @@ import {
 } from "./signup";
 
 describe("passwordError", () => {
-  it("AC-AUTH-001-07: 15·128 코드포인트 경계와 양끝 공백을 허용한다", () => {
-    expect(passwordError("a".repeat(15))).toBeNull();
-    expect(passwordError("a".repeat(128))).toBeNull();
-    expect(passwordError(` ${"a".repeat(13)} `)).toBeNull();
+  it("AC-AUTH-001-07: 백엔드와 같은 8·64자 경계와 양끝 공백을 허용한다", () => {
+    expect(passwordError("a".repeat(8))).toBeNull();
+    expect(passwordError("a".repeat(64))).toBeNull();
+    expect(passwordError(` ${"a".repeat(6)} `)).toBeNull();
   });
 
-  it("AC-AUTH-001-21: 14·129 코드포인트를 거절한다", () => {
-    expect(passwordError("a".repeat(14))).toContain("15~128자");
-    expect(passwordError("a".repeat(129))).toContain("15~128자");
+  it("AC-AUTH-001-21: 7·65자와 공백만 있는 비밀번호를 거절한다", () => {
+    expect(passwordError("a".repeat(7))).toContain("8~64자");
+    expect(passwordError("a".repeat(65))).toContain("8~64자");
+    expect(passwordError(" ".repeat(10))).toContain("공백만");
   });
 
-  it("UTF-16 길이가 아니라 NFC 후 코드포인트로 센다", () => {
-    expect(passwordError("😀".repeat(15))).toBeNull();
-    expect(passwordError("😀".repeat(14))).not.toBeNull();
-    // e + combining acute becomes one code point after NFC.
-    expect(passwordError("é".repeat(15))).toBeNull();
-    expect(passwordError(`${"é".repeat(14)}`)).not.toBeNull();
+  it("백엔드처럼 UTF-16 길이로 세고 UTF-8 72바이트를 넘으면 거절한다", () => {
+    // An emoji is two UTF-16 units and four UTF-8 bytes.
+    expect(passwordError("😀".repeat(4))).toBeNull();
+    expect(passwordError("😀".repeat(3) + "a")).not.toBeNull();
+    // 24 Korean letters are 72 bytes; 25 are 75.
+    expect(passwordError("가".repeat(24))).toBeNull();
+    expect(passwordError("가".repeat(25))).toContain("너무 길어요");
   });
 
   it("빈 비밀번호를 안내한다", () => {
@@ -129,9 +131,34 @@ describe("오류 메시지", () => {
     ).toContain(message);
   });
 
-  it("AC-AUTH-001-22: 차단 목록 비밀번호 거절을 안내한다", () => {
+  it("AC-AUTH-001-22: 서버가 비밀번호를 거절하면 길이 규칙을 안내한다", () => {
+    const invalid = new ApiError(
+      400,
+      JSON.stringify({ error: { code: "INVALID_PASSWORD" } }),
+    );
+    expect(registerErrorMessage(invalid)).toContain("8~64자");
     expect(registerErrorMessage(new ApiError(400, ""))).toContain(
-      "유출된 비밀번호",
+      "입력한 정보를 확인",
+    );
+  });
+
+  it("이미 등록된 학번과 이미 가입된 계정을 구분한다", () => {
+    const conflict = (code: string) =>
+      new ApiError(409, JSON.stringify({ error: { code } }));
+    expect(
+      registerErrorMessage(conflict("STUDENT_NO_ALREADY_REGISTERED")),
+    ).toContain("이미 등록된 학번");
+    expect(
+      registerErrorMessage(conflict("EMAIL_ALREADY_REGISTERED")),
+    ).toContain("이미 가입된 계정");
+  });
+
+  it("이미 가입된 이메일과 메일 발송 실패를 인증번호 요청에서 안내한다", () => {
+    expect(requestCodeErrorMessage(new ApiError(409, ""))).toContain(
+      "이미 가입된 학교 이메일",
+    );
+    expect(requestCodeErrorMessage(new ApiError(503, ""))).toContain(
+      "인증 메일을 보내지 못했어요",
     );
   });
 
