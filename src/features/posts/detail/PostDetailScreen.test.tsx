@@ -12,6 +12,7 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ParticipationRejected } from "@/features/participation/participation";
 import {
   CommentsError,
+  commentsOperations,
   type CommentsOperations,
 } from "@/features/comments/comments";
 import { rememberListOrigin } from "../listOrigin";
@@ -94,7 +95,7 @@ function ops(patch: Partial<PostDetailOperations> = {}): PostDetailOperations {
 
 async function setup(
   operations: PostDetailOperations,
-  commentOperations?: CommentsOperations,
+  commentOperations = commentsOperations,
 ) {
   render(
     <AuthProvider operations={auth}>

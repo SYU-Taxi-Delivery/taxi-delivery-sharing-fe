@@ -19,7 +19,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const detail = (viewer: Partial<typeof taxiDetail.viewer>, extra = {}) =>
+const detail = (
+  viewer: Partial<typeof taxiDetail.viewer & { reported: unknown }>,
+  extra = {},
+) =>
   Response.json(
     envelope({
       ...taxiDetail,
@@ -83,6 +86,19 @@ describe("GET /api/posts/{id} 연동", () => {
     expect(result.participantNames).toEqual(["author", "student1", "student2"]);
     expect(result.communicationUrl).toBe("https://open.kakao.com/o/abc");
   });
+
+  it.each([
+    [true, true],
+    [false, false],
+    ["true", false],
+  ])(
+    "viewer.reported가 %s이면 신고 상태를 %s로 읽는다",
+    async (reported, expected) => {
+      fakeBackend({ "GET /api/posts/1": () => detail({ reported }) });
+      const result = toPostDetail(await postDetailOperations.load("1"));
+      expect(result.reported).toBe(expected);
+    },
+  );
 
   it("작성자는 AUTHOR 관계로 읽고, 명단의 일시적 실패는 화면을 막지 않는다", async () => {
     fakeBackend({
@@ -362,8 +378,77 @@ describe("참여 신청·취소 연동", () => {
       kind: "conflict",
     });
   });
+});
 
-  it("신고는 백엔드 API가 없어 제공하지 않는다", () => {
-    expect(postDetailOperations.report).toBeUndefined();
+describe("POST /api/posts/{id}/reports 연동", () => {
+  const request = { reason: "FALSE_RECRUITMENT", detail: null } as const;
+
+  it("신고 사유와 상세를 CSRF 헤더와 함께 보내고 201을 처리한다", async () => {
+    const { calls } = fakeBackend({
+      "POST /api/posts/1/reports": () =>
+        Response.json(
+          envelope({
+            reportId: "3",
+            postId: "1",
+            reason: request.reason,
+            createdAt: EVALUATED_AT,
+          }),
+          { status: 201 },
+        ),
+    });
+    await expect(
+      postDetailOperations.report!("1", request),
+    ).resolves.toBeUndefined();
+    const call = calls.at(-1)!;
+    expect(call).toMatchObject({
+      method: "POST",
+      path: "/api/posts/1/reports",
+      body: request,
+    });
+    expect(call.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
+  });
+
+  it.each([
+    [400, "INVALID_REPORT", "invalid"],
+    [400, "INVALID_REQUEST", "invalid"],
+    [403, "SELF_REPORT_NOT_ALLOWED", "ownPost"],
+    [404, "POST_NOT_FOUND", "notFound"],
+    [409, "DUPLICATE_REPORT", "duplicateReport"],
+  ])("신고가 %s %s로 거절되면 %s 오류를 넘긴다", async (status, code, kind) => {
+    fakeBackend({ "POST /api/posts/1/reports": () => failure(status, code) });
+    await expect(
+      postDetailOperations.report!("1", request),
+    ).rejects.toMatchObject({ kind });
+  });
+
+  it("401은 인증 만료 처리를 위해 그대로 넘긴다", async () => {
+    fakeBackend({
+      "POST /api/posts/1/reports": () =>
+        failure(401, "AUTHENTICATION_REQUIRED"),
+    });
+    await expect(
+      postDetailOperations.report!("1", request),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("아직 신고 경로가 없는 서버는 연동 준비 중으로 표시한다", async () => {
+    fakeBackend({});
+    await expect(
+      postDetailOperations.report!("1", request),
+    ).rejects.toMatchObject({
+      name: "PostDetailNotConnectedError",
+    });
+  });
+
+  it("신고 응답을 받지 못했을 때 요청을 자동 재전송하지 않는다", async () => {
+    const { calls } = fakeBackend({
+      "POST /api/posts/1/reports": () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    await expect(postDetailOperations.report!("1", request)).rejects.toThrow(
+      TypeError,
+    );
+    expect(calls.filter(({ method }) => method === "POST")).toHaveLength(1);
   });
 });

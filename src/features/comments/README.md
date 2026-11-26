@@ -1,8 +1,7 @@
 # 공개 댓글 (#11)
 
 모집 상세의 참여 안내 아래에서 로그인 사용자가 댓글을 조회·등록하고 본인 댓글을
-삭제한다. 기존 상세 레이아웃과 확인창을 재사용한다. 실제 API는 연결하지 않았으며,
-운영 화면은 가짜 댓글 대신 연동 준비 안내를 표시한다.
+삭제한다. 기존 상세 레이아웃과 확인창을 재사용하고, 백엔드 #54의 댓글 API에 연결한다.
 
 ## 화면 규칙
 
@@ -22,19 +21,19 @@
 - 401은 기존 로그인 만료 처리를 사용한다. 조회 403은 이전 댓글을 지우고 권한 안내를,
   모집 없음은 상세 재확인을 요청한다. 모집·사용자·operation 변경 후 늦은 응답은 무시한다.
 
-## 추후 API 연결
+## API 연결
 
-`comments.ts`의 `CommentsOperations`는 화면 콜백이며 URI·서버 DTO 계약이 아니다.
+`commentsApi.ts`가 화면의 `CommentsOperations`를 구현한다.
 
-- `list(postId)`: `{ content: [...] }`. 표시용 항목은 `id`, `authorName`, `content`,
-  `createdAt`, `isMine`만 사용한다. adapter가 `createdAt ASC / id ASC` 순서를 제공하며
+- `list(postId)`: `GET /api/posts/{id}/comments`의 `data.content`를 읽고 `commentId`를 화면의 `id`로 변환한다.
+  표시용 항목은 `id`, `authorName`, `content`, `createdAt`, `isMine`을 사용한다. 서버가 `createdAt ASC / id ASC` 순서를 제공하며
   화면은 불투명 ID를 추측해서 재정렬하지 않는다. 삭제 행은 전달하지 않으며
   `isDeleted: true`가 있어도 본문을 화면에 전달하지 않는다.
-- `create(postId, content)`·`remove(postId, commentId)`: 서버가 변경 성공을 확인한 경우에만
-  resolve한다. 인증 사용자의 소유권·상태·입력·soft delete는 서버가 최종 판정해야 한다.
-- `CommentsError("invalid"|"forbidden"|"closed")`는 저장되지 않았음이 확인된 거절에 사용한다.
-  응답 유실·잘못된 변경 성공 응답 등 처리 여부를 모르면 `unknownOutcome` 또는 일반 오류로
-  전달한다. HTTP 상태·문제 코드·페이지 계약·삭제 결과의 세부 매핑은 #18에서 확정한다.
+- `create(postId, content)`는 목록 경로에 `POST`로 `{ content }`를 보낸다. 성공 후 목록을 다시 읽는다.
+- `remove(postId, commentId)`는 `DELETE /api/posts/{id}/comments/{commentId}`를 호출한다.
+  `COMMENT_NOT_FOUND`는 이미 삭제된 것으로 보고 목록에서 제거한다.
+  `POST_NOT_FOUND`는 모집 상세를 다시 확인한다.
+- 서버에서 처리 여부를 확인할 수 없는 오류에는 기존 댓글 목록을 다시 불러온다.
 
 ## 개발 미리보기와 검증
 

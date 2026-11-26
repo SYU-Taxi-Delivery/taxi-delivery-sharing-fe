@@ -6,10 +6,8 @@ import { ApiError, retryHint } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
 import { CommentsPanel } from "@/features/comments/CommentsPanel";
-import {
-  commentsOperations,
-  type CommentsOperations,
-} from "@/features/comments/comments";
+import type { CommentsOperations } from "@/features/comments/comments";
+import { commentApiOperations } from "@/features/comments/commentsApi";
 import {
   ParticipationCancel,
   ParticipationPanel,
@@ -53,7 +51,7 @@ export function PostDetailScreen({
   postId,
   listPath = "/posts",
   operations = postDetailOperations,
-  commentOperations = commentsOperations,
+  commentOperations = commentApiOperations,
 }: {
   postId: string;
   listPath?: string;
