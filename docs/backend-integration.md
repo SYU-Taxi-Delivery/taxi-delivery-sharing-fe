@@ -144,11 +144,11 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 | 로그아웃                   | 브라우저 요청은 204(2026-11-09 확인)                    | 해결                                                         |
 | 학교 이메일 도메인         | 화면 `@syuin.ac.kr`, 백엔드 `@syuin.ac.kr`·`@syu.ac.kr` | 소스 기준 화면 도메인 지원(2026-11-12 확인)                  |
 | 회원가입·비밀번호 재설정   | 실제 API 연결(2026-11-26), 비밀번호 규칙 백엔드와 일치  | 해결                                                         |
-| 작성자 모집 마감·모집 취소 | API 없음(버튼 비활성화, "준비 중" 안내)                 | `POST /api/posts/{id}/close`, `/cancel` 등                   |
+| 작성자 모집 마감·모집 취소 | `POST /api/posts/{id}/close`와 `/cancel` 연결           | 해결                                                         |
 | 신고                       | API 없음(버튼 대신 "준비 중"), `reported` 필드 없음     | 신고 API와 상세의 `reported`                                 |
 | 유사 모집 추천             | API 없음(빈 결과로 작성 진행)                           | 같은 날짜·유형·±30분 검색                                    |
-| 작성한 모집 목록           | API 없음("작성한 글" 탭은 준비 중 안내)                 | `GET /api/users/me/posts`                                    |
-| "참여 가능한 글만" 필터    | `status=OPEN`으로 대체(마감 직전 글 포함)               | `joinable=true` 필터                                         |
-| 내 참여 내역               | 목록에 장소·인원이 없어 모집마다 상세 추가 조회         | 목록 항목에 장소·인원·`joinable`·`participationDeadline`     |
+| 작성한 모집 목록           | "작성한 글" 탭에서 `GET /api/users/me/posts` 호출       | 해결                                                         |
+| "참여 가능한 글만" 필터    | 목록 조회에 `joinable=true` 적용                        | 해결                                                         |
+| 내 참여 내역               | 장소·인원·`joinable`·`participationDeadline` 포함       | 해결                                                         |
 | demo 로그인                | demo 계정은 Basic 인증만                                | demo 계정에 LOCAL_CREDENTIAL                                 |
 | 참여 마감                  | 백엔드 T-10                                             | 30분 변경 시 `participationDeadline`만 바꾸면 화면이 따라감  |
