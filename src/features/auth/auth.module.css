@@ -625,11 +625,7 @@
   font-weight: 700;
 }
 
-/* Two different clocks, side by side with their own names */
 .timing {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
   margin: 0;
 }
 

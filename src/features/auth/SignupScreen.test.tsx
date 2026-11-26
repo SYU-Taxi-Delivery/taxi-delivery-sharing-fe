@@ -222,13 +222,15 @@ describe("SignupScreen", () => {
     );
   });
 
-  it("AC-AUTH-001-24: 60초 동안 재발송을 막고 경계부터 허용한다", async () => {
+  it("AC-AUTH-001-24: 재발송 대기를 버튼에 한 번 표시하고 60초부터 허용한다", async () => {
     const operations = await setup();
     type("학교 이메일", "a@syuin.ac.kr");
     await click("인증번호 받기");
-    expect(
-      screen.getByRole("button", { name: "인증번호 다시 받기 (60초)" }),
-    ).toBeDisabled();
+    const resendButton = screen.getByRole("button", {
+      name: "인증번호 다시 받기 (60초)",
+    });
+    expect(resendButton).toBeDisabled();
+    expect(screen.getAllByText(/60초/)).toEqual([resendButton]);
     await act(async () => vi.advanceTimersByTime(59_000));
     expect(
       screen.getByRole("button", { name: "인증번호 다시 받기 (1초)" }),
