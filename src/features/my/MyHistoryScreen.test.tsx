@@ -320,15 +320,15 @@ describe("my history screen", () => {
         tab === "created" ? "아직 작성한 모집" : "아직 참여한 모집",
       );
       expect(screen.queryByRole("alert")).toBeNull();
-      // Next action: browse (participated) or write (created, also the top CTA)
-      expect(
-        screen.getAllByRole("link", {
-          name: tab === "created" ? "모집글 쓰기" : "모집 둘러보기",
-        }),
-      ).toHaveLength(tab === "created" ? 2 : 1);
-      expect(
-        screen.getByRole("link", { name: "모집글 목록으로" }),
-      ).toHaveAttribute("href", "/posts");
+      const results = screen.getByRole("region", {
+        name: tab === "created" ? "작성한 글" : "참여한 글",
+        busy: false,
+      });
+      expect(within(results).getByRole("link")).toHaveAttribute(
+        "href",
+        tab === "created" ? "/posts/new" : "/posts",
+      );
+      expect(screen.queryByText(/각 카드에 표시된/)).not.toBeInTheDocument();
     },
   );
 
@@ -363,7 +363,12 @@ describe("my history screen", () => {
           })
         : Promise.resolve(history([post({ id: "mine", relation: "AUTHOR" })])),
     );
-    expect(screen.getByRole("status")).toHaveTextContent("불러오고 있어요");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "참여한 글을 불러오고 있어요",
+    );
+    expect(
+      screen.getByRole("region", { name: "참여한 글", busy: true }),
+    ).not.toContainElement(screen.getByRole("status"));
     await act(async () => switchTab("created"));
     await act(async () =>
       resolve(history([post({ departure: "이전 응답 장소" })])),
@@ -388,6 +393,40 @@ describe("my history screen", () => {
     );
     expect(rows()).toHaveLength(1);
     expect(operations.list).toHaveBeenLastCalledWith("participated");
+  });
+
+  it("작성 이력 재시도 중 포커스를 유지하고 빈 이력의 작성 링크로 이어진다", async () => {
+    let finish!: (value: unknown) => void;
+    const list = vi
+      .fn<MyHistoryOperations["list"]>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+    await setup(list, undefined, "created");
+    const retry = screen.getByRole("button", { name: "다시 시도" });
+    retry.focus();
+    await act(async () => fireEvent.click(retry));
+    const results = screen.getByRole("region", {
+      name: "작성한 글",
+      busy: true,
+    });
+    expect(results).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "작성한 글을 불러오고 있어요",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(results).queryByRole("link")).not.toBeInTheDocument();
+    await act(async () => finish(history([])));
+    expect(results).toHaveFocus();
+    expect(results).toHaveAttribute("aria-busy", "false");
+    expect(
+      within(results).getByRole("link", { name: "모집글 쓰기" }),
+    ).toHaveAttribute("href", "/posts/new");
+    expect(list.mock.calls).toEqual([["created"], ["created"]]);
   });
 
   it.each(["FULL", "CLOSED"])(

@@ -470,7 +470,7 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
   it("결과가 없으면 조건 초기화와 이 조건으로 글쓰기를 안내한다", async () => {
     await setup(
       { ...taxiQuery, departure: "석계", destination: "정문" },
-      async () => pageOf([]),
+      async (query) => pageOf(query.departure ? [] : [taxi]),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
       "조건에 맞는 모집이 없어요‘석계 출발 · 정문 도착’ 택시 모집이 아직 없어요.조건을 줄이거나 직접 모집해 보세요.",
@@ -485,6 +485,29 @@ describe("모집 검색 (휴대폰: 필터 시트)", () => {
     expect(router.push).toHaveBeenCalledWith("/posts?type=TAXI", {
       scroll: false,
     });
+    await rerenderWith(taxiQuery);
+    expect(
+      screen.getByRole("heading", { name: "택시 모집글 목록" }),
+    ).toHaveFocus();
+    expect(screen.getByText("택시 참여 가능 1개")).toBeVisible();
+  });
+
+  it("빈 목록에서 마감된 모집까지 열면 같은 유형의 결과에서 탐색을 이어간다", async () => {
+    await setup(taxiQuery, async (query) =>
+      pageOf(query.joinableOnly ? [] : [{ ...taxi, joinable: false }]),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "마감된 모집도 보기" }));
+    expect(router.push).toHaveBeenCalledWith(
+      "/posts?type=TAXI&joinable=false",
+      {
+        scroll: false,
+      },
+    );
+    await rerenderWith({ ...taxiQuery, joinableOnly: false });
+    expect(
+      screen.getByRole("heading", { name: "택시 모집글 목록" }),
+    ).toHaveFocus();
+    expect(screen.getByText("택시 1개")).toBeVisible();
   });
 });
 

@@ -440,6 +440,14 @@
   min-width: 0;
 }
 
+.resultsTitle:focus-visible {
+  width: fit-content;
+  margin-top: var(--space-3);
+  font-size: var(--type-label);
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+}
+
 .summary {
   display: flex;
   flex-wrap: wrap;
@@ -1021,6 +1029,10 @@
   display: grid;
 }
 
+.loading .list > li {
+  animation: none;
+}
+
 .loadingText {
   margin-top: var(--space-3);
   color: var(--posts-muted);
@@ -1236,7 +1248,8 @@
   }
 }
 
-.srOnly {
+.srOnly,
+.resultsTitle:not(:focus-visible) {
   position: absolute;
   width: 1px;
   height: 1px;

@@ -146,6 +146,12 @@ function PostList({
   const focusAfter = useRef<number | null>(null);
   const chipGroup = useRef<HTMLDivElement>(null);
   const resultsHeading = useRef<HTMLHeadingElement>(null);
+  const clearSearch = () => {
+    focusAfter.current = -1;
+    router.push(path(postQueryHref(basePath, clearedSearch(query))), {
+      scroll: false,
+    });
+  };
   useEffect(() => {
     const index = focusAfter.current;
     if (index === null) return;
@@ -250,13 +256,7 @@ function PostList({
               <button
                 type="button"
                 className={styles.textButton}
-                onClick={() => {
-                  focusAfter.current = -1;
-                  router.push(
-                    path(postQueryHref(basePath, clearedSearch(query))),
-                    { scroll: false },
-                  );
-                }}
+                onClick={clearSearch}
               >
                 초기화
               </button>
@@ -273,7 +273,7 @@ function PostList({
             id={headingId}
             ref={resultsHeading}
             tabIndex={-1}
-            className={styles.srOnly}
+            className={styles.resultsTitle}
           >
             {active.label} 모집글 목록
           </h2>
@@ -357,7 +357,10 @@ function PostList({
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={retry}
+                onClick={() => {
+                  resultsHeading.current?.focus({ preventScroll: true });
+                  retry();
+                }}
               >
                 다시 불러오기
               </button>
@@ -426,12 +429,7 @@ function PostList({
                 <button
                   type="button"
                   className={styles.secondary}
-                  onClick={() =>
-                    router.push(
-                      path(postQueryHref(basePath, clearedSearch(query))),
-                      { scroll: false },
-                    )
-                  }
+                  onClick={clearSearch}
                 >
                   조건 초기화
                 </button>
@@ -451,7 +449,10 @@ function PostList({
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => go({ joinableOnly: false })}
+                onClick={() => {
+                  focusAfter.current = -1;
+                  go({ joinableOnly: false });
+                }}
               >
                 마감된 모집도 보기
               </button>
