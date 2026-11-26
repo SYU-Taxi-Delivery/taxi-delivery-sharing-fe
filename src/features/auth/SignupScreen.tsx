@@ -507,12 +507,6 @@ export function SignupScreen({
                         <dt>인증번호 유효 시간</dt>
                         <dd>발급 후 {CODE_TTL_MS / 60_000}분</dd>
                       </div>
-                      <div>
-                        <dt>다시 받기</dt>
-                        <dd aria-live="off">
-                          {cooling ? `${waitSeconds}초 후 가능` : "지금 가능"}
-                        </dd>
-                      </div>
                     </dl>
                     <button
                       type="button"
