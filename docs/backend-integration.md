@@ -136,19 +136,28 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
   - 마감 요청의 409 `POST_CLOSED`, 일정 취소 요청의 409 `POST_CANCELLED`: 성공과 같이 처리한다. 다른 종료 상태(예: 마감 요청에 `POST_CANCELLED`)는 지금처럼 상태 변경 안내다.
 - 글 작성에는 `Idempotency-Key`를 사용하지 않는다. 결과를 확인할 수 없으면 같은 입력으로 재등록하는 대신 내 작성 글 목록에서 확인한다.
 
+## 댓글·신고
+
+백엔드 [#54의 API 계약](https://github.com/SYU-Taxi-Delivery/taxi-delivery-sharing/blob/8105fe6c463728bfe48a3721a044154a5f1c6fee/docs/comment-report-api.md)을 사용한다.
+
+- 댓글은 `GET /api/posts/{id}/comments`의 목록을 표시하고, 같은 경로에 `POST { content }`로 등록한다.
+  본인 댓글은 `DELETE /api/posts/{id}/comments/{commentId}`로 삭제한다. 목록 순서와 본인 여부는 서버 값을 사용한다.
+- 신고는 `POST /api/posts/{id}/reports`에 사유·상세를 보내며, 상세의 `viewer.reported`를 통해 이미 신고했는지 표시한다.
+- 댓글 등록 응답이 유실되면 목록을 다시 확인한다. 저장 여부가 불확실한 변경을 자동으로 다시 보내지 않는다.
+
 ## 프론트·백엔드 불일치와 요청 목록
 
-| 항목                       | 현재                                                    | 요청                                                         |
-| -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
-| 현재 사용자 조회           | API 없음. 로그인 응답을 브라우저에 기억                 | `GET /api/users/me` (`userId`, `name`, `role`), 비로그인 401 |
-| 로그아웃                   | 브라우저 요청은 204(2026-11-09 확인)                    | 해결                                                         |
-| 학교 이메일 도메인         | 화면 `@syuin.ac.kr`, 백엔드 `@syuin.ac.kr`·`@syu.ac.kr` | 소스 기준 화면 도메인 지원(2026-11-12 확인)                  |
-| 회원가입·비밀번호 재설정   | 실제 API 연결(2026-11-26), 비밀번호 규칙 백엔드와 일치  | 해결                                                         |
-| 작성자 모집 마감·모집 취소 | API 없음(버튼 비활성화, "준비 중" 안내)                 | `POST /api/posts/{id}/close`, `/cancel` 등                   |
-| 신고                       | API 없음(버튼 대신 "준비 중"), `reported` 필드 없음     | 신고 API와 상세의 `reported`                                 |
-| 유사 모집 추천             | API 없음(빈 결과로 작성 진행)                           | 같은 날짜·유형·±30분 검색                                    |
-| 작성한 모집 목록           | API 없음("작성한 글" 탭은 준비 중 안내)                 | `GET /api/users/me/posts`                                    |
-| "참여 가능한 글만" 필터    | `status=OPEN`으로 대체(마감 직전 글 포함)               | `joinable=true` 필터                                         |
-| 내 참여 내역               | 목록에 장소·인원이 없어 모집마다 상세 추가 조회         | 목록 항목에 장소·인원·`joinable`·`participationDeadline`     |
-| demo 로그인                | demo 계정은 Basic 인증만                                | demo 계정에 LOCAL_CREDENTIAL                                 |
-| 참여 마감                  | 백엔드 T-10                                             | 30분 변경 시 `participationDeadline`만 바꾸면 화면이 따라감  |
+| 항목                       | 현재                                                        | 요청                                                         |
+| -------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| 현재 사용자 조회           | API 없음. 로그인 응답을 브라우저에 기억                     | `GET /api/users/me` (`userId`, `name`, `role`), 비로그인 401 |
+| 로그아웃                   | 브라우저 요청은 204(2026-11-09 확인)                        | 해결                                                         |
+| 학교 이메일 도메인         | 화면 `@syuin.ac.kr`, 백엔드 `@syuin.ac.kr`·`@syu.ac.kr`     | 소스 기준 화면 도메인 지원(2026-11-12 확인)                  |
+| 회원가입·비밀번호 재설정   | 실제 API 연결(2026-11-26), 비밀번호 규칙 백엔드와 일치      | 해결                                                         |
+| 작성자 모집 마감·모집 취소 | API 없음(버튼 비활성화, "준비 중" 안내)                     | `POST /api/posts/{id}/close`, `/cancel` 등                   |
+| 댓글·신고                  | 백엔드 #54 계약으로 작성·삭제·신고와 `viewer.reported` 연동 | 운영 배포 및 Render의 Flyway V3 적용 확인                    |
+| 유사 모집 추천             | API 없음(빈 결과로 작성 진행)                               | 같은 날짜·유형·±30분 검색                                    |
+| 작성한 모집 목록           | API 없음("작성한 글" 탭은 준비 중 안내)                     | `GET /api/users/me/posts`                                    |
+| "참여 가능한 글만" 필터    | `status=OPEN`으로 대체(마감 직전 글 포함)                   | `joinable=true` 필터                                         |
+| 내 참여 내역               | 목록에 장소·인원이 없어 모집마다 상세 추가 조회             | 목록 항목에 장소·인원·`joinable`·`participationDeadline`     |
+| demo 로그인                | demo 계정은 Basic 인증만                                    | demo 계정에 LOCAL_CREDENTIAL                                 |
+| 참여 마감                  | 백엔드 T-10                                                 | 30분 변경 시 `participationDeadline`만 바꾸면 화면이 따라감  |

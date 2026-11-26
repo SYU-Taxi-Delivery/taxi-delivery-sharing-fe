@@ -9,7 +9,7 @@ export type CommentItem = {
   isMine: boolean;
 };
 
-// UI callbacks only; URI, authentication and DTO mapping await the API contract.
+// UI-facing callbacks. The live adapter owns URLs, authentication and DTOs.
 export type CommentsOperations = {
   list: (postId: string) => Promise<unknown>;
   create: (postId: string, content: string) => Promise<void>;

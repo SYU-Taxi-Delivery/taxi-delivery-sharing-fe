@@ -32,6 +32,7 @@ export type BackendDetail = Record<string, unknown> & {
   viewer?: {
     isAuthor?: unknown;
     myParticipationStatus?: unknown;
+    reported?: unknown;
   };
 };
 
@@ -112,8 +113,7 @@ export function fromBackendDetail(
     relation: relationOf(detail),
     serverTime: evaluatedAt,
     ...(names ? { participantNames: names } : {}),
-    // There is no report API yet, so nothing is known to be reported.
-    reported: false,
+    reported: detail.viewer?.reported === true,
   };
 }
 
@@ -175,10 +175,10 @@ export function toParticipationError(error: unknown): unknown {
 }
 
 /**
- * Author close/cancel: a 404 that is not POST_NOT_FOUND (API_NOT_FOUND, no
- * code) or a 405 means this server does not offer the endpoint yet.
+ * A 404 without POST_NOT_FOUND (API_NOT_FOUND, no code) or a 405 can mean
+ * an older server does not offer this management or reporting endpoint yet.
  */
-function toManageError(error: unknown): unknown {
+function toDetailMutationError(error: unknown): unknown {
   if (
     error instanceof ApiError &&
     (error.status === 405 ||
@@ -205,7 +205,7 @@ async function manage(id: string, action: "close" | "cancel") {
       errorCode(error) === done
     )
       return;
-    throw toManageError(error);
+    throw toDetailMutationError(error);
   }
 }
 
@@ -228,7 +228,28 @@ export const postDetailOperations: PostDetailOperations = {
   close: (id) => manage(id, "close"),
   /** POST /api/posts/{id}/cancel: the whole schedule, every member cancelled. */
   cancel: (id) => manage(id, "cancel"),
-  // There is no report API yet, so report is omitted and the screen says so.
+  report: async (id, request) => {
+    try {
+      await backendSend("POST", `${path(id)}/reports`, request);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const code = errorCode(error);
+        if (error.status === 409 && code === "DUPLICATE_REPORT") {
+          throw new PostDetailError("duplicateReport");
+        }
+        if (error.status === 403 && code === "SELF_REPORT_NOT_ALLOWED") {
+          throw new PostDetailError("ownPost");
+        }
+        if (
+          error.status === 400 &&
+          (code === "INVALID_REPORT" || code === "INVALID_REQUEST")
+        ) {
+          throw new PostDetailError("invalid");
+        }
+      }
+      throw toDetailMutationError(error);
+    }
+  },
   join: async (id) => {
     try {
       await backendSend("POST", `${path(id)}/participants`);
