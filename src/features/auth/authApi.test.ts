@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { envelope, failure, fakeBackend } from "@/test/fakeBackend";
 import { toCurrentUser } from "./auth";
-import { authOperations } from "./authApi";
+import { authOperations, signupOperations } from "./authApi";
 
 const sessionProbe = "GET /api/users/me/participations?page=0&size=1";
 const login = { email: " student1@syuin.ac.kr ", password: "demo-pass" };
@@ -257,5 +257,54 @@ describe("로그인 세션 연동", () => {
     await expect(authOperations.me()).resolves.toBeNull();
     expired = false;
     await expect(authOperations.me()).resolves.toBeNull();
+  });
+});
+
+describe("회원가입 연동", () => {
+  it("인증번호 발송·확인·가입을 백엔드 경로와 필드로 CSRF와 함께 보낸다", async () => {
+    const { calls } = fakeBackend({
+      // The backend answers these with a plain sentence or a bare id.
+      "POST /api/auth/school-email/send-code": () =>
+        new Response("학교 이메일로 인증 코드가 발송되었습니다."),
+      "POST /api/auth/school-email/verify-code": () =>
+        new Response("학교 이메일 인증이 성공적으로 완료되었습니다."),
+      "POST /api/auth/school-email/register": () => Response.json(12),
+    });
+    await signupOperations.requestCode("new@syuin.ac.kr");
+    await signupOperations.verifyCode("new@syuin.ac.kr", "012345");
+    await signupOperations.register({
+      studentNo: "2026001",
+      name: "새 학생",
+      schoolEmail: "new@syuin.ac.kr",
+      password: " pass word 1 ",
+    });
+    const sent = calls.filter((call) => call.path.startsWith("/api/auth/"));
+    expect(sent.map((call) => [call.path, call.body])).toEqual([
+      ["/api/auth/school-email/send-code", { schoolEmail: "new@syuin.ac.kr" }],
+      [
+        "/api/auth/school-email/verify-code",
+        { schoolEmail: "new@syuin.ac.kr", code: "012345" },
+      ],
+      [
+        "/api/auth/school-email/register",
+        {
+          studentNo: "2026001",
+          name: "새 학생",
+          schoolEmail: "new@syuin.ac.kr",
+          password: " pass word 1 ",
+        },
+      ],
+    ]);
+    expect(sent.every((call) => call.headers.get("X-XSRF-TOKEN"))).toBe(true);
+  });
+
+  it("거절은 상태와 오류 코드를 가진 채 화면으로 전달한다", async () => {
+    fakeBackend({
+      "POST /api/auth/school-email/send-code": () =>
+        failure(409, "EMAIL_ALREADY_REGISTERED"),
+    });
+    await expect(
+      signupOperations.requestCode("demo-student1@syuin.ac.kr"),
+    ).rejects.toMatchObject({ status: 409 });
   });
 });

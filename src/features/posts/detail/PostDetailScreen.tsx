@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "@/lib/api";
+import { ApiError, retryHint } from "@/lib/api";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
 import { CommentsPanel } from "@/features/comments/CommentsPanel";
@@ -85,6 +85,8 @@ type Loaded =
   | {
       key: number;
       error: "notFound" | "forbidden" | "failed";
+      /** For "failed": what to try next (wait, or check the network). */
+      hint?: string;
       detail?: undefined;
     };
 
@@ -135,6 +137,7 @@ function DetailLoader({
                     error.kind === "forbidden")
                 ? "forbidden"
                 : "failed",
+          hint: retryHint(error),
         });
       });
     return () => {
@@ -165,8 +168,7 @@ function DetailLoader({
     return (
       <div className={styles.state}>
         <p role="alert">
-          모집 정보를 불러오지 못했어요. 네트워크를 확인한 후 다시 시도해
-          주세요.
+          모집 정보를 불러오지 못했어요. {current.hint ?? retryHint(null)}
         </p>
         <button
           type="button"

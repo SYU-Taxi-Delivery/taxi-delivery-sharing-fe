@@ -34,6 +34,7 @@ import {
 } from "./signup";
 import styles from "./auth.module.css";
 import { useAppPath } from "@/features/demo/AppProviders";
+import { errorCode } from "@/lib/backend";
 
 type EmailStep = "idle" | "sending" | "sent" | "verifying" | "verified";
 type Page = 1 | 2 | 3;
@@ -300,6 +301,9 @@ export function SignupScreen({
         // Rejected input (usually the password): back to the account step.
         focusLater("password");
         setPage(2);
+      } else if (errorCode(failure) === "STUDENT_NO_ALREADY_REGISTERED") {
+        focusLater("studentNo");
+        setPage(2);
       }
     } finally {
       locked.current = false;
@@ -409,15 +413,6 @@ export function SignupScreen({
             );
           })}
         </ol>
-        {operations === defaultOperations && (
-          <p className={styles.terms}>
-            현재 이메일 인증과 가입 요청을 연결하고 있어요. 데모에서는 가입
-            과정을 체험할 수 있어요.{" "}
-            <Link href="/signup-preview" className={styles.textLink}>
-              가입 데모 보기
-            </Link>
-          </p>
-        )}
         <form
           className={styles.form}
           noValidate
@@ -692,8 +687,8 @@ export function SignupScreen({
                 />
                 {fieldError("password")}
                 <p id={id("password-help")} className={styles.help}>
-                  {PASSWORD_MIN}~{PASSWORD_MAX}자 · 다른 사이트와 같은
-                  비밀번호는 피해 주세요.
+                  {PASSWORD_MIN}~{PASSWORD_MAX}자(한글은 약 24자까지) · 다른
+                  사이트와 같은 비밀번호는 피해 주세요.
                 </p>
               </div>
 

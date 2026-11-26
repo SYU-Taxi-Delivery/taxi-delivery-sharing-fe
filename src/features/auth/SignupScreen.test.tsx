@@ -86,7 +86,7 @@ const currentStep = () =>
     .querySelector('[aria-current="step"]');
 
 describe("SignupScreen", () => {
-  it("운영 가입 화면은 인증과 약관 준비 상태를 입력 전에 알린다", async () => {
+  it("운영 가입 화면은 실제 연동 상태로 열리고 준비 중 안내를 띄우지 않는다", async () => {
     render(
       <AuthProvider
         operations={{
@@ -99,12 +99,10 @@ describe("SignupScreen", () => {
       </AuthProvider>,
     );
     await act(async () => {});
-    expect(screen.getByText(/현재 이메일 인증과 가입 요청/)).toBeVisible();
+    expect(screen.queryByText(/연결하고 있어요/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "가입 데모 보기" })).toBeNull();
     expect(screen.getByLabelText("학교 이메일")).toBeVisible();
     expect(screen.getByText("기존 회원이세요?")).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "가입 데모 보기" }),
-    ).toHaveAttribute("href", "/signup-preview");
     expect(
       screen.getByRole("link", { name: "로그인으로 돌아가기" }),
     ).toHaveAttribute("href", "/login");
@@ -514,7 +512,7 @@ describe("SignupScreen", () => {
     const password = screen.getByLabelText("비밀번호");
     expect(password).toHaveFocus();
     expect(password).toHaveAttribute("aria-invalid", "true");
-    expect(password).toHaveAccessibleDescription(/15~128자로 입력해/);
+    expect(password).toHaveAccessibleDescription(/8~64자로 입력해/);
     type("비밀번호", "a long enough password");
     expect(password).not.toHaveAttribute("aria-invalid");
   });
@@ -552,12 +550,20 @@ describe("SignupScreen", () => {
   it("AC-AUTH-001-22: 서버가 거절하면 원문 없이 안내하고 계정 정보에서 다시 시도할 수 있다", async () => {
     await setup({
       register: vi.fn(async () =>
-        Promise.reject(new ApiError(400, "blocked: CompromisedPass15!")),
+        Promise.reject(
+          new ApiError(
+            400,
+            JSON.stringify({
+              error: { code: "INVALID_PASSWORD" },
+              detail: "blocked: CompromisedPass15!",
+            }),
+          ),
+        ),
       ),
     });
     await fillAll();
     await click("회원가입");
-    expect(screen.getByRole("alert")).toHaveTextContent("유출된 비밀번호");
+    expect(screen.getByRole("alert")).toHaveTextContent("8~64자");
     expect(screen.queryByText(/CompromisedPass/)).not.toBeInTheDocument();
     expect(currentStep()).toHaveTextContent("계정 정보");
     expect(screen.getByLabelText("비밀번호")).toHaveFocus();

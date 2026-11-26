@@ -28,6 +28,5 @@ export function demoPath(href: string): string {
     if (post[2]) url.searchParams.set("mode", "edit");
   }
   if (!pathname) return href;
-  if (url.pathname === "/reset-password") url.searchParams.set("mode", "reset");
   return pathname + url.search + url.hash;
 }

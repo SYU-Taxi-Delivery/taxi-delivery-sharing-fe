@@ -102,17 +102,17 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 `{ studentNo, name, schoolEmail, password }`만 전달한다. 학번은 필수 문자열·최대 20자,
 이름은 필수·최대 50자이며 길이는 UTF-16 코드 단위다. 학번의 선행 0은 유지한다.
 
-실제 `requestCode`·`verifyCode`·`register`는 계속 미연결이다. 백엔드는
-`POST /api/auth/school-email/send-code`에 `{ schoolEmail }`, `/verify-code`에
-`{ schoolEmail, code }`, `/register`에 위 네 필드를 받으며 모두 CSRF가 필요하다.
-인증 상태는 이메일별로 30분 유지되고 가입 시 소비되며 가입 후 자동 로그인하지 않는다.
-실제 연결 전에는 다음 차이를 반영해야 한다.
+2026-11-26 실제 연결: `requestCode`·`verifyCode`·`register`가
+`POST /api/auth/school-email/send-code`(`{ schoolEmail }`), `/verify-code`(`{ schoolEmail, code }`),
+`/register`(위 네 필드)로 CSRF와 함께 요청한다(`src/features/auth/authApi.ts`).
+성공 본문은 문장·숫자라 상태 코드만 보고 성공으로 처리한다. 가입 후 자동 로그인하지 않는다.
+비밀번호 검증은 백엔드 `PasswordPolicy`와 같게 8~64자(UTF-16)·UTF-8 72바이트 이하·공백만 불가로
+바꿨다. 이미 가입된 이메일(409), 이미 등록된 학번(409 `STUDENT_NO_ALREADY_REGISTERED`),
+메일 발송 실패(503)를 구분해 안내한다.
 
-- 발송·인증 성공은 200 일반 문자열, 가입 성공은 200 숫자 ID다. 현재 `apiFetch`는
-  성공 본문을 JSON으로 파싱하므로 문자열 응답 처리가 필요하다.
-- 이미 가입된 이메일의 발송 요청은 409, 인증번호 5회 실패는 429다. 재발송 60초는 일치한다.
-- 화면의 비밀번호 검증은 기존 15~128 코드포인트를 유지했다. 백엔드는 원문 8~64
-  UTF-16 코드 단위·UTF-8 72바이트 이하를 요구하므로 별도 정합성 작업이 필요하다.
+비밀번호 재설정도 백엔드 방식(메일 인증번호)으로 바꿨다. `/forgot-password`에서 학교 이메일 →
+`POST /api/auth/password-reset/send-code` → 인증번호·새 비밀번호 →
+`/confirm`(`{ schoolEmail, code, newPassword }`) 순서이며, 예전 `/reset-password` 주소도 같은 화면을 연다.
 
 백엔드 기본 허용 도메인은 `syuin.ac.kr`와 `syu.ac.kr`이며 화면의 `@syuin.ac.kr`를
 지원한다. 위 내용은 소스 계약 확인이며 실제 메일·가입·운영 배포 검증 결과가 아니다.
@@ -143,7 +143,7 @@ demo 프로필 계정에는 로컬 비밀번호(LOCAL_CREDENTIAL)가 없어 로�
 | 현재 사용자 조회           | API 없음. 로그인 응답을 브라우저에 기억                 | `GET /api/users/me` (`userId`, `name`, `role`), 비로그인 401 |
 | 로그아웃                   | 브라우저 요청은 204(2026-11-09 확인)                    | 해결                                                         |
 | 학교 이메일 도메인         | 화면 `@syuin.ac.kr`, 백엔드 `@syuin.ac.kr`·`@syu.ac.kr` | 소스 기준 화면 도메인 지원(2026-11-12 확인)                  |
-| 회원가입 항목              | 학번·이름·학교 이메일·비밀번호 및 요청 필드 일치        | 항목 정합성 반영. 실제 연결·응답·정책 차이는 위 절 참고      |
+| 회원가입·비밀번호 재설정   | 실제 API 연결(2026-11-26), 비밀번호 규칙 백엔드와 일치  | 해결                                                         |
 | 작성자 모집 마감·모집 취소 | API 없음(버튼 비활성화, "준비 중" 안내)                 | `POST /api/posts/{id}/close`, `/cancel` 등                   |
 | 신고                       | API 없음(버튼 대신 "준비 중"), `reported` 필드 없음     | 신고 API와 상세의 `reported`                                 |
 | 유사 모집 추천             | API 없음(빈 결과로 작성 진행)                           | 같은 날짜·유형·±30분 검색                                    |

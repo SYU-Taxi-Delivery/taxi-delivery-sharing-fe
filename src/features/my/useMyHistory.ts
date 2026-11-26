@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { ApiError } from "@/lib/api";
+import { ApiError, retryHint } from "@/lib/api";
 import {
   participationDeadlineMs,
   type LatestPublicState,
@@ -41,7 +41,7 @@ function errorMessage(error: unknown) {
   if (error instanceof Error && error.name === "InvalidMyHistoryData") {
     return "내 이력 정보를 확인할 수 없어요. 다시 불러와 주세요.";
   }
-  return "내 이력을 불러오지 못했어요. 네트워크를 확인한 후 다시 시도해 주세요.";
+  return `내 이력을 불러오지 못했어요. ${retryHint(error)}`;
 }
 
 export function useMyHistory(tab: MyTab, operations: MyHistoryOperations) {

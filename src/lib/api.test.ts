@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, retryHint } from "@/lib/api";
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -151,5 +151,17 @@ describe("apiFetch", () => {
     fetchMock.mockRejectedValue(error);
 
     await expect(apiFetch("/rooms")).rejects.toBe(error);
+  });
+});
+
+describe("retryHint", () => {
+  it("서버 오류(5xx)는 네트워크 확인 대신 잠시 후 다시 시도하라고 안내한다", () => {
+    expect(retryHint(new ApiError(500, ""))).toContain("서버에 잠시 문제");
+    expect(retryHint(new ApiError(503, ""))).toContain("잠시 후");
+  });
+
+  it("연결 실패와 그 밖의 오류는 네트워크 확인을 안내한다", () => {
+    expect(retryHint(new TypeError("Failed to fetch"))).toContain("네트워크");
+    expect(retryHint(new ApiError(400, ""))).toContain("네트워크");
   });
 });
