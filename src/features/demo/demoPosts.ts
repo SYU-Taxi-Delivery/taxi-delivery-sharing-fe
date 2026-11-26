@@ -171,6 +171,29 @@ export function generateDemoPost(
     communicationUrl: COMMUNICATION_URL,
     reported: false,
   };
+  if (base.id === "preview-6") {
+    return {
+      ...base,
+      type,
+      departure: "삼육대학교 정문",
+      destination: "태릉입구역 7번 출구",
+      title: "수업 끝나고 태릉입구역까지 같이 가요",
+      description:
+        "지하철로 갈아타실 분 한 분 더 구해요.\n출발 5분 전까지 정문 안내판 앞에서 만나요.",
+    };
+  }
+  if (base.id === "preview-5") {
+    return {
+      ...base,
+      type,
+      restaurantName: "정문 김밥",
+      pickupLocation: "학생회관 1층 입구",
+      title: "동아리 모임 전에 김밥 같이 주문해요",
+      description:
+        "학생회관에서 모임이 있어 김밥을 주문하려고 해요. 도착하면 제가 받아서 나눠 드릴게요.",
+      orderGuide: "참여한 뒤 오픈채팅에 김밥 종류와 수량을 남겨 주세요.",
+    };
+  }
   if (type === "TAXI") {
     const departure = STOPS[index % STOPS.length];
     const destination = STOPS[(index + 2) % STOPS.length];

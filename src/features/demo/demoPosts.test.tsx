@@ -119,6 +119,47 @@ describe("공유 데모 모집글", () => {
   });
 
   it.each([
+    {
+      id: "preview-6",
+      type: "TAXI",
+      keyword: "수업 끝나고",
+      title: "수업 끝나고 태릉입구역까지 같이 가요",
+      places: ["삼육대학교 정문", "태릉입구역 7번 출구"],
+      instructions: {
+        description: expect.stringContaining("정문 안내판 앞에서 만나요"),
+      },
+    },
+    {
+      id: "preview-5",
+      type: "DELIVERY",
+      keyword: "동아리 모임",
+      title: "동아리 모임 전에 김밥 같이 주문해요",
+      places: ["정문 김밥", "학생회관 1층 입구"],
+      instructions: { orderGuide: expect.stringContaining("김밥 종류와 수량") },
+    },
+  ] as const)(
+    "시연용 $type 모집은 제목으로 검색하고 상세에서 만남·주문 안내를 읽을 수 있다",
+    async ({ id, type, keyword, title, places, instructions }) => {
+      const { list, detail } = await screens(id);
+      const results = toPostPage(
+        await settle(
+          list.list({
+            type,
+            q: keyword,
+            joinableOnly: true,
+            page: 0,
+          }),
+        ),
+      );
+      expect(results.content.map((post) => post.id)).toEqual([id]);
+      expect(shown(results.content[0]).places).toEqual(places);
+      const post = toPostDetail(await settle(detail.load(id)));
+      expect(post).toMatchObject({ title, ...instructions });
+      expect(shown(post).places).toEqual(places);
+    },
+  );
+
+  it.each([
     ["preview-6", "TAXI", "11. 13. 23:52", 3, 4, "한지우"],
     ["preview-5", "DELIVERY", "11. 13. 23:40", 5, 6, "이도윤"],
   ] as const)(

@@ -107,6 +107,29 @@
   gap: var(--space-3);
 }
 
+.results:focus-visible {
+  outline: 2px solid var(--posts-focus);
+  outline-offset: 2px;
+  border-radius: var(--round-card);
+}
+
+.loadingLabel {
+  margin: var(--space-5) 0 var(--space-3);
+  color: var(--posts-muted);
+  font-weight: 600;
+}
+
+.loadingCards .card {
+  min-height: 10rem;
+  align-content: center;
+}
+
+@media (width < 64rem) {
+  .loadingCards .card + .card {
+    display: none;
+  }
+}
+
 .list > li {
   animation: card-in 340ms var(--curve-enter) both;
 }

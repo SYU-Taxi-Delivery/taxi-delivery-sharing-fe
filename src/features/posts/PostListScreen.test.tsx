@@ -406,6 +406,9 @@ describe("PostListScreen", () => {
     });
     expect(operations.list).toHaveBeenCalledTimes(2);
     expect(cards()).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { name: "전체 모집글 목록" }),
+    ).toHaveFocus();
   });
 
   it("AC-TAXI-003-02: 필수값이 빠진 응답은 오류와 재시도로 표시한다", async () => {

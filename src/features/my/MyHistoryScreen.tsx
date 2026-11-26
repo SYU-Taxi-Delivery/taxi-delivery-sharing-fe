@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AccessDenied, RequireAuth } from "@/features/auth/RequireAuth";
 import { AppShell } from "@/features/posts/AppShell";
 import common from "@/features/posts/posts.module.css";
@@ -106,6 +106,8 @@ function History({
     restoreFocus: () => void;
   } | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const results = useRef<HTMLElement>(null);
+  const tabLabel = tab === "created" ? "작성한 글" : "참여한 글";
   const selected = selection?.operations === operations ? selection : null;
   const clearSelection = useCallback(() => setSelection(null), []);
 
@@ -156,11 +158,33 @@ function History({
           restoreFocus={selected.restoreFocus}
         />
       )}
-      <div aria-busy={loading}>
+      {loading && (
+        <p role="status" className={styles.loadingLabel}>
+          {tabLabel}을 불러오고 있어요.
+        </p>
+      )}
+      <section
+        ref={results}
+        className={styles.results}
+        aria-label={tabLabel}
+        aria-busy={loading}
+        tabIndex={-1}
+      >
         {loading ? (
-          <p role="status" className={common.state}>
-            이력을 불러오고 있어요.
-          </p>
+          <div
+            className={`${styles.list} ${styles.loadingCards}`}
+            aria-hidden="true"
+          >
+            {[0, 1].map((index) => (
+              <div key={index} className={styles.card}>
+                <span className={common.skeletonLines}>
+                  <span data-line="meta" />
+                  <span data-line="title" />
+                  <span data-line="facts" />
+                </span>
+              </div>
+            ))}
+          </div>
         ) : forbidden ? (
           <AccessDenied />
         ) : error ? (
@@ -174,8 +198,16 @@ function History({
               </>
             ) : (
               <>
+                <SpotArt kind="error" />
                 <p role="alert">{error}</p>
-                <button type="button" className={styles.button} onClick={retry}>
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => {
+                    results.current?.focus();
+                    retry();
+                  }}
+                >
                   다시 시도
                 </button>
               </>
@@ -210,7 +242,7 @@ function History({
         ) : (
           <div className={common.state}>
             <SpotArt />
-            <p role="status">
+            <p role="status" className={common.emptyTitle}>
               {tab === "created"
                 ? "아직 작성한 모집이 없어요."
                 : "아직 참여한 모집이 없어요."}
@@ -223,19 +255,22 @@ function History({
             </Link>
           </div>
         )}
-      </div>
-      <aside className={styles.help}>
-        <span className={styles.helpIcon} aria-hidden="true">
-          <InfoIcon />
-        </span>
-        <div>
-          <p>참여 취소: 각 카드에 표시된 참여 취소 기한까지 가능해요.</p>
-          <p>
-            작성한 글은 상세 화면의 &lsquo;내 모집글 관리&rsquo;에서 관리해요.
-          </p>
-          <Link href={path("/posts")}>모집글 목록으로</Link>
-        </div>
-      </aside>
+      </section>
+      {history && history.content.length > 0 && (
+        <aside className={styles.help}>
+          <span className={styles.helpIcon} aria-hidden="true">
+            <InfoIcon />
+          </span>
+          <div>
+            <p>
+              {tab === "participated"
+                ? "참여 취소는 각 카드에 표시된 기한까지 가능해요."
+                : "작성한 글은 상세 화면의 ‘내 모집글 관리’에서 관리해요."}
+            </p>
+            <Link href={path("/posts")}>모집글 목록으로</Link>
+          </div>
+        </aside>
+      )}
     </>
   );
 }
